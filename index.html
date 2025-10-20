@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WesAI Notepad</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            colors: {
+              light: {
+                background: '#f5f5f4', // stone-100
+                text: '#18181b', // zinc-900
+                ui: '#e2e8f0', // slate-200
+                'ui-hover': '#cbd5e1', // slate-300
+                primary: '#3b82f6', // blue-500
+                'primary-hover': '#2563eb', // blue-600
+                border: '#d4d4d8' // zinc-300
+              },
+              dark: {
+                background: '#18181b', // zinc-900
+                text: '#f5f5f4', // stone-100
+                ui: '#3f3f46', // zinc-700
+                'ui-hover': '#52525b', // zinc-600
+                primary: '#60a5fa', // blue-400
+                'primary-hover': '#3b82f6', // blue-500
+                border: '#27272a' // zinc-800
+              }
+            }
+          }
+        }
+      }
+    </script>
+  <style>
+    .markdown-highlighter .token.punctuation { color: #a1a1aa; /* zinc-400 */ }
+    .dark .markdown-highlighter .token.punctuation { color: #71717a; /* zinc-500 */ }
+    .markdown-highlighter .token.header-punctuation,
+    .markdown-highlighter .token.header { color: #3b82f6; font-weight: bold; }
+    .dark .markdown-highlighter .token.header-punctuation,
+    .dark .markdown-highlighter .token.header { color: #60a5fa; }
+    .markdown-highlighter .token.bold-punctuation,
+    .markdown-highlighter .token.bold { font-weight: bold; color: #059669; }
+    .dark .markdown-highlighter .token.bold-punctuation,
+    .dark .markdown-highlighter .token.bold { color: #34d399; }
+    .markdown-highlighter .token.italic-punctuation,
+    .markdown-highlighter .token.italic { font-style: italic; color: #059669; }
+    .dark .markdown-highlighter .token.italic-punctuation,
+    .dark .markdown-highlighter .token.italic { color: #34d399; }
+    .markdown-highlighter .token.strikethrough-punctuation,
+    .markdown-highlighter .token.strikethrough { text-decoration: line-through; }
+    .markdown-highlighter .token.code { background-color: #e2e8f0; color: #c2410c; font-family: monospace; padding: 0.1em 0.3em; border-radius: 4px; }
+    .dark .markdown-highlighter .token.code { background-color: #3f3f46; color: #fb923c; }
+    .markdown-highlighter .token.link,
+    .markdown-highlighter .token.link-url { color: #6d28d9; }
+    .dark .markdown-highlighter .token.link,
+    .dark .markdown-highlighter .token.link-url { color: #a78bfa; }
+    .markdown-highlighter .token.blockquote { color: #78716c; }
+    .dark .markdown-highlighter .token.blockquote { color: #a1a1aa; }
+    .markdown-highlighter .token.list-punctuation { color: #ea580c; font-weight: bold; }
+    .dark .markdown-highlighter .token.list-punctuation { color: #f97316; }
+    .markdown-highlighter .token.hr { color: #d4d4d8; }
+    .dark .markdown-highlighter .token.hr { color: #3f3f46; }
+  </style>
+  <script type="importmap">
+{
+  "imports": {
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.25.0",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/"
+  }
+}
+</script>
+</head>
+  <body class="bg-light-background dark:bg-dark-background">
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>

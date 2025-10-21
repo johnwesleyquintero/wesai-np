@@ -285,16 +285,29 @@ export const useStore = (user: User | undefined) => {
             }
     
             if (data.notes?.length > 0) {
-                // Separate notes from their histories to avoid inserting a 'history' column
-                const notesToInsert = data.notes.map(({ history, ...note }) => 
-                    toSupabase({ ...note, userId: currentUserId })
-                );
+                // Whitelist properties to prevent inserting unknown columns like 'order' or 'history'.
+                const notesToInsert = data.notes.map(note => ({
+                    id: note.id,
+                    user_id: currentUserId,
+                    title: note.title,
+                    content: note.content,
+                    created_at: note.createdAt,
+                    updated_at: note.updatedAt,
+                    is_favorite: note.isFavorite,
+                    tags: note.tags,
+                    parent_id: note.parentId,
+                }));
 
-                const allVersionsToInsert = data.notes.flatMap(note => 
-                    (note.history || []).map(version => 
-                        // Ensure version has all necessary fields, like noteId
-                        toSupabase({ ...version, noteId: note.id, userId: currentUserId })
-                    )
+                // Whitelist properties for versions as well.
+                const allVersionsToInsert = data.notes.flatMap(note =>
+                    (note.history || []).map(version => ({
+                        note_id: note.id,
+                        user_id: currentUserId,
+                        saved_at: version.savedAt,
+                        title: version.title,
+                        content: version.content,
+                        tags: version.tags
+                    }))
                 );
 
                 // Insert the notes first

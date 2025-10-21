@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
+import { GoogleIcon } from './Icons';
 
 type AuthView = 'login' | 'signup' | 'resend_confirmation';
 
@@ -20,6 +21,18 @@ const Auth: React.FC = () => {
             window.history.replaceState(null, '', window.location.pathname + window.location.search);
         }
     }, []);
+    
+    const handleGoogleSignIn = async () => {
+        setLoading(true);
+        setError(null);
+        const { error } = await supabase.auth.signInWithOAuth({
+            provider: 'google',
+        });
+        if (error) {
+            setError(error.message);
+            setLoading(false);
+        }
+    };
 
     const handleAuth = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -139,7 +152,7 @@ const Auth: React.FC = () => {
 
     return (
         <div className="flex items-center justify-center h-screen w-screen bg-light-background dark:bg-dark-background">
-            <div className="w-full max-w-md p-8 space-y-8 bg-light-ui dark:bg-dark-ui rounded-xl shadow-lg">
+            <div className="w-full max-w-md p-8 space-y-6 bg-light-ui dark:bg-dark-ui rounded-xl shadow-lg">
                 <div>
                     <h2 className="text-3xl font-bold text-center text-light-text dark:text-dark-text">
                         WesAI Notepad
@@ -148,7 +161,30 @@ const Auth: React.FC = () => {
                         {view === 'login' ? 'Sign in to your account' : 'Create a new account'}
                     </p>
                 </div>
-                <form className="mt-8 space-y-6" onSubmit={handleAuth}>
+                
+                <div className="space-y-4">
+                    <button
+                        onClick={handleGoogleSignIn}
+                        disabled={loading}
+                        className="group relative w-full flex justify-center items-center py-2 px-4 border border-light-border dark:border-dark-border text-sm font-medium rounded-md text-light-text dark:text-dark-text bg-white dark:bg-dark-background hover:bg-light-ui dark:hover:bg-dark-ui-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-light-primary dark:focus:ring-dark-primary disabled:opacity-50"
+                    >
+                        <GoogleIcon className="w-4 h-4 mr-2" />
+                        Sign {view === 'login' ? 'in' : 'up'} with Google
+                    </button>
+                </div>
+
+                <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                        <div className="w-full border-t border-light-border dark:border-dark-border"></div>
+                    </div>
+                    <div className="relative flex justify-center text-sm">
+                        <span className="px-2 bg-light-ui dark:bg-dark-ui text-light-text/70 dark:text-dark-text/70">
+                            Or continue with
+                        </span>
+                    </div>
+                </div>
+
+                <form className="space-y-6" onSubmit={handleAuth}>
                     <div className="rounded-md shadow-sm -space-y-px">
                         <div>
                             <input
@@ -178,10 +214,10 @@ const Auth: React.FC = () => {
                         </div>
                     </div>
                     
-                    {error && <p className="text-sm text-red-500 text-center pt-4">{error}</p>}
-                    {notification && <p className="text-sm text-green-600 dark:text-green-400 text-center pt-4">{notification}</p>}
+                    {error && <p className="text-sm text-red-500 text-center pt-2">{error}</p>}
+                    {notification && <p className="text-sm text-green-600 dark:text-green-400 text-center pt-2">{notification}</p>}
 
-                    <div className="pt-2">
+                    <div>
                         <button
                             type="submit"
                             disabled={loading}

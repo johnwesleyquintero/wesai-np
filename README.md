@@ -1,8 +1,8 @@
 # WesAI Notepad
 
-**Your personal knowledge assistant, transformed into a powerful operational tool.**
+**Your personal knowledge system, transformed into a powerful operational tool.**
 
-WesAI Notepad is a secure, AI-enhanced application designed for privacy, performance, and productivity. It combines a fast, responsive notepad with a multi-mode AI assistant powered by the Google Gemini API. All your data is securely stored in your Supabase account, making it accessible across all your devices.
+WesAI Notepad is a secure, AI-enhanced application designed for privacy, performance, and productivity. It combines a fast, responsive notepad with a multi-mode AI assistant powered by the Google Gemini API. All your data is securely stored in your personal Supabase account, making it accessible across all your devices while ensuring you are the sole owner of your data.
 
 ## Key Features
 
@@ -28,6 +28,7 @@ WesAI Notepad is a secure, AI-enhanced application designed for privacy, perform
 
 ### Productivity and Workflow
 - **Optimized for Performance & Scale:** A highly-optimized Supabase backend with custom database indexing ensures data retrieval is instantaneous, providing a snappy experience even as your knowledge base grows to thousands of notes. The frontend is built with lazy-loading components for a fast initial load.
+- **Full Keyboard Navigation:** Navigate the entire sidebar, select notes, and expand folders using only your keyboard for maximum efficiency.
 - **Command Palette:** Press `Ctrl/Cmd + K` to access nearly every application feature, from creating notes to executing AI actions.
 - **Slash Commands:** Type `/` in the editor to quickly insert headings, lists, to-do items, and more.
 - **Drag & Drop Import:** Drag text or markdown files directly into the editor or onto a folder in the sidebar to instantly create new notes.
@@ -39,8 +40,10 @@ WesAI Notepad is a secure, AI-enhanced application designed for privacy, perform
 
 ## Getting Started
 
+### For Users (Hosted App)
+
 1.  **Open the Application:** Navigate to the live application URL.
-2.  **Sign Up:** Create an account using your email and password or by signing in with your Google account.
+2.  **Sign Up / Sign In:** Create an account using your email and password or by signing in with your Google account.
 3.  **Obtain a Gemini API Key:** The AI features require a free API key from Google.
     - Go to [Google AI Studio](https://ai.google.dev/).
     - Click "Get API key" and follow the on-screen instructions.
@@ -49,6 +52,27 @@ WesAI Notepad is a secure, AI-enhanced application designed for privacy, perform
     - Click the Settings icon (gear) in the bottom-left corner of the sidebar.
     - Paste your API key into the "Gemini API Key" field and click "Save Settings".
 5.  **Begin Writing:** Your API key is saved securely in your browser's local storage, and all AI features are now available for use.
+
+### For Developers (Running Locally)
+
+1.  **Clone the Repository:**
+    ```bash
+    git clone <repository-url>
+    cd <repository-directory>
+    ```
+2.  **Set Up Supabase:**
+    - Create a new project on [Supabase](https://supabase.com/).
+    - In your Supabase project, navigate to the **SQL Editor** and run the `schema.sql` script from this repository to set up your database tables and policies.
+    - Go to **Settings** > **API**. Find your Project URL and your `public` anonymous key.
+3.  **Configure the Client:**
+    - Open the file: `lib/supabaseClient.ts`.
+    - Replace the placeholder values for `supabaseUrl` and `supabaseAnonKey` with the keys from your Supabase project.
+4.  **Install Dependencies & Run:**
+    ```bash
+    npm install
+    npm run dev
+    ```
+5.  Follow the "For Users" guide above to sign up and add your Gemini API key within the running application.
 
 ## Technology Stack
 - **Frontend:** React, TypeScript, Tailwind CSS

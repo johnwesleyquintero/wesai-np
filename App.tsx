@@ -16,6 +16,8 @@ import WelcomeModal from './components/WelcomeModal';
 import ApiKeyIndicator from './components/ApiKeyIndicator';
 import Auth from './components/Auth';
 import { isSupabaseConfigured } from './lib/supabaseClient';
+import NoteEditorSkeleton from './components/NoteEditorSkeleton';
+import ChatViewSkeleton from './components/ChatViewSkeleton';
 
 const NoteEditor = React.lazy(() => import('./components/NoteEditor'));
 const ChatView = React.lazy(() => import('./components/ChatView'));
@@ -186,6 +188,8 @@ function AppContent() {
 
         return <WelcomeScreen isMobileView={isMobileView} onToggleSidebar={() => setIsSidebarOpen(true)} onAddNote={() => onAddNote()} />;
     };
+    
+    const suspenseFallback = view === 'CHAT' ? <ChatViewSkeleton /> : <NoteEditorSkeleton />;
 
     return (
         <div className={`flex h-screen w-screen font-sans text-light-text dark:text-dark-text bg-light-background dark:bg-dark-background overflow-hidden ${isSidebarOpen && isMobileView ? 'fixed' : ''}`}>
@@ -209,7 +213,7 @@ function AppContent() {
             {!isMobileView && <SidebarResizer onResizeStart={handleResizeStart} />}
             <main className="flex-1 flex flex-col h-full min-w-0">
                 {isApiKeyMissing && <ApiKeyIndicator />}
-                <Suspense fallback={<SuspenseLoader />}>
+                <Suspense fallback={suspenseFallback}>
                     {renderMainView()}
                 </Suspense>
             </main>

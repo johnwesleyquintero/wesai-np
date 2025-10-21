@@ -103,6 +103,8 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onUpdate, onDelete, onTog
     const MIN_CONTENT_LENGTH_FOR_SUGGESTIONS = 50;
 
     const debouncedEditorState = useDebounce(editorState, 5000);
+    const debouncedContentForSpelling = useDebounce(editorState.content, 1500);
+
     const displayedTitle = previewVersion ? previewVersion.title : editorState.title;
     const displayedContent = previewVersion ? previewVersion.content : editorState.content;
     const displayedTags = previewVersion ? previewVersion.tags : editorState.tags;
@@ -227,7 +229,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onUpdate, onDelete, onTog
     useEffect(() => {
         if (isVersionPreviewing || viewMode === 'preview' || isAiRateLimited) return;
         
-        const contentForSpelling = debouncedEditorState.content;
+        const contentForSpelling = debouncedContentForSpelling;
         if (contentForSpelling && contentForSpelling !== lastAnalyzedContentForSpellingRef.current) {
             const currentCheckId = ++spellingCheckIdRef.current;
             setIsCheckingSpelling(true);
@@ -244,7 +246,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onUpdate, onDelete, onTog
         } else if (!contentForSpelling) {
              setSpellingErrors([]);
         }
-    }, [debouncedEditorState, isVersionPreviewing, viewMode, isAiRateLimited]);
+    }, [debouncedContentForSpelling, isVersionPreviewing, viewMode, isAiRateLimited]);
     
     const applyAiActionToFullNote = useCallback(async (action: InlineAction) => {
         setIsFullAiActionLoading(`Applying: ${action}...`);

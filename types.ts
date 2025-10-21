@@ -89,7 +89,7 @@ export interface ToastMessage {
     message: string;
     type: 'success' | 'error' | 'info';
 }
-// FIX: Moved ContextMenuItem here to make it globally available.
+
 export interface ContextMenuItem {
     label: string;
     action: () => void;

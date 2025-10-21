@@ -55,19 +55,26 @@ const getAi = () => {
 
 const handleGeminiError = (error: unknown, context: string): Error => {
     console.error(`Error in ${context}:`, error);
+
+    // Convert the error to a string to reliably check for keywords.
+    const errorString = (error instanceof Error) ? error.message : JSON.stringify(error);
+
+    if (errorString.includes("API key is not configured")) {
+        return new Error("Your API key is missing. Please add it in the settings to use AI features.");
+    }
+    if (errorString.includes('429') || errorString.toLowerCase().includes('quota')) {
+        window.dispatchEvent(new CustomEvent('ai-rate-limit'));
+        return new Error("You've exceeded your API quota. Please check your plan and billing details at ai.google.dev. Features will resume shortly.");
+    }
+    if (errorString.includes('fetch failed')) {
+        return new Error("Network error. Please check your connection and try again.");
+    }
+
+    // Fallback for other errors from the Error object, if available.
     if (error instanceof Error) {
-        if (error.message.includes("API key is not configured")) {
-            return new Error("Your API key is missing. Please add it in the settings to use AI features.");
-        }
-        if (error.message.includes('429') || error.message.toLowerCase().includes('quota')) {
-            window.dispatchEvent(new CustomEvent('ai-rate-limit'));
-            return new Error("You've exceeded your API quota. Please check your plan and billing details at ai.google.dev. Features will resume shortly.");
-        }
-        if (error.message.includes('fetch failed')) {
-            return new Error("Network error. Please check your connection and try again.");
-        }
         return new Error(`An AI error occurred. Please try again later.`);
     }
+
     return new Error(`An unknown error occurred during ${context}.`);
 };
 

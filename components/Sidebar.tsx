@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from 'react';
-import { Note, FilterType, SearchMode } from '../types';
+import React, { useMemo, useState, useRef } from 'react';
+import { Note, FilterType, SearchMode, SmartCollection } from '../types';
 import NoteCard from './NoteCard';
 import {
     PencilSquareIcon, Cog6ToothIcon, SunIcon, MoonIcon, XMarkIcon, MagnifyingGlassIcon, SparklesIcon,
@@ -8,6 +8,7 @@ import {
 import SidebarNode, { TreeNode } from './SidebarNode';
 import Highlight from './Highlight';
 import { useAppContext } from '../context/AppContext';
+import { useDragAndDrop } from '../hooks/useDragAndDrop';
 
 interface SidebarProps {
     filteredNotes: Note[];
@@ -21,6 +22,9 @@ interface SidebarProps {
     isAiSearching: boolean;
     aiSearchError: string | null;
     width: number;
+    activeSmartCollectionId: string | null;
+    onActivateSmartCollection: (collection: SmartCollection) => void;
+    onClearActiveSmartCollection: () => void;
 }
 
 const buildTree = (notes: Note[], collections: import('../types').Collection[]): TreeNode[] => {
@@ -85,7 +89,8 @@ const FooterButton: React.FC<{
 );
 
 const Sidebar: React.FC<SidebarProps> = ({
-    filteredNotes, activeNoteId, filter, setFilter, searchTerm, setSearchTerm, searchMode, setSearchMode, isAiSearching, aiSearchError, width
+    filteredNotes, activeNoteId, filter, setFilter, searchTerm, setSearchTerm, searchMode, setSearchMode, isAiSearching, aiSearchError, width,
+    activeSmartCollectionId, onActivateSmartCollection, onClearActiveSmartCollection
 }) => {
     const {
         notes, collections, smartCollections, onSelectNote, onAddNote, onAddCollection,
@@ -93,55 +98,37 @@ const Sidebar: React.FC<SidebarProps> = ({
         isAiRateLimited, onOpenSmartFolderModal, onDeleteSmartCollection, onMoveItem,
         onOpenContextMenu, openSettings, onAddNoteFromFile
     } = useAppContext();
-
-    const [isRootDragOver, setIsRootDragOver] = useState(false);
-    const fileTree = useMemo(() => buildTree(notes, collections), [notes, collections]);
     
-    const handleRootDragOver = (e: React.DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        // Check if files are being dragged
-        if (e.dataTransfer.types.includes('Files')) {
-            setIsRootDragOver(true);
-        }
-    };
+    const rootDropRef = useRef<HTMLDivElement>(null);
+    const { isFileOver: isRootFileOver, dragAndDropProps: rootDragAndDropProps } = useDragAndDrop(rootDropRef, {
+        id: null,
+        type: 'root',
+        onMoveItem: onMoveItem,
+        // FIX: Read file content before passing to onAddNoteFromFile. The `file` object was being passed as the content string.
+        onDropFile: (file, parentId) => {
+            const reader = new FileReader();
+            reader.onload = (loadEvent) => {
+                const content = loadEvent.target?.result as string;
+                if (content) {
+                    onAddNoteFromFile(file.name, content, parentId);
+                }
+            };
+            reader.readAsText(file);
+        },
+    });
 
-    const handleRootDragLeave = (e: React.DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setIsRootDragOver(false);
-    };
+    const fileTree = useMemo(() => buildTree(notes, collections), [notes, collections]);
+    const activeSmartCollection = useMemo(() => smartCollections.find(sc => sc.id === activeSmartCollectionId), [smartCollections, activeSmartCollectionId]);
 
-    const handleRootDrop = (e: React.DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setIsRootDragOver(false);
-
-        // Handle file drop
-        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-            const validFiles = Array.from(e.dataTransfer.files).filter(f => f.type === 'text/plain' || f.name.endsWith('.md'));
-            validFiles.forEach(file => {
-                const reader = new FileReader();
-                reader.onload = (loadEvent) => {
-                    const content = loadEvent.target?.result as string;
-                    if (content) {
-                        onAddNoteFromFile(file.name, content, null);
-                    }
-                };
-                reader.readAsText(file);
-            });
-            return;
-        }
-
-        // Handle note/folder reorder drop
-        try {
-            const data = JSON.parse(e.dataTransfer.getData('application/json'));
-             if (data.id && data.parentId !== null) { // Only move if it's not already at root
-                onMoveItem(data.id, null, 'inside');
+    const handleDropFile = (file: File, parentId: string | null) => {
+        const reader = new FileReader();
+        reader.onload = (loadEvent) => {
+            const content = loadEvent.target?.result as string;
+            if (content) {
+                onAddNoteFromFile(file.name, content, parentId);
             }
-        } catch (error) {
-            console.error("Failed to parse drag-and-drop data:", error);
-        }
+        };
+        reader.readAsText(file);
     };
     
     const renderSmartCollections = () => (
@@ -155,7 +142,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             {smartCollections.map(sc => (
                 <div key={sc.id} 
                     className={`group flex items-center justify-between w-full text-left rounded-md px-2 py-1.5 my-0.5 text-sm cursor-pointer hover:bg-light-background dark:hover:bg-dark-background`}
-                     onClick={() => { setSearchTerm(sc.query); setSearchMode('AI'); }}
+                     onClick={() => onActivateSmartCollection(sc)}
                      onContextMenu={(e) => onOpenContextMenu(e, [
                          { label: 'Edit Smart Folder', action: () => onOpenSmartFolderModal(sc), icon: <PencilSquareIcon /> },
                          { label: 'Delete Smart Folder', action: () => onDeleteSmartCollection(sc), isDestructive: true, icon: <TrashIcon /> },
@@ -276,6 +263,19 @@ const Sidebar: React.FC<SidebarProps> = ({
 
             <div className="flex-1 overflow-y-auto">
                 <div className="py-2">
+                    {activeSmartCollection && (
+                        <div className="px-4 mb-2">
+                            <div className="flex items-center justify-between p-2 rounded-lg bg-light-primary/10 dark:bg-dark-primary/10 text-sm">
+                                <div className="flex items-center gap-2 font-semibold truncate">
+                                    <BrainIcon className="w-4 h-4 text-light-primary dark:text-dark-primary flex-shrink-0" />
+                                    <span className="truncate">{activeSmartCollection.name}</span>
+                                </div>
+                                <button onClick={onClearActiveSmartCollection} className="p-1 rounded-full hover:bg-light-primary/20 dark:hover:bg-dark-primary/20 flex-shrink-0">
+                                    <XMarkIcon className="w-4 h-4" />
+                                </button>
+                            </div>
+                        </div>
+                    )}
                     <div className="px-4 mb-2">
                         <div className="flex justify-between items-center">
                              <div className="flex space-x-1 bg-light-background dark:bg-dark-background p-1 rounded-lg">
@@ -303,10 +303,9 @@ const Sidebar: React.FC<SidebarProps> = ({
                     {searchTerm ? renderFlatList() : (
                         filter === 'ALL' ? (
                             <div
-                                onDragOver={handleRootDragOver}
-                                onDragLeave={handleRootDragLeave}
-                                onDrop={handleRootDrop}
-                                className={`transition-colors p-1 rounded-md min-h-[10rem] ${isRootDragOver ? 'bg-light-primary/10' : ''}`}
+                                ref={rootDropRef}
+                                {...rootDragAndDropProps}
+                                className={`transition-colors p-1 rounded-md min-h-[10rem] ${isRootFileOver ? 'bg-light-primary/10' : ''}`}
                             >
                                {renderSmartCollections()}
                                {renderFileTree()}

@@ -5,6 +5,7 @@ import { ContextMenuItem } from '../types';
 import { useAppContext } from '../context/AppContext';
 import { useToast } from '../context/ToastContext';
 import Highlight from './Highlight';
+import { useDragAndDrop } from '../hooks/useDragAndDrop';
 
 export type TreeNode = (Note | (import('../types').Collection & { type: 'collection' })) & {
     children: TreeNode[];
@@ -28,15 +29,36 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
     const isCollection = 'name' in node;
     const [isExpanded, setIsExpanded] = useState(true);
     const [renameValue, setRenameValue] = useState('');
-    const [isDragOver, setIsDragOver] = useState(false);
-    const [dropPosition, setDropPosition] = useState<'top' | 'bottom' | null>(null);
     
     const { showToast } = useToast();
     const inputRef = useRef<HTMLInputElement>(null);
+    const nodeRef = useRef<HTMLDivElement>(null);
 
     const isRenaming = renamingItemId === node.id;
     const name = isCollection ? node.name : node.title;
     const isActive = !isCollection && activeNoteId === node.id;
+
+    const handleDropFile = (file: File, parentId: string | null) => {
+        // FIX: Read the file content as a string before passing it to onAddNoteFromFile.
+        const reader = new FileReader();
+        reader.onload = (loadEvent) => {
+            const content = loadEvent.target?.result as string;
+            if (content) {
+                onAddNoteFromFile(file.name, content, parentId);
+            }
+        };
+        reader.readAsText(file);
+    };
+
+    const { isDragOver, dropPosition, dragAndDropProps } = useDragAndDrop(nodeRef, {
+        id: node.id,
+        parentId: node.parentId,
+        type: isCollection ? 'collection' : 'note',
+        onMoveItem,
+        onDropFile: isCollection ? handleDropFile : undefined,
+        collections,
+        isDisabled: isRenaming,
+    });
 
     useEffect(() => {
         if (isRenaming) {
@@ -113,122 +135,15 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
         }
     };
 
-    const handleDragStart = (e: React.DragEvent) => {
-        e.stopPropagation();
-        e.dataTransfer.setData('application/json', JSON.stringify({ id: node.id, type: isCollection ? 'collection' : 'note', parentId: node.parentId }));
-        e.dataTransfer.effectAllowed = 'move';
-    };
-    
-    const handleDragOver = (e: React.DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-
-        const hasFiles = e.dataTransfer.types.includes('Files');
-        if (hasFiles) {
-            if (isCollection) {
-                setIsDragOver(true);
-                setDropPosition(null);
-            }
-            return;
-        }
-        
-        try {
-            const data = JSON.parse(e.dataTransfer.getData('application/json'));
-            if (data.id === node.id) return; // Can't drop on self
-
-            if (data.type === 'collection') {
-                let currentParentId = node.id;
-                while (currentParentId) {
-                    if (currentParentId === data.id) {
-                        return; // Invalid move: dropping folder into its own descendant
-                    }
-                    const parent = collections.find(c => c.id === currentParentId);
-                    currentParentId = parent ? parent.parentId : null;
-                }
-            }
-            
-            const targetRect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-            const verticalMidpoint = targetRect.top + targetRect.height / 2;
-
-            if (isCollection) {
-                const dropZoneThreshold = targetRect.height * 0.25;
-                if (e.clientY < targetRect.top + dropZoneThreshold) {
-                    setDropPosition('top');
-                    setIsDragOver(false);
-                } else if (e.clientY > targetRect.bottom - dropZoneThreshold) {
-                    setDropPosition('bottom');
-                    setIsDragOver(false);
-                } else {
-                    setDropPosition(null);
-                    setIsDragOver(true);
-                }
-            } else { // It's a note
-                setDropPosition(e.clientY < verticalMidpoint ? 'top' : 'bottom');
-                setIsDragOver(false);
-            }
-        } catch (error) {}
-    };
-
-    const handleDragLeave = (e: React.DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setIsDragOver(false);
-        setDropPosition(null);
-    };
-
-    const handleDrop = (e: React.DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        
-        // Handle file drop first
-        if (isCollection && e.dataTransfer.files.length > 0) {
-            const validFiles = Array.from(e.dataTransfer.files).filter(f => f.type === 'text/plain' || f.name.endsWith('.md'));
-            validFiles.forEach(file => {
-                const reader = new FileReader();
-                reader.onload = (loadEvent) => {
-                    const content = loadEvent.target?.result as string;
-                    if (content) {
-                        onAddNoteFromFile(file.name, content, node.id);
-                    }
-                };
-                reader.readAsText(file);
-            });
-            setIsDragOver(false);
-            setDropPosition(null);
-            return;
-        }
-        
-        // Handle note/folder reordering
-        try {
-            const data = JSON.parse(e.dataTransfer.getData('application/json'));
-            if (data.id) {
-                if (isDragOver) {
-                    onMoveItem(data.id, node.id, 'inside');
-                } else if (dropPosition) {
-                    onMoveItem(data.id, node.id, dropPosition);
-                }
-            }
-        } catch (err) {
-            console.error("Drop failed", err);
-        } finally {
-            setIsDragOver(false);
-            setDropPosition(null);
-        }
-    };
-
-
     return (
         <div className="relative">
             {dropPosition === 'top' && <div className="absolute -top-0.5 left-2 right-2 h-0.5 bg-light-primary dark:bg-dark-primary rounded-full z-10" style={{ marginLeft: `${level * 16}px` }} />}
             <div
+                ref={nodeRef}
+                {...dragAndDropProps}
                 onClick={handleNodeClick}
                 onDoubleClick={handleDoubleClick}
-                onDragStart={handleDragStart}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
                 onContextMenu={handleContextMenu}
-                draggable={!isRenaming}
                 className={`group flex items-center justify-between w-full text-left rounded-md pr-2 my-0.5 text-sm cursor-grab transition-all duration-150 ${
                     isActive
                         ? 'bg-light-primary/30 dark:bg-dark-primary/30 text-light-primary dark:text-dark-primary font-semibold'

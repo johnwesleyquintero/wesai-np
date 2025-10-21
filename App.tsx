@@ -2,7 +2,6 @@ import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import Sidebar from './components/Sidebar';
 import NoteEditor from './components/NoteEditor';
 import { useStore } from './hooks/useStore';
-// FIX: Added ContextMenuItem to this import from types.ts
 import { Note, FilterType, NoteVersion, Template, SearchMode, ChatMessage, EditorActions, Collection, SmartCollection, ContextMenuItem } from './types';
 import SettingsModal from './components/SettingsModal';
 import ConfirmationModal from './components/ConfirmationModal';
@@ -14,7 +13,6 @@ import { getStreamingChatResponse, semanticSearchNotes } from './services/gemini
 import ChatView from './components/ChatView';
 import { AppContext } from './context/AppContext';
 import CommandPalette from './components/CommandPalette';
-// FIX: Removed ContextMenuItem from this import as it's no longer exported here.
 import ContextMenu from './components/ContextMenu';
 import SmartFolderModal from './components/SmartFolderModal';
 import { ToastProvider, useToast } from './context/ToastContext';
@@ -74,6 +72,7 @@ function AppContent() {
     
     const [isSmartFolderModalOpen, setIsSmartFolderModalOpen] = useState(false);
     const [smartFolderToEdit, setSmartFolderToEdit] = useState<SmartCollection | null>(null);
+    const [activeSmartCollectionId, setActiveSmartCollectionId] = useState<string | null>(null);
 
     const [theme, setTheme] = useState<'light' | 'dark'>(() => {
         return (localStorage.getItem('theme') as 'light' | 'dark') || 'light';
@@ -234,6 +233,25 @@ function AppContent() {
     const openSmartFolderModal = (folder: SmartCollection | null) => {
         setSmartFolderToEdit(folder);
         setIsSmartFolderModalOpen(true);
+    };
+
+    const handleActivateSmartCollection = (collection: SmartCollection) => {
+        setSearchTerm(collection.query);
+        setSearchMode('AI');
+        setActiveSmartCollectionId(collection.id);
+        setFilter('ALL');
+    };
+    
+    const handleSearchTermChange = (term: string) => {
+        if (activeSmartCollectionId) {
+            setActiveSmartCollectionId(null);
+        }
+        setSearchTerm(term);
+    };
+
+    const handleClearActiveSmartCollection = () => {
+        setActiveSmartCollectionId(null);
+        setSearchTerm('');
     };
 
     const activeNote = useMemo(() => {
@@ -501,12 +519,15 @@ function AppContent() {
                     filter={filter}
                     setFilter={setFilter}
                     searchTerm={searchTerm}
-                    setSearchTerm={setSearchTerm}
+                    setSearchTerm={handleSearchTermChange}
                     searchMode={searchMode}
                     setSearchMode={setSearchMode}
                     isAiSearching={isAiSearching}
                     aiSearchError={aiSearchError}
                     width={sidebarWidth}
+                    activeSmartCollectionId={activeSmartCollectionId}
+                    onActivateSmartCollection={handleActivateSmartCollection}
+                    onClearActiveSmartCollection={handleClearActiveSmartCollection}
                 />
                 {!isMobileView && <SidebarResizer onResizeStart={handleResizeStart} />}
                 <main className="flex-1 flex flex-col h-full min-w-0">

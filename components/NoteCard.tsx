@@ -1,14 +1,16 @@
 import React from 'react';
 import { Note } from '../types';
 import { StarIcon } from './Icons';
+import Highlight from './Highlight';
 
 interface NoteCardProps {
     note: Note;
     isActive: boolean;
     onClick: () => void;
+    searchTerm: string;
 }
 
-const NoteCard: React.FC<NoteCardProps> = ({ note, isActive, onClick }) => {
+const NoteCard: React.FC<NoteCardProps> = ({ note, isActive, onClick, searchTerm }) => {
     const preview = note.content.substring(0, 80) + (note.content.length > 80 ? '...' : '');
 
     const formatDate = (dateString: string) => {
@@ -28,10 +30,12 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isActive, onClick }) => {
             }`}
         >
             <h3 className="font-semibold truncate flex justify-between items-center">
-                {note.title}
+                <Highlight text={note.title} highlight={searchTerm} />
                 {note.isFavorite && <StarIcon className="w-4 h-4 text-yellow-500" filled />}
             </h3>
-            <p className="text-sm text-light-text/70 dark:text-dark-text/70 truncate">{preview || 'No content'}</p>
+            <p className="text-sm text-light-text/70 dark:text-dark-text/70 truncate">
+                 <Highlight text={preview || 'No content'} highlight={searchTerm} />
+            </p>
             <p className="text-xs text-light-text/50 dark:text-dark-text/50 mt-1">{formatDate(note.updatedAt)}</p>
         </div>
     );

@@ -1,11 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Note, Collection } from '../types';
+import { Note } from '../types';
 import { ChevronDownIcon, ChevronRightIcon, DocumentTextIcon, FolderIcon, TrashIcon, PencilSquareIcon, DocumentDuplicateIcon, ClipboardDocumentIcon, GripVerticalIcon } from './Icons';
 import { ContextMenuItem } from './ContextMenu';
 import { useAppContext } from '../context/AppContext';
 import { useToast } from '../context/ToastContext';
+import Highlight from './Highlight';
 
-export type TreeNode = (Note | (Collection & { type: 'collection' })) & {
+export type TreeNode = (Note | (import('../types').Collection & { type: 'collection' })) & {
     children: TreeNode[];
 };
 
@@ -13,28 +14,22 @@ interface SidebarNodeProps {
     node: TreeNode;
     level: number;
     activeNoteId: string | null;
-    collections: Collection[];
-    onSelectNote: (id: string) => void;
-    onAddNote: (parentId: string | null) => void;
-    onDeleteCollection: (collection: Collection) => void;
-    onUpdateCollection: (id: string, updatedFields: Partial<Omit<Collection, 'id'>>) => void;
-    onRenameNote: (id: string, newTitle: string) => void;
-    onMoveItem: (itemId: string, newParentId: string | null) => void;
-    onOpenContextMenu: (e: React.MouseEvent, items: ContextMenuItem[]) => void;
-    renamingItemId: string | null;
-    setRenamingItemId: (id: string | null) => void;
+    searchTerm: string;
 }
 
 const SidebarNode: React.FC<SidebarNodeProps> = ({ 
-    node, level, activeNoteId, collections, onSelectNote, onAddNote, onDeleteCollection, 
-    onUpdateCollection, onRenameNote, onMoveItem, onOpenContextMenu, renamingItemId, setRenamingItemId 
+    node, level, activeNoteId, searchTerm
 }) => {
+    const { 
+        collections, onSelectNote, onAddNote, onDeleteCollection, onUpdateCollection, onRenameNote, onMoveItem,
+        onOpenContextMenu, renamingItemId, setRenamingItemId, onCopyNote, onDeleteNote
+    } = useAppContext();
+
     const isCollection = 'name' in node;
     const [isExpanded, setIsExpanded] = useState(true);
     const [renameValue, setRenameValue] = useState('');
     const [isDragOver, setIsDragOver] = useState(false);
     
-    const { onCopyNote, onDeleteNote } = useAppContext();
     const { showToast } = useToast();
     const inputRef = useRef<HTMLInputElement>(null);
 
@@ -78,7 +73,6 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
             const noteAsNote = node as Note;
             menuItems = [
                 { label: 'Rename Note', action: () => setRenamingItemId(node.id), icon: <PencilSquareIcon /> },
-                // FIX: Changed `note.id` to `node.id` to correctly reference the note object.
                 { label: 'Copy Note', action: () => onCopyNote(node.id), icon: <DocumentDuplicateIcon /> },
                 { 
                     label: 'Copy as Markdown', 
@@ -123,6 +117,22 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
         e.stopPropagation();
         e.dataTransfer.setData('application/json', JSON.stringify({ id: node.id, type: isCollection ? 'collection' : 'note', parentId: node.parentId }));
         e.dataTransfer.effectAllowed = 'move';
+    
+        const dragGhost = document.createElement('div');
+        const iconSvg = isCollection 
+            ? `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z" /></svg>`
+            : `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /></svg>`;
+        
+        dragGhost.style.cssText = 'position: absolute; top: -1000px; padding: 8px 12px; background-color: #3f3f46; color: #f5f5f4; border-radius: 8px; display: flex; align-items: center; gap: 8px; font-family: sans-serif; font-size: 14px;';
+        dragGhost.innerHTML = `${iconSvg} <span>${name}</span>`;
+
+        document.body.appendChild(dragGhost);
+        e.dataTransfer.setDragImage(dragGhost, -10, 15);
+    
+        // Clean up the ghost element after the drag operation has started
+        setTimeout(() => {
+            document.body.removeChild(dragGhost);
+        }, 0);
     };
     
     const handleDragOver = (e: React.DragEvent) => {
@@ -217,7 +227,9 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
                             onClick={(e) => e.stopPropagation()}
                         />
                     ) : (
-                        <span className="truncate">{name}</span>
+                        <span className="truncate">
+                            <Highlight text={name} highlight={searchTerm} />
+                        </span>
                     )}
                 </div>
                  {isCollection && !isRenaming && (
@@ -239,16 +251,7 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
                             node={childNode}
                             level={level + 1}
                             activeNoteId={activeNoteId}
-                            collections={collections}
-                            onSelectNote={onSelectNote}
-                            onAddNote={onAddNote}
-                            onDeleteCollection={onDeleteCollection}
-                            onUpdateCollection={onUpdateCollection}
-                            onRenameNote={onRenameNote}
-                            onMoveItem={onMoveItem}
-                            onOpenContextMenu={onOpenContextMenu}
-                            renamingItemId={renamingItemId}
-                            setRenamingItemId={setRenamingItemId}
+                            searchTerm={searchTerm}
                         />
                     ))}
                 </div>

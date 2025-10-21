@@ -1,27 +1,28 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ChatMessage, Note } from '../types';
-import { Bars3Icon, SparklesIcon, DocumentTextIcon, PaperAirplaneIcon } from './Icons';
+import { Bars3Icon, SparklesIcon, DocumentTextIcon, PaperAirplaneIcon, MagnifyingGlassIcon } from './Icons';
 import MarkdownPreview from './MarkdownPreview';
 
 interface ChatViewProps {
     messages: ChatMessage[];
     onSendMessage: (query: string) => void;
-    isReplying: boolean;
+    chatStatus: 'idle' | 'searching' | 'replying';
     onSelectNote: (noteId: string) => void;
     isMobileView: boolean;
     onToggleSidebar: () => void;
     isAiRateLimited: boolean;
 }
 
-const ChatView: React.FC<ChatViewProps> = ({ messages, onSendMessage, isReplying, onSelectNote, isMobileView, onToggleSidebar, isAiRateLimited }) => {
+const ChatView: React.FC<ChatViewProps> = ({ messages, onSendMessage, chatStatus, onSelectNote, isMobileView, onToggleSidebar, isAiRateLimited }) => {
     const [input, setInput] = useState('');
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const isReplying = chatStatus !== 'idle';
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }
 
-    useEffect(scrollToBottom, [messages, isReplying]);
+    useEffect(scrollToBottom, [messages, chatStatus]);
 
     const handleSend = (e: React.FormEvent) => {
         e.preventDefault();
@@ -37,6 +38,40 @@ const ChatView: React.FC<ChatViewProps> = ({ messages, onSendMessage, isReplying
             handleSend(e);
         }
     };
+
+    const LoadingIndicator = () => {
+        if (chatStatus === 'searching') {
+            return (
+                 <div className="flex items-start gap-4">
+                    <div className="w-8 h-8 rounded-full bg-light-primary/80 dark:bg-dark-primary/80 flex items-center justify-center flex-shrink-0 mt-1"><MagnifyingGlassIcon className="w-5 h-5 text-white" /></div>
+                    <div className="max-w-xl p-4 rounded-2xl bg-light-ui dark:bg-dark-ui">
+                        <div className="flex items-center gap-2 text-light-text/80 dark:text-dark-text/80">
+                            <div className="w-2 h-2 bg-light-primary dark:bg-dark-primary rounded-full animate-pulse"></div>
+                            <div className="w-2 h-2 bg-light-primary dark:bg-dark-primary rounded-full animate-pulse [animation-delay:0.2s]"></div>
+                            <div className="w-2 h-2 bg-light-primary dark:bg-dark-primary rounded-full animate-pulse [animation-delay:0.4s]"></div>
+                            <span className="text-sm">Finding relevant notes...</span>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+        if (chatStatus === 'replying' && messages[messages.length-1]?.role !== 'ai') {
+             return (
+                <div className="flex items-start gap-4">
+                    <div className="w-8 h-8 rounded-full bg-light-primary dark:bg-dark-primary flex items-center justify-center flex-shrink-0 mt-1"><SparklesIcon className="w-5 h-5 text-white" /></div>
+                    <div className="max-w-xl p-4 rounded-2xl bg-light-ui dark:bg-dark-ui">
+                        <div className="flex items-center gap-2 text-light-text/80 dark:text-dark-text/80">
+                            <div className="w-2 h-2 bg-light-primary dark:bg-dark-primary rounded-full animate-pulse"></div>
+                            <div className="w-2 h-2 bg-light-primary dark:bg-dark-primary rounded-full animate-pulse [animation-delay:0.2s]"></div>
+                            <div className="w-2 h-2 bg-light-primary dark:bg-dark-primary rounded-full animate-pulse [animation-delay:0.4s]"></div>
+                            <span className="text-sm">AI is thinking...</span>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+        return null;
+    }
 
     return (
         <div className="flex-1 flex flex-col h-full bg-light-background dark:bg-dark-background">
@@ -68,7 +103,7 @@ const ChatView: React.FC<ChatViewProps> = ({ messages, onSendMessage, isReplying
                             <div className={`max-w-xl p-4 rounded-2xl ${msg.role === 'user' ? 'bg-light-primary text-white dark:bg-dark-primary dark:text-zinc-900' : 'bg-light-ui dark:bg-dark-ui'}`}>
                                 {msg.role === 'ai' ? (
                                     <div className="prose prose-sm sm:prose-base max-w-none text-light-text dark:text-dark-text">
-                                        <MarkdownPreview title="" content={msg.content} onToggleTask={() => {}} />
+                                        <MarkdownPreview title="" content={msg.content || '...'} onToggleTask={() => {}} />
                                     </div>
                                 ) : (
                                     <p>{msg.content}</p>
@@ -90,19 +125,8 @@ const ChatView: React.FC<ChatViewProps> = ({ messages, onSendMessage, isReplying
                         </div>
                     ))}
 
-                    {isReplying && (
-                        <div className="flex items-start gap-4">
-                            <div className="w-8 h-8 rounded-full bg-light-primary dark:bg-dark-primary flex items-center justify-center flex-shrink-0 mt-1"><SparklesIcon className="w-5 h-5 text-white" /></div>
-                            <div className="max-w-xl p-4 rounded-2xl bg-light-ui dark:bg-dark-ui">
-                                <div className="flex items-center gap-2 text-light-text/80 dark:text-dark-text/80">
-                                    <div className="w-2 h-2 bg-light-primary dark:bg-dark-primary rounded-full animate-pulse"></div>
-                                    <div className="w-2 h-2 bg-light-primary dark:bg-dark-primary rounded-full animate-pulse [animation-delay:0.2s]"></div>
-                                    <div className="w-2 h-2 bg-light-primary dark:bg-dark-primary rounded-full animate-pulse [animation-delay:0.4s]"></div>
-                                    <span className="text-sm">AI is thinking...</span>
-                                </div>
-                            </div>
-                        </div>
-                    )}
+                    <LoadingIndicator />
+
                      <div ref={messagesEndRef} />
                 </div>
             </div>

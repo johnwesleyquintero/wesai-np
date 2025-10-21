@@ -1,27 +1,17 @@
 import React, { useMemo, useState } from 'react';
-import { Note, Collection, SmartCollection, FilterType, SearchMode } from '../types';
+import { Note, FilterType, SearchMode } from '../types';
 import NoteCard from './NoteCard';
 import {
     PencilSquareIcon, Cog6ToothIcon, SunIcon, MoonIcon, XMarkIcon, MagnifyingGlassIcon, SparklesIcon,
     PlusIcon, FolderPlusIcon, BrainIcon, TrashIcon
 } from './Icons';
 import SidebarNode, { TreeNode } from './SidebarNode';
-import { ContextMenuItem } from './ContextMenu';
+import Highlight from './Highlight';
+import { useAppContext } from '../context/AppContext';
 
 interface SidebarProps {
-    notes: Note[];
-    collections: Collection[];
-    smartCollections: SmartCollection[];
     filteredNotes: Note[];
     activeNoteId: string | null;
-    onSelectNote: (id: string) => void;
-    onAddNote: (parentId?: string | null) => void;
-    onAddCollection: (name: string, parentId?: string | null) => void;
-    onDeleteCollection: (collection: Collection) => void;
-    onUpdateCollection: (id: string, updatedFields: Partial<Omit<Collection, 'id'>>) => void;
-    onRenameNote: (id: string, newTitle: string) => void;
-    onMoveItem: (itemId: string, newParentId: string | null) => void;
-    onOpenContextMenu: (e: React.MouseEvent, items: ContextMenuItem[]) => void;
     filter: FilterType;
     setFilter: (filter: FilterType) => void;
     searchTerm: string;
@@ -30,30 +20,15 @@ interface SidebarProps {
     setSearchMode: (mode: SearchMode) => void;
     isAiSearching: boolean;
     aiSearchError: string | null;
-    onSettingsClick: () => void;
-    theme: 'light' | 'dark';
-    toggleTheme: () => void;
-    isMobileView: boolean;
-    isOpen: boolean;
-    onClose: () => void;
-    view: 'NOTES' | 'CHAT';
-    onSetView: (view: 'NOTES' | 'CHAT') => void;
-    renamingItemId: string | null;
-    setRenamingItemId: (id: string | null) => void;
-    isAiRateLimited: boolean;
-    onOpenSmartFolderModal: (folder: SmartCollection | null) => void;
-    onDeleteSmartCollection: (collection: SmartCollection) => void;
+    width: number;
 }
 
-const buildTree = (notes: Note[], collections: Collection[]): TreeNode[] => {
-    // FIX: Explicitly type children as TreeNode[] to ensure type compatibility.
+const buildTree = (notes: Note[], collections: import('../types').Collection[]): TreeNode[] => {
     const noteMap = new Map(notes.map(note => [note.id, { ...note, children: [] as TreeNode[] }]));
     const collectionMap = new Map(collections.map(c => [c.id, { ...c, type: 'collection' as const, children: [] as TreeNode[] }]));
     
     const tree: TreeNode[] = [];
     
-    // Combine notes and collections into a single map for easier lookup
-    // FIX: Explicitly provide generic type arguments to the Map constructor to prevent incorrect type inference.
     const allItemsMap: Map<string, TreeNode> = new Map<string, TreeNode>([...noteMap.entries(), ...collectionMap.entries()]);
 
     allItemsMap.forEach(item => {
@@ -64,13 +39,11 @@ const buildTree = (notes: Note[], collections: Collection[]): TreeNode[] => {
             if (parent) {
                 parent.children.push(item);
             } else {
-                // If parent is not a collection (e.g., corrupted data), add to root
                 tree.push(item);
             }
         }
     });
 
-    // Sort folders first, then notes, then alphabetically
     const sortNodes = (nodes: TreeNode[]) => {
         nodes.sort((a, b) => {
             const aIsCollection = 'name' in a;
@@ -120,10 +93,14 @@ const FooterButton: React.FC<{
 );
 
 const Sidebar: React.FC<SidebarProps> = ({
-    notes, collections, smartCollections, filteredNotes, activeNoteId, onSelectNote, onAddNote, onAddCollection, onDeleteCollection, onUpdateCollection, onRenameNote, onMoveItem, onOpenContextMenu,
-    filter, setFilter, searchTerm, setSearchTerm, searchMode, setSearchMode, isAiSearching, aiSearchError, onSettingsClick, theme, toggleTheme,
-    isMobileView, isOpen, onClose, view, onSetView, renamingItemId, setRenamingItemId, isAiRateLimited, onOpenSmartFolderModal, onDeleteSmartCollection,
+    filteredNotes, activeNoteId, filter, setFilter, searchTerm, setSearchTerm, searchMode, setSearchMode, isAiSearching, aiSearchError, width
 }) => {
+    const {
+        notes, collections, smartCollections, onSelectNote, onAddNote, onAddCollection,
+        theme, toggleTheme, isMobileView, isSidebarOpen, setIsSidebarOpen, view, onSetView,
+        isAiRateLimited, onOpenSmartFolderModal, onDeleteSmartCollection, onMoveItem
+    } = useAppContext();
+
     const [isRootDragOver, setIsRootDragOver] = useState(false);
     const fileTree = useMemo(() => buildTree(notes, collections), [notes, collections]);
     
@@ -165,7 +142,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                 <div key={sc.id} 
                     className={`group flex items-center justify-between w-full text-left rounded-md px-2 py-1.5 my-0.5 text-sm cursor-pointer hover:bg-light-background dark:hover:bg-dark-background`}
                      onClick={() => { setSearchTerm(sc.query); setSearchMode('AI'); }}
-                     onContextMenu={(e) => onOpenContextMenu(e, [
+                     onContextMenu={(e) => useAppContext().onOpenContextMenu(e, [
                          { label: 'Edit Smart Folder', action: () => onOpenSmartFolderModal(sc), icon: <PencilSquareIcon /> },
                          { label: 'Delete Smart Folder', action: () => onDeleteSmartCollection(sc), isDestructive: true, icon: <TrashIcon /> },
                      ])}
@@ -180,7 +157,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     );
     
     const renderFileTree = () => {
-        if (fileTree.length === 0 && smartCollections.length === 0) {
+        if (fileTree.length === 0 && smartCollections.length === 0 && filter === 'ALL') {
             return (
                 <div className="text-center px-4 py-8 text-sm text-light-text/60 dark:text-dark-text/60">
                     <p>Your workspace is empty.</p>
@@ -203,16 +180,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                         node={node} 
                         level={0} 
                         activeNoteId={activeNoteId}
-                        collections={collections}
-                        onSelectNote={onSelectNote}
-                        onAddNote={onAddNote}
-                        onDeleteCollection={onDeleteCollection}
-                        onUpdateCollection={onUpdateCollection}
-                        onRenameNote={onRenameNote}
-                        onMoveItem={onMoveItem}
-                        onOpenContextMenu={onOpenContextMenu}
-                        renamingItemId={renamingItemId}
-                        setRenamingItemId={setRenamingItemId}
+                        searchTerm={searchTerm}
                     />
                 ))}
             </div>
@@ -228,6 +196,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                         note={note}
                         isActive={note.id === activeNoteId}
                         onClick={() => onSelectNote(note.id)}
+                        searchTerm={searchTerm}
                     />
                 ))
             ) : (
@@ -239,12 +208,15 @@ const Sidebar: React.FC<SidebarProps> = ({
     );
 
     return (
-        <aside className={`absolute md:relative z-30 flex flex-col h-full bg-light-ui dark:bg-dark-ui border-r border-light-border dark:border-dark-border transition-transform transform ${isOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 w-80 flex-shrink-0`}>
+        <aside 
+            className={`absolute md:relative z-30 flex flex-col h-full bg-light-ui dark:bg-dark-ui border-r border-light-border dark:border-dark-border transition-transform transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 flex-shrink-0`}
+            style={{ width: isMobileView ? '20rem' : `${width}px` }} // 20rem is 320px
+        >
             <div className="p-4 flex-shrink-0 border-b border-light-border dark:border-dark-border">
                 <div className="flex justify-between items-center mb-4">
                     <h1 className="text-xl font-bold">WesAI Notepad</h1>
                     {isMobileView && (
-                        <button onClick={onClose} className="p-2 -mr-2 rounded-md hover:bg-light-ui-hover dark:hover:bg-dark-ui-hover" aria-label="Close sidebar">
+                        <button onClick={() => setIsSidebarOpen(false)} className="p-2 -mr-2 rounded-md hover:bg-light-ui-hover dark:hover:bg-dark-ui-hover" aria-label="Close sidebar">
                             <XMarkIcon />
                         </button>
                     )}
@@ -348,7 +320,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                     </FooterButton>
 
                     <FooterButton
-                        onClick={onSettingsClick}
+                        onClick={() => useAppContext().openSettings()}
                         tooltip="Settings"
                     >
                         <Cog6ToothIcon />

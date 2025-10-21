@@ -1,11 +1,8 @@
 import React, { useEffect, useRef } from 'react';
+// FIX: Import ContextMenuItem from the central types file.
+import { ContextMenuItem } from '../types';
 
-export interface ContextMenuItem {
-    label: string;
-    action: () => void;
-    icon?: React.ReactElement;
-    isDestructive?: boolean;
-}
+// FIX: Removed local definition of ContextMenuItem.
 
 interface ContextMenuProps {
     x: number;

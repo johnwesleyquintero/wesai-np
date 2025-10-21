@@ -73,8 +73,24 @@ export interface Command {
     section: 'Navigation' | 'Note' | 'AI' | 'Settings';
 }
 
+export interface SlashCommand {
+    id: string;
+    name: string;
+    description: string;
+    section: 'Formatting' | 'AI Actions' | 'Insert';
+    icon: React.ReactElement;
+    keywords?: string;
+}
+
 export interface ToastMessage {
     id: number;
     message: string;
     type: 'success' | 'error' | 'info';
+}
+// FIX: Moved ContextMenuItem here to make it globally available.
+export interface ContextMenuItem {
+    label: string;
+    action: () => void;
+    icon?: React.ReactElement;
+    isDestructive?: boolean;
 }

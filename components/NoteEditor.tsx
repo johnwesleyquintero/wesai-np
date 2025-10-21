@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Note, NoteVersion, Template, SpellingError } from '../types';
 import { useDebounce } from '../hooks/useDebounce';
 import Toolbar from './Toolbar';
@@ -16,6 +16,7 @@ import MarkdownHighlighter from './MarkdownHighlighter';
 import NoteLinker from './NoteLinker';
 import BacklinksDisplay from './BacklinksDisplay';
 import { useBacklinks } from '../hooks/useBacklinks';
+import SlashCommandMenu from './SlashCommandMenu';
 
 interface NoteEditorProps {
     note: Note;
@@ -33,6 +34,7 @@ type NoteState = { title: string; content: string; tags: string[] };
 type SelectionState = { start: number; end: number; text: string; rect: DOMRect } | null;
 type ActiveSpellingError = { error: SpellingError; rect: DOMRect };
 type NoteLinkerState = { query: string; position: { top: number; left: number } } | null;
+type SlashCommandState = { query: string; position: { top: number; left: number }, range: { start: number, end: number } } | null;
 
 const StatusBar: React.FC<{ wordCount: number; charCount: number }> = ({ wordCount, charCount }) => (
     <div className="flex-shrink-0 px-4 sm:px-8 py-1.5 border-t border-light-border dark:border-dark-border text-xs text-light-text/60 dark:text-dark-text/60 flex items-center justify-end space-x-4">
@@ -80,6 +82,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onUpdate, onDelete, onTog
     const [suggestionError, setSuggestionError] = useState<string | null>(null);
 
     const [noteLinker, setNoteLinker] = useState<NoteLinkerState>(null);
+    const [slashCommand, setSlashCommand] = useState<SlashCommandState>(null);
     const [isDragOver, setIsDragOver] = useState(false);
 
     const { registerEditorActions, unregisterEditorActions, notes } = useAppContext();
@@ -88,9 +91,14 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onUpdate, onDelete, onTog
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const editorPaneRef = useRef<HTMLDivElement>(null);
     const highlighterRef = useRef<HTMLDivElement>(null);
+    
     const lastAnalyzedContentForTagsRef = useRef<string | null>(null);
     const lastAnalyzedContentForTitleRef = useRef<string | null>(null);
     const lastAnalyzedContentForSpellingRef = useRef<string|null>(null);
+    const tagSuggestionIdRef = useRef(0);
+    const titleSuggestionIdRef = useRef(0);
+    const spellingCheckIdRef = useRef(0);
+
     const MIN_CONTENT_LENGTH_FOR_SUGGESTIONS = 50;
 
     const debouncedEditorState = useDebounce(editorState, 5000);
@@ -129,30 +137,46 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onUpdate, onDelete, onTog
         }
     }, [editorState.content, viewMode]);
 
-
+    // Reset all local state when switching to a new note
     useEffect(() => {
-        if (!previewVersion) {
-            resetEditorState({ title: note.title, content: note.content, tags: note.tags });
-            setViewMode('edit');
-            setSuggestedTags([]);
-            setTagSuggestionError(null);
-            setSuggestedTitle(null);
-            setTitleSuggestionError(null);
-            setSpellingErrors([]);
-            lastAnalyzedContentForTagsRef.current = note.content;
-            lastAnalyzedContentForTitleRef.current = note.content;
-            lastAnalyzedContentForSpellingRef.current = note.content;
+        // Prevent stale state when switching notes, especially from a version preview
+        if (previewVersion && note.id !== note.id) {
+            setPreviewVersion(null);
         }
-    }, [note.id, previewVersion, resetEditorState, note.title, note.content, note.tags]);
+        resetEditorState({ title: note.title, content: note.content, tags: note.tags });
+        setViewMode('edit');
+        setSuggestedTags([]);
+        setTagSuggestionError(null);
+        setSuggestedTitle(null);
+        setTitleSuggestionError(null);
+        setSpellingErrors([]);
+        setSelection(null);
+        setActiveSpellingError(null);
+        setNoteLinker(null);
+        setSlashCommand(null);
+        
+        // Prevent stale background tasks from updating the new note
+        tagSuggestionIdRef.current += 1;
+        titleSuggestionIdRef.current += 1;
+        spellingCheckIdRef.current += 1;
+        
+        // Reset last analyzed content to prevent skipping analysis on the new note
+        lastAnalyzedContentForTagsRef.current = null;
+        lastAnalyzedContentForTitleRef.current = null;
+        lastAnalyzedContentForSpellingRef.current = null;
+    }, [note.id, resetEditorState, note.title, note.content, note.tags]);
 
+    // Handle auto-saving
     useEffect(() => {
         if (previewVersion) return;
         const isDirty = JSON.stringify(editorState) !== JSON.stringify({ title: note.title, content: note.content, tags: note.tags });
         setSaveStatus(isDirty ? 'unsaved' : 'saved');
     }, [editorState, note.title, note.content, note.tags, previewVersion]);
 
+    // Debounced actions: saving and AI suggestions
     useEffect(() => {
-        if (previewVersion || isAiRateLimited) return;
+        if (isVersionPreviewing || isAiRateLimited) return;
+        
         const isDifferentFromPersisted = JSON.stringify(debouncedEditorState) !== JSON.stringify({ title: note.title, content: note.content, tags: note.tags });
 
         if (saveStatus === 'unsaved' && isDifferentFromPersisted) {
@@ -163,46 +187,162 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onUpdate, onDelete, onTog
 
         const contentForAnalysis = debouncedEditorState.content;
         if (contentForAnalysis.length >= MIN_CONTENT_LENGTH_FOR_SUGGESTIONS) {
-             const isGenericTitle = debouncedEditorState.title.trim().toLowerCase() === 'untitled note';
+            const isGenericTitle = debouncedEditorState.title.trim().toLowerCase() === 'untitled note';
             if (isGenericTitle && contentForAnalysis !== lastAnalyzedContentForTitleRef.current) {
-                suggestTitleForFullNote();
+                const currentSuggestionId = ++titleSuggestionIdRef.current;
+                lastAnalyzedContentForTitleRef.current = contentForAnalysis;
+                setIsSuggestingTitle(true);
+                setTitleSuggestionError(null);
+                suggestTitle(contentForAnalysis).then(title => {
+                    if (currentSuggestionId === titleSuggestionIdRef.current && title) setSuggestedTitle(title);
+                }).catch(err => {
+                    if (currentSuggestionId === titleSuggestionIdRef.current) setTitleSuggestionError(err.message);
+                }).finally(() => {
+                    if (currentSuggestionId === titleSuggestionIdRef.current) setIsSuggestingTitle(false);
+                });
             } else if (!isGenericTitle) {
                 setSuggestedTitle(null);
             }
-            if (contentForAnalysis !== lastAnalyzedContentForTagsRef.current && editorState.tags.length === 0) {
-                suggestTagsForFullNote();
+            if (contentForAnalysis !== lastAnalyzedContentForTagsRef.current && debouncedEditorState.tags.length === 0) {
+                const currentSuggestionId = ++tagSuggestionIdRef.current;
+                lastAnalyzedContentForTagsRef.current = contentForAnalysis;
+                setIsSuggestingTags(true);
+                setTagSuggestionError(null);
+                suggestTags(debouncedEditorState.title, contentForAnalysis).then(tags => {
+                    if (currentSuggestionId === tagSuggestionIdRef.current) {
+                        const newSuggestions = tags.filter(tag => !debouncedEditorState.tags.includes(tag));
+                        setSuggestedTags(newSuggestions);
+                    }
+                }).catch(err => {
+                    if (currentSuggestionId === tagSuggestionIdRef.current) setTagSuggestionError(err.message);
+                }).finally(() => {
+                    if (currentSuggestionId === tagSuggestionIdRef.current) setIsSuggestingTags(false);
+                });
             }
         }
-    }, [debouncedEditorState, note.id, onUpdate, saveStatus, previewVersion, isAiRateLimited, editorState.tags]);
+    }, [debouncedEditorState, note.id, onUpdate, saveStatus, isVersionPreviewing, isAiRateLimited, note.title, note.content, note.tags]);
 
+    // Debounced spell check
     useEffect(() => {
-        if (previewVersion || viewMode === 'preview' || isAiRateLimited) return;
+        if (isVersionPreviewing || viewMode === 'preview' || isAiRateLimited) return;
         
         const contentForSpelling = debouncedEditorState.content;
         if (contentForSpelling && contentForSpelling !== lastAnalyzedContentForSpellingRef.current) {
+            const currentCheckId = ++spellingCheckIdRef.current;
             setIsCheckingSpelling(true);
             findMisspelledWords(contentForSpelling).then(errors => {
-                lastAnalyzedContentForSpellingRef.current = contentForSpelling;
-                setSpellingErrors(errors);
-            }).finally(() => setIsCheckingSpelling(false));
+                if (currentCheckId === spellingCheckIdRef.current) {
+                    lastAnalyzedContentForSpellingRef.current = contentForSpelling;
+                    setSpellingErrors(errors);
+                }
+            }).finally(() => {
+                if (currentCheckId === spellingCheckIdRef.current) {
+                    setIsCheckingSpelling(false);
+                }
+            });
         } else if (!contentForSpelling) {
              setSpellingErrors([]);
         }
-    }, [debouncedEditorState, previewVersion, viewMode, isAiRateLimited]);
+    }, [debouncedEditorState, isVersionPreviewing, viewMode, isAiRateLimited]);
+    
+    const applyAiActionToFullNote = useCallback(async (action: InlineAction) => {
+        setIsFullAiActionLoading(`Applying: ${action}...`);
+        setAiActionError(null);
+        try {
+            const newContent = await performInlineEdit(editorState.content, action);
+            setEditorState({ ...editorState, content: newContent });
+        } catch (error) {
+             setAiActionError(error instanceof Error ? error.message : 'An unknown error occurred.');
+        } finally {
+            setIsFullAiActionLoading(null);
+        }
+    }, [editorState, setEditorState]);
+    
+    const summarizeAndFindActionForFullNote = useCallback(async () => {
+        setIsFullAiActionLoading('Summarizing...');
+        setAiActionError(null);
+        try {
+            const { summary, actionItems } = await summarizeAndExtractActions(editorState.content);
+            let formattedSummary = '';
+            if (summary) formattedSummary += `### ✨ AI Summary\n\n${summary}\n\n`;
+            if (actionItems && actionItems.length > 0) formattedSummary += `### ✅ Action Items\n\n${actionItems.map(item => `- [ ] ${item}`).join('\n')}\n\n`;
+            if (formattedSummary) {
+                const newContent = `---\n\n${formattedSummary}---\n\n${editorState.content}`;
+                setEditorState({ ...editorState, content: newContent });
+            }
+        } catch (error) {
+             setAiActionError(error instanceof Error ? error.message : 'An unknown error occurred.');
+        } finally {
+            setIsFullAiActionLoading(null);
+        }
+    }, [editorState, setEditorState]);
+    
+    const suggestTagsForFullNote = useCallback(() => {
+        const currentContent = editorState.content;
+        lastAnalyzedContentForTagsRef.current = currentContent;
+        const currentSuggestionId = ++tagSuggestionIdRef.current;
+
+        setIsSuggestingTags(true);
+        setTagSuggestionError(null);
+        setSuggestedTags([]);
+
+        suggestTags(editorState.title, currentContent).then(tags => {
+            if (currentSuggestionId === tagSuggestionIdRef.current) {
+                const newSuggestions = tags.filter(tag => !editorState.tags.includes(tag));
+                setSuggestedTags(newSuggestions);
+            }
+        }).catch(err => {
+            if (currentSuggestionId === tagSuggestionIdRef.current) {
+                setTagSuggestionError(err.message)
+            }
+        }).finally(() => {
+            if (currentSuggestionId === tagSuggestionIdRef.current) {
+                setIsSuggestingTags(false)
+            }
+        });
+    }, [editorState.content, editorState.title, editorState.tags]);
+
+    const suggestTitleForFullNote = useCallback(() => {
+        const currentContent = editorState.content;
+        lastAnalyzedContentForTitleRef.current = currentContent;
+        const currentSuggestionId = ++titleSuggestionIdRef.current;
+
+        setIsSuggestingTitle(true);
+        setTitleSuggestionError(null);
+        setSuggestedTitle(null);
+
+        suggestTitle(currentContent).then(title => {
+            if (currentSuggestionId === titleSuggestionIdRef.current) {
+                if (title) setSuggestedTitle(title);
+            }
+        }).catch(err => {
+            if (currentSuggestionId === titleSuggestionIdRef.current) {
+                setTitleSuggestionError(err.message)
+            }
+        }).finally(() => {
+            if (currentSuggestionId === titleSuggestionIdRef.current) {
+                setIsSuggestingTitle(false)
+            }
+        });
+    }, [editorState.content]);
+
+    // Register editor actions with the App context
+    const editorActions = useMemo(() => ({ 
+        undo, redo, canUndo, canRedo, 
+        applyAiActionToFullNote,
+        suggestTagsForFullNote,
+        suggestTitleForFullNote,
+        summarizeAndFindActionForFullNote
+    }), [
+        undo, redo, canUndo, canRedo, 
+        applyAiActionToFullNote, suggestTagsForFullNote, 
+        suggestTitleForFullNote, summarizeAndFindActionForFullNote
+    ]);
 
     useEffect(() => {
-        registerEditorActions({ 
-            undo, 
-            redo, 
-            canUndo, 
-            canRedo, 
-            applyAiActionToFullNote,
-            suggestTagsForFullNote,
-            suggestTitleForFullNote,
-            summarizeAndFindActionForFullNote
-        });
+        registerEditorActions(editorActions);
         return () => unregisterEditorActions();
-    }, [undo, redo, canUndo, canRedo, editorState]);
+    }, [registerEditorActions, unregisterEditorActions, editorActions]);
 
     useEffect(() => {
         const pane = editorPaneRef.current;
@@ -210,6 +350,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onUpdate, onDelete, onTog
             setSelection(null);
             setActiveSpellingError(null);
             setNoteLinker(null);
+            setSlashCommand(null);
         };
         pane?.addEventListener('scroll', handleScroll);
         return () => pane?.removeEventListener('scroll', handleScroll);
@@ -254,22 +395,39 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onUpdate, onDelete, onTog
          setSelection(null);
          setActiveSpellingError(null);
          setNoteLinker(null);
+         setSlashCommand(null);
     };
 
     const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
         const { value, selectionStart } = e.target;
         setEditorState({ ...editorState, content: value });
+        // Hide popups that depend on selection, as content is changing
         setSelection(null); 
         setActiveSpellingError(null);
 
-        const linkerMatch = value.substring(0, selectionStart).match(/\[\[([^\[\]]*)$/);
-        if (linkerMatch) {
+        const textBeforeCursor = value.substring(0, selectionStart);
+        const slashMatch = textBeforeCursor.match(/(?:\s|^)\/([\w-]*)$/);
+        const linkerMatch = textBeforeCursor.match(/\[\[([^\[\]]*)$/);
+
+        // Mutually exclusive popups: only one can be active.
+        if (slashMatch) {
+            const query = slashMatch[1];
+            const rect = getCursorPositionRect(e.target, selectionStart);
+            const range = {
+                start: selectionStart - query.length - 1,
+                end: selectionStart,
+            };
+            setSlashCommand({ query, position: { top: rect.bottom, left: rect.left }, range });
+            setNoteLinker(null);
+        } else if (linkerMatch) {
             const rect = getCursorPositionRect(e.target, selectionStart);
             setNoteLinker({
                 query: linkerMatch[1],
                 position: { top: rect.bottom + window.scrollY, left: rect.left + window.scrollX },
             });
+            setSlashCommand(null);
         } else {
+            setSlashCommand(null);
             setNoteLinker(null);
         }
     };
@@ -315,20 +473,35 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onUpdate, onDelete, onTog
     };
 
     const handleSelect = () => {
-        if (isEffectivelyReadOnly || isAiActionLoading || isAiRateLimited) {
-            setSelection(null); return;
-        }
         const textarea = textareaRef.current;
         if (!textarea) return;
         const { selectionStart, selectionEnd, value } = textarea;
-        
+
+        // Check if the current cursor position is still valid for a slash command.
+        // Close the menu if the user makes a selection or moves the cursor away from the trigger.
+        const textBeforeCursor = value.substring(0, selectionStart);
+        const slashMatch = textBeforeCursor.match(/(?:\s|^)\/([\w-]*)$/);
+
+        if (!slashMatch || selectionStart !== selectionEnd) {
+            if (slashCommand) setSlashCommand(null);
+        }
+
+        if (isEffectivelyReadOnly || isAiActionLoading || isAiRateLimited) {
+            setSelection(null);
+            return;
+        }
+
         const selectedText = value.substring(selectionStart, selectionEnd);
         if (selectedText.trim().length > 0) {
-            setActiveSpellingError(null);
-            const rect = getCursorPositionRect(textarea, selectionEnd);
-            setSelection({ start: selectionStart, end: selectionEnd, text: selectedText, rect });
+            // If a slash command is active, don't show the selection menu.
+            if (!slashMatch || selectionStart !== selectionEnd) {
+                setActiveSpellingError(null);
+                const rect = getCursorPositionRect(textarea, selectionEnd);
+                setSelection({ start: selectionStart, end: selectionEnd, text: selectedText, rect });
+            }
         } else {
-            setSelection(null);
+            // No text selected, so clear the selection state
+            if (selection) setSelection(null);
         }
 
         if (selectionStart === selectionEnd) {
@@ -339,23 +512,63 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onUpdate, onDelete, onTog
                 const rect = getCursorPositionRect(textarea, selectionStart);
                 setActiveSpellingError({ error: clickedError, rect });
             } else {
-                setActiveSpellingError(null);
+                if (activeSpellingError) setActiveSpellingError(null);
             }
         }
+    };
+    
+    const handleSelectCommand = (commandId: string) => {
+        if (!slashCommand) return;
+        
+        const { range } = slashCommand;
+        const currentContent = editorState.content;
+
+        const replaceCommandText = (replacement: string, cursorOffset = replacement.length) => {
+            const newContent = currentContent.substring(0, range.start) + replacement + currentContent.substring(range.end);
+            setEditorState({ ...editorState, content: newContent });
+
+            setTimeout(() => {
+                textareaRef.current?.focus();
+                const newCursorPos = range.start + cursorOffset;
+                textareaRef.current?.setSelectionRange(newCursorPos, newCursorPos);
+            }, 0);
+        };
+
+        switch(commandId) {
+            case 'h1': replaceCommandText('# '); break;
+            case 'h2': replaceCommandText('## '); break;
+            case 'h3': replaceCommandText('### '); break;
+            case 'list': replaceCommandText('- '); break;
+            case 'todo': replaceCommandText('- [ ] '); break;
+            case 'divider': replaceCommandText('---\n'); break;
+            case 'ai-summarize':
+                summarizeAndFindActionForFullNote();
+                replaceCommandText('', 0);
+                break;
+            case 'ai-fix':
+                applyAiActionToFullNote('fix');
+                replaceCommandText('', 0);
+                break;
+            default: break;
+        }
+        
+        setSlashCommand(null);
     };
 
     const handleAiAction = async (action: InlineAction) => {
         if (!selection) return;
         setIsAiActionLoading(true);
         setAiActionError(null);
-        const { start, end, text } = selection;
+        // Use a local copy of selection state to prevent it from being cleared by a re-render
+        const currentSelection = selection;
+        setSelection(null); 
         try {
-            const newText = await performInlineEdit(text, action);
+            const newText = await performInlineEdit(currentSelection.text, action);
             const currentContent = editorState.content;
-            const updatedContent = currentContent.substring(0, start) + newText + currentContent.substring(end);
+            const updatedContent = currentContent.substring(0, currentSelection.start) + newText + currentContent.substring(currentSelection.end);
             setEditorState({ ...editorState, content: updatedContent });
             if (textareaRef.current) {
-                const newCursorPos = start + newText.length;
+                const newCursorPos = currentSelection.start + newText.length;
                 textareaRef.current.focus();
                 setTimeout(() => textareaRef.current?.setSelectionRange(newCursorPos, newCursorPos), 0);
             }
@@ -363,61 +576,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onUpdate, onDelete, onTog
             setAiActionError(error instanceof Error ? error.message : 'An unknown error occurred.');
         } finally {
             setIsAiActionLoading(false);
-            setSelection(null);
         }
-    };
-    
-    const applyAiActionToFullNote = async (action: InlineAction) => {
-        setIsFullAiActionLoading(`Applying: ${action}...`);
-        setAiActionError(null);
-        try {
-            const newContent = await performInlineEdit(editorState.content, action);
-            setEditorState({ ...editorState, content: newContent });
-        } catch (error) {
-             setAiActionError(error instanceof Error ? error.message : 'An unknown error occurred.');
-        } finally {
-            setIsFullAiActionLoading(null);
-        }
-    };
-    
-    const summarizeAndFindActionForFullNote = async () => {
-        setIsFullAiActionLoading('Summarizing...');
-        setAiActionError(null);
-        try {
-            const { summary, actionItems } = await summarizeAndExtractActions(editorState.content);
-            let formattedSummary = '';
-            if (summary) formattedSummary += `### ✨ AI Summary\n\n${summary}\n\n`;
-            if (actionItems && actionItems.length > 0) formattedSummary += `### ✅ Action Items\n\n${actionItems.map(item => `- [ ] ${item}`).join('\n')}\n\n`;
-            if (formattedSummary) {
-                const newContent = `---\n\n${formattedSummary}---\n\n${editorState.content}`;
-                setEditorState({ ...editorState, content: newContent });
-            }
-        } catch (error) {
-             setAiActionError(error instanceof Error ? error.message : 'An unknown error occurred.');
-        } finally {
-            setIsFullAiActionLoading(null);
-        }
-    };
-    
-    const suggestTagsForFullNote = () => {
-        setIsSuggestingTags(true);
-        setTagSuggestionError(null);
-        setSuggestedTags([]);
-        suggestTags(editorState.title, editorState.content).then(tags => {
-            lastAnalyzedContentForTagsRef.current = editorState.content;
-            const newSuggestions = tags.filter(tag => !editorState.tags.includes(tag));
-            setSuggestedTags(newSuggestions);
-        }).catch(err => setTagSuggestionError(err.message)).finally(() => setIsSuggestingTags(false));
-    };
-
-    const suggestTitleForFullNote = () => {
-        setIsSuggestingTitle(true);
-        setTitleSuggestionError(null);
-        setSuggestedTitle(null);
-        suggestTitle(editorState.content).then(title => {
-            lastAnalyzedContentForTitleRef.current = editorState.content;
-            if (title) setSuggestedTitle(title);
-        }).catch(err => setTitleSuggestionError(err.message)).finally(() => setIsSuggestingTitle(false));
     };
     
     const handleApplySuggestion = (suggestion: string) => {
@@ -495,7 +654,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onUpdate, onDelete, onTog
                                     onScroll={handleScroll}
                                     value={displayedContent}
                                     onChange={handleChange}
-                                    placeholder="Start writing, drop an image, or type [[ to link notes..."
+                                    placeholder="Start writing, drop an image, or type / for commands..."
                                     className={`${sharedEditorClasses} relative z-10 caret-light-text dark:caret-dark-text bg-transparent block overflow-y-hidden`}
                                     readOnly={isVersionPreviewing}
                                     spellCheck={false}
@@ -517,6 +676,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onUpdate, onDelete, onTog
             <StatusBar wordCount={wordCount} charCount={charCount} />
 
             {noteLinker && <NoteLinker notes={notes} query={noteLinker.query} onSelect={handleInsertLink} onClose={() => setNoteLinker(null)} position={noteLinker.position} />}
+            {slashCommand && <SlashCommandMenu query={slashCommand.query} position={slashCommand.position} onSelect={handleSelectCommand} onClose={() => setSlashCommand(null)} textareaRef={textareaRef} />}
             <InlineAiMenu selection={selection} onAction={handleAiAction} isLoading={isAiActionLoading} onClose={() => setSelection(null)} />
             <SpellcheckMenu activeError={activeSpellingError} suggestions={spellingSuggestions} onSelect={handleApplySuggestion} isLoading={isLoadingSuggestions} error={suggestionError} onClose={() => setActiveSpellingError(null)} />
             {isHistoryOpen && <VersionHistorySidebar history={note.history || []} onClose={handleCloseHistory} onPreview={setPreviewVersion} onRestore={handleRestore} activeVersionTimestamp={previewVersion?.savedAt} />}

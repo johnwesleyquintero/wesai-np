@@ -107,6 +107,23 @@ export const GripVerticalIcon: React.FC<IconProps> = (props) => (
     </svg>
 );
 
+export const Heading1Icon: React.FC<IconProps> = (props) => (
+    <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5" {...props}>
+        <path d="M12.25 19H14.25V7H16V5H8V7H9.75V11.25H4V13.25H9.75V19H12.25Z"></path>
+    </svg>
+);
+
+export const Heading2Icon: React.FC<IconProps> = (props) => (
+    <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5" {...props}>
+        <path d="M14 17H12V19H16V15C16 13.9 15.1 13 14 13H10V11H14V9H10V7H14V5H8V11C8 12.1 8.9 13 10 13H12V15H8V17H10V19H6V15H4V7H10C12.21 7 14 8.79 14 11C14 12.63 13.04 14.04 11.5 14.68V14.72C12.96 15.14 14 16.43 14 18V19H18V15H20V19H14V17Z"></path>
+    </svg>
+);
+
+export const Heading3Icon: React.FC<IconProps> = (props) => (
+    <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5" {...props}>
+        <path d="M12 17H20V19H12V17M18.5 7A2.5 2.5 0 0 1 21 9.5A2.5 2.5 0 0 1 18.5 12H16V13H14V11H16C17.11 11 18 10.11 18 9C18 7.9 17.11 7 16 7H14V5H18.5M10 5H4V7H8V19H10V5Z"></path>
+    </svg>
+);
 
 export const HistoryIcon: React.FC<IconProps> = (props) => (
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5" {...props}>
@@ -126,9 +143,21 @@ export const LinkIcon: React.FC<IconProps> = (props) => (
     </svg>
 );
 
+export const ListBulletIcon: React.FC<IconProps> = (props) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5" {...props}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zM3.75 12h.007v.008H3.75V12zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zM3.75 17.25h.007v.008H3.75V17.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+    </svg>
+);
+
 export const MagnifyingGlassIcon: React.FC<IconProps> = (props) => (
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5" {...props}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+    </svg>
+);
+
+export const MinusIcon: React.FC<IconProps> = (props) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5" {...props}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M18 12H6" />
     </svg>
 );
 

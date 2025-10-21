@@ -1,4 +1,4 @@
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenAI, Type, GenerateContentResponse, Content } from "@google/genai";
 import { Note, SpellingError } from "../types";
 
 export type InlineAction = 'fix' | 'shorten' | 'expand' | 'simplify' | 'makeProfessional' | 'makeCasual';
@@ -323,78 +323,41 @@ Note Content:
     }
 };
 
-
-export const askAboutNotes = async (query: string, notes: Note[]): Promise<{ answer: string; sourceNoteIds: string[] }> => {
-    if (!query) {
-        return { answer: "Please ask a question.", sourceNoteIds: [] };
-    }
-    if (notes.length === 0) {
-        return { answer: "You don't have any notes for me to search through yet.", sourceNoteIds: [] };
-    }
-
+export const getStreamingChatResponse = async (
+    query: string,
+    contextNotes: Note[]
+): Promise<AsyncGenerator<GenerateContentResponse>> => {
     try {
         const ai = getAi();
 
-        const simplifiedNotes = notes.map(({ id, title, content, tags }) => ({
-            id,
+        const simplifiedNotes = contextNotes.map(({ title, content, tags }) => ({
             title,
             content: content.substring(0, 2000), // Truncate content
             tags,
         }));
-
-        const schema = {
-            type: Type.OBJECT,
-            properties: {
-                answer: {
-                    type: Type.STRING,
-                    description: 'A comprehensive, synthesized answer to the user\'s query based *only* on the provided notes. The answer should be in well-formatted Markdown.',
-                },
-                sourceNoteIds: {
-                    type: Type.ARRAY,
-                    items: {
-                        type: Type.STRING,
-                    },
-                    description: 'An array of note IDs that were used as sources to construct the answer. Only include notes that were directly referenced.',
-                }
-            },
-            required: ['answer', 'sourceNoteIds']
-        };
-
-        const prompt = `You are an AI assistant for a note-taking app. Your task is to answer the user's question based *exclusively* on the content of the notes provided below.
-
-User's Question: "${query}"
-
-Instructions:
-1.  Read all the provided notes carefully.
-2.  Synthesize a single, coherent answer to the user's question.
-3.  If the notes don't contain relevant information, say so. Do not invent information.
-4.  Identify the specific notes you used to formulate your answer.
-5.  Return a JSON object containing your markdown-formatted answer and an array of the source note IDs.
-
-Here are the notes:
-${JSON.stringify(simplifiedNotes)}`;
-
-        const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
-            contents: prompt,
-            config: {
-                responseMimeType: "application/json",
-                responseSchema: schema,
-            }
-        });
         
-        const responseText = response.text.trim();
-        const result = safeJsonParse<{ answer: string; sourceNoteIds: string[] } | null>(responseText, null);
+        const history: Content[] = [{
+            role: 'user',
+            parts: [{
+                text: `You are an AI assistant for a note-taking app. Your task is to answer the user's question based *exclusively* on the content of the notes provided in this context. If the notes don't contain relevant information, say so. Do not invent information. Format your answer in clear Markdown.
+
+Here are the notes to use as context:
+${JSON.stringify(simplifiedNotes)}`
+            }]
+        }, {
+            role: 'model',
+            parts: [{ text: "Understood. I will answer the user's next question based only on the provided notes." }]
+        }];
         
-        if (!result) {
-            return { answer: "Sorry, I received an invalid response from the AI. This can happen due to content safety filters. Please try rephrasing your question.", sourceNoteIds: [] };
-        }
+        const chat = ai.chats.create({ model: 'gemini-2.5-flash', history });
+
+        const result = await chat.sendMessageStream({ message: query });
         return result;
-
     } catch (error) {
         throw handleGeminiError(error, "AI chat");
     }
 };
+
 
 export const findMisspelledWords = async (text: string): Promise<SpellingError[]> => {
     if (!text || text.trim().length < 2) {

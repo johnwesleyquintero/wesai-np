@@ -2,22 +2,29 @@ import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import Sidebar from './components/Sidebar';
 import NoteEditor from './components/NoteEditor';
 import { useStore } from './hooks/useStore';
-import { Note, FilterType, NoteVersion, Template, SearchMode, ChatMessage, EditorActions, Collection, SmartCollection } from './types';
+// FIX: Added ContextMenuItem to this import from types.ts
+import { Note, FilterType, NoteVersion, Template, SearchMode, ChatMessage, EditorActions, Collection, SmartCollection, ContextMenuItem } from './types';
 import SettingsModal from './components/SettingsModal';
 import ConfirmationModal from './components/ConfirmationModal';
 import { useTemplates } from './hooks/useTemplates';
 import { useMobileView } from './hooks/useMobileView';
-import { Bars3Icon } from './components/Icons';
+import { Bars3Icon, PencilSquareIcon } from './components/Icons';
 import { useDebounce } from './hooks/useDebounce';
-import { askAboutNotes, semanticSearchNotes } from './services/geminiService';
+import { getStreamingChatResponse, semanticSearchNotes } from './services/geminiService';
 import ChatView from './components/ChatView';
 import { AppContext } from './context/AppContext';
 import CommandPalette from './components/CommandPalette';
-import ContextMenu, { ContextMenuItem } from './components/ContextMenu';
+// FIX: Removed ContextMenuItem from this import as it's no longer exported here.
+import ContextMenu from './components/ContextMenu';
 import SmartFolderModal from './components/SmartFolderModal';
 import { ToastProvider, useToast } from './context/ToastContext';
+import SidebarResizer from './components/SidebarResizer';
 
-const WelcomeScreen: React.FC<{ onToggleSidebar?: () => void; isMobileView?: boolean }> = ({ onToggleSidebar, isMobileView }) => (
+const WELCOME_SCREEN_SIDEBAR_WIDTH_KEY = 'wesai-sidebar-width';
+const MIN_SIDEBAR_WIDTH = 280;
+const MAX_SIDEBAR_WIDTH = 500;
+
+const WelcomeScreen: React.FC<{ onToggleSidebar?: () => void; isMobileView?: boolean; onAddNote: () => void; }> = ({ onToggleSidebar, isMobileView, onAddNote }) => (
     <div className="flex flex-col h-full">
         {isMobileView && (
             <header className="flex items-center p-4 border-b border-light-border dark:border-dark-border flex-shrink-0">
@@ -31,7 +38,11 @@ const WelcomeScreen: React.FC<{ onToggleSidebar?: () => void; isMobileView?: boo
                 <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002 2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
             </svg>
             <h2 className="text-2xl font-bold">WesAI Notepad</h2>
-            <p>Select a note to start editing, or create a new one.</p>
+            <p className="mb-6">Select a note to start editing, or create a new one.</p>
+            <button onClick={onAddNote} className="flex items-center justify-center bg-light-primary text-white dark:bg-dark-primary dark:text-zinc-900 rounded-md py-2 px-6 text-base font-semibold hover:bg-light-primary-hover dark:hover:bg-dark-primary-hover">
+                <PencilSquareIcon className="w-5 h-5 mr-2" />
+                Create New Note
+            </button>
         </div>
     </div>
 );
@@ -69,7 +80,7 @@ function AppContent() {
 
     const [view, setView] = useState<'NOTES' | 'CHAT'>('NOTES');
     const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
-    const [isAiReplying, setIsAiReplying] = useState(false);
+    const [chatStatus, setChatStatus] = useState<'idle' | 'searching' | 'replying'>('idle');
     const [chatError, setChatError] = useState<string | null>(null);
     
     const [isAiRateLimited, setIsAiRateLimited] = useState(false);
@@ -79,6 +90,12 @@ function AppContent() {
     const [isSidebarOpen, setIsSidebarOpen] = useState(!isMobileView);
     const debouncedSearchTerm = useDebounce(searchTerm, 500);
 
+    const [sidebarWidth, setSidebarWidth] = useState<number>(() => {
+        const savedWidth = localStorage.getItem(WELCOME_SCREEN_SIDEBAR_WIDTH_KEY);
+        return savedWidth ? parseInt(savedWidth, 10) : 320;
+    });
+    const isResizing = useRef(false);
+
     const [editorActions, setEditorActions] = useState<EditorActions | null>(null);
     const registerEditorActions = (actions: EditorActions) => setEditorActions(actions);
     const unregisterEditorActions = () => setEditorActions(null);
@@ -86,6 +103,10 @@ function AppContent() {
     useEffect(() => {
         setIsSidebarOpen(!isMobileView);
     }, [isMobileView]);
+    
+     useEffect(() => {
+        localStorage.setItem(WELCOME_SCREEN_SIDEBAR_WIDTH_KEY, String(sidebarWidth));
+    }, [sidebarWidth]);
 
     useEffect(() => {
         if (theme === 'dark') {
@@ -121,14 +142,14 @@ function AppContent() {
         setTheme(prevTheme => (prevTheme === 'light' ? 'dark' : 'light'));
     };
 
-    const handleAddNote = (parentId: string | null = null) => {
+    const handleAddNote = useCallback((parentId: string | null = null) => {
         const newNoteId = addNote(parentId);
         setActiveNoteId(newNoteId);
         setView('NOTES');
          if (isMobileView) {
             setIsSidebarOpen(false);
         }
-    };
+    }, [addNote, isMobileView]);
 
     const handleCopyNote = useCallback((noteId: string) => {
         const newId = copyNote(noteId);
@@ -138,10 +159,10 @@ function AppContent() {
         }
     }, [copyNote, getNoteById, showToast]);
 
-    const handleAddCollection = (name: string, parentId: string | null = null) => {
+    const handleAddCollection = useCallback((name: string, parentId: string | null = null) => {
         const newCollectionId = addCollection(name, parentId);
         setRenamingItemId(newCollectionId);
-    };
+    }, [addCollection]);
 
     const handleSelectNote = (id: string) => {
         setActiveNoteId(id);
@@ -318,20 +339,37 @@ function AppContent() {
         setChatError(null);
         const newUserMessage: ChatMessage = { role: 'user', content: query };
         setChatMessages(prev => [...prev, newUserMessage]);
-        setIsAiReplying(true);
+        setChatStatus('searching');
 
         try {
-            const { answer, sourceNoteIds } = await askAboutNotes(query, notes);
+            // Step 1: Find relevant notes for context
+            const sourceNoteIds = await semanticSearchNotes(query, notes);
             const sourceNotes = sourceNoteIds.map(id => getNoteById(id)).filter((n): n is Note => !!n);
-            const newAiMessage: ChatMessage = { role: 'ai', content: answer, sources: sourceNotes };
+            
+            setChatStatus('replying');
+
+            // Step 2: Get streaming response using context
+            const stream = await getStreamingChatResponse(query, sourceNotes);
+
+            // Add an empty AI message to the chat that we will populate
+            const newAiMessage: ChatMessage = { role: 'ai', content: '', sources: sourceNotes };
             setChatMessages(prev => [...prev, newAiMessage]);
+
+            let fullResponse = '';
+            for await (const chunk of stream) {
+                fullResponse += chunk.text;
+                // Update the last message (the AI's) with the new chunk
+                setChatMessages(prev => prev.map((msg, index) => 
+                    index === prev.length - 1 ? { ...msg, content: fullResponse } : msg
+                ));
+            }
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
             setChatError(errorMessage);
             const errorAiMessage: ChatMessage = { role: 'ai', content: `Sorry, I ran into an error: ${errorMessage}` };
             setChatMessages(prev => [...prev, errorAiMessage]);
         } finally {
-            setIsAiReplying(false);
+            setChatStatus('idle');
         }
     };
 
@@ -349,7 +387,7 @@ function AppContent() {
                 <ChatView
                     messages={chatMessages}
                     onSendMessage={handleSendChatMessage}
-                    isReplying={isAiReplying}
+                    chatStatus={chatStatus}
                     onSelectNote={handleSelectNoteFromChat}
                     onToggleSidebar={() => setIsSidebarOpen(prev => !prev)}
                     isMobileView={isMobileView}
@@ -375,11 +413,37 @@ function AppContent() {
             );
         }
 
-        return <WelcomeScreen isMobileView={isMobileView} onToggleSidebar={() => setIsSidebarOpen(true)} />;
+        return <WelcomeScreen isMobileView={isMobileView} onToggleSidebar={() => setIsSidebarOpen(true)} onAddNote={() => handleAddNote()} />;
     };
 
-    const appContextValue = {
+    const handleResizeStart = useCallback((e: React.MouseEvent) => {
+        isResizing.current = true;
+        
+        const handleMouseMove = (e: MouseEvent) => {
+            if (isResizing.current) {
+                let newWidth = e.clientX;
+                if (newWidth < MIN_SIDEBAR_WIDTH) newWidth = MIN_SIDEBAR_WIDTH;
+                if (newWidth > MAX_SIDEBAR_WIDTH) newWidth = MAX_SIDEBAR_WIDTH;
+                setSidebarWidth(newWidth);
+            }
+        };
+
+        const handleMouseUp = () => {
+            isResizing.current = false;
+            window.removeEventListener('mousemove', handleMouseMove);
+            window.removeEventListener('mouseup', handleMouseUp);
+             document.body.style.cursor = 'default';
+        };
+        
+        document.body.style.cursor = 'col-resize';
+        window.addEventListener('mousemove', handleMouseMove);
+        window.addEventListener('mouseup', handleMouseUp);
+    }, []);
+
+    const appContextValue = useMemo(() => ({
         notes,
+        collections,
+        smartCollections,
         activeNote,
         templates,
         theme,
@@ -388,10 +452,19 @@ function AppContent() {
         isSidebarOpen,
         isAiRateLimited,
         onAddNote: () => handleAddNote(),
+        onAddCollection: handleAddCollection,
         onCopyNote: handleCopyNote,
         onSelectNote: handleSelectNote,
         onDeleteNote: handleDeleteNoteRequest,
+        onDeleteCollection: handleDeleteCollectionRequest,
+        onDeleteSmartCollection: handleDeleteSmartCollectionRequest,
+        onOpenSmartFolderModal: openSmartFolderModal,
         onToggleFavorite: toggleFavorite,
+        onUpdateCollection: updateCollection,
+        onRenameNote: renameNoteTitle,
+        onMoveItem: moveItem,
+        renamingItemId,
+        setRenamingItemId,
         toggleTheme,
         onSetView: setView,
         setIsSidebarOpen,
@@ -400,25 +473,20 @@ function AppContent() {
         editorActions,
         registerEditorActions,
         unregisterEditorActions,
-    };
+        onOpenContextMenu: handleOpenContextMenu,
+    }), [
+        notes, collections, smartCollections, activeNote, templates, theme, view, isMobileView, isSidebarOpen, isAiRateLimited,
+        handleAddNote, handleAddCollection, handleCopyNote, handleSelectNote, handleDeleteNoteRequest, handleDeleteCollectionRequest,
+        handleDeleteSmartCollectionRequest, openSmartFolderModal, toggleFavorite, updateCollection, renameNoteTitle, moveItem,
+        renamingItemId, setRenamingItemId, toggleTheme, setView, setIsSidebarOpen, getNoteById, editorActions, registerEditorActions, unregisterEditorActions, handleOpenContextMenu
+    ]);
 
     return (
         <AppContext.Provider value={appContextValue}>
             <div className="flex h-screen w-screen font-sans text-light-text dark:text-dark-text bg-light-background dark:bg-dark-background overflow-hidden">
                 <Sidebar
-                    notes={notes}
-                    collections={collections}
-                    smartCollections={smartCollections}
                     filteredNotes={filteredNotes}
                     activeNoteId={activeNoteId}
-                    onSelectNote={handleSelectNote}
-                    onAddNote={handleAddNote}
-                    onAddCollection={handleAddCollection}
-                    onDeleteCollection={handleDeleteCollectionRequest}
-                    onUpdateCollection={updateCollection}
-                    onRenameNote={renameNoteTitle}
-                    onMoveItem={moveItem}
-                    onOpenContextMenu={handleOpenContextMenu}
                     filter={filter}
                     setFilter={setFilter}
                     searchTerm={searchTerm}
@@ -427,21 +495,10 @@ function AppContent() {
                     setSearchMode={setSearchMode}
                     isAiSearching={isAiSearching}
                     aiSearchError={aiSearchError}
-                    onSettingsClick={() => setIsSettingsOpen(true)}
-                    theme={theme}
-                    toggleTheme={toggleTheme}
-                    isMobileView={isMobileView}
-                    isOpen={isSidebarOpen}
-                    onClose={() => setIsSidebarOpen(false)}
-                    view={view}
-                    onSetView={setView}
-                    renamingItemId={renamingItemId}
-                    setRenamingItemId={setRenamingItemId}
-                    isAiRateLimited={isAiRateLimited}
-                    onOpenSmartFolderModal={openSmartFolderModal}
-                    onDeleteSmartCollection={handleDeleteSmartCollectionRequest}
+                    width={sidebarWidth}
                 />
-                <main className="flex-1 flex flex-col h-full">
+                {!isMobileView && <SidebarResizer onResizeStart={handleResizeStart} />}
+                <main className="flex-1 flex flex-col h-full min-w-0">
                     {renderMainView()}
                 </main>
                 

@@ -35,9 +35,9 @@ interface StoreContextType extends ReturnType<typeof useStoreHook> {
     handleDeleteSmartCollectionConfirm: () => void;
     chatMessages: ChatMessage[];
     chatStatus: 'idle' | 'searching' | 'replying';
-    onSendMessage: (query: string) => Promise<void>;
-    onGenerateServiceResponse: (customerQuery: string) => Promise<void>;
-    onSendGeneralMessage: (query: string) => Promise<void>;
+    onSendMessage: (query: string, image?: string) => Promise<void>;
+    onGenerateServiceResponse: (customerQuery: string, image?: string) => Promise<void>;
+    onSendGeneralMessage: (query: string, image?: string) => Promise<void>;
     clearChat: () => void;
     onAddNote: (parentId?: string | null) => string;
     onAddNoteFromFile: (title: string, content: string, parentId: string | null) => string;
@@ -318,9 +318,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         setActiveSmartCollectionId(null);
         setSearchTerm('');
     };
-    const onSendMessage = async (query: string) => {
+    const onSendMessage = async (query: string, image?: string) => {
         setChatError(null);
-        const newUserMessage: ChatMessage = { role: 'user', content: query };
+        const newUserMessage: ChatMessage = { role: 'user', content: query, image };
         setChatMessages(prev => [...prev, newUserMessage]);
         setChatStatus('searching');
 
@@ -330,7 +330,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             
             setChatStatus('replying');
 
-            const stream = await getStreamingChatResponse(query, sourceNotes);
+            const stream = await getStreamingChatResponse(query, sourceNotes, image);
             const newAiMessage: ChatMessage = { role: 'ai', content: '', sources: sourceNotes };
             setChatMessages(prev => [...prev, newAiMessage]);
 
@@ -351,9 +351,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         }
     };
 
-    const onGenerateServiceResponse = async (customerQuery: string) => {
+    const onGenerateServiceResponse = async (customerQuery: string, image?: string) => {
         setChatError(null);
-        const newUserMessage: ChatMessage = { role: 'user', content: customerQuery };
+        const newUserMessage: ChatMessage = { role: 'user', content: customerQuery, image };
         setChatMessages(prev => [...prev, newUserMessage]);
         setChatStatus('searching');
 
@@ -363,7 +363,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             
             setChatStatus('replying');
             
-            const responseText = await generateCustomerResponse(customerQuery, sourceNotes);
+            const responseText = await generateCustomerResponse(customerQuery, sourceNotes, image);
             const newAiMessage: ChatMessage = { role: 'ai', content: responseText, sources: sourceNotes };
             setChatMessages(prev => [...prev, newAiMessage]);
 
@@ -377,14 +377,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         }
     };
     
-    const onSendGeneralMessage = async (query: string) => {
+    const onSendGeneralMessage = async (query: string, image?: string) => {
         setChatError(null);
-        const newUserMessage: ChatMessage = { role: 'user', content: query };
+        const newUserMessage: ChatMessage = { role: 'user', content: query, image };
         setChatMessages(prev => [...prev, newUserMessage]);
         setChatStatus('replying');
 
         try {
-            const stream = await getGeneralChatResponseStream(query);
+            const stream = await getGeneralChatResponseStream(query, image);
             const newAiMessage: ChatMessage = { role: 'ai', content: '' };
             setChatMessages(prev => [...prev, newAiMessage]);
 

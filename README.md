@@ -1,10 +1,10 @@
 # WesAI Notepad
 
-**A local-first, AI-enhanced notepad built for privacy, performance, and productivity.**
+**Your personal knowledge assistant, transformed into a powerful operational tool.**
 
 [**Live Demo**](https://wesai-np.vercel.app/)
 
-WesAI Notepad is a powerful, privacy-focused note-taking application that runs entirely in your browser. It combines a fast, responsive, and offline-capable interface with the advanced capabilities of the Google Gemini API to create an intelligent writing environment. All your data is stored locally on your device.
+WesAI Notepad is a local-first, AI-enhanced application designed for privacy, performance, and productivity. It combines a fast, offline-capable notepad with a multi-mode AI assistant powered by the Google Gemini API. All your data is stored securely in your browser.
 
 ## Key Features
 
@@ -19,8 +19,11 @@ WesAI Notepad is a powerful, privacy-focused note-taking application that runs e
 - **Favorites:** Mark important notes as favorites for quick and easy access.
 
 ### AI-Powered by Google Gemini
+- **Multi-Mode AI Assistant:** The core of the application is a versatile AI assistant with three distinct modes for different tasks:
+    - **Knowledge Assistant:** Engage in a conversation with your notes. Ask complex questions and receive synthesized answers with direct links to the source notes for verification.
+    - **Service Responder:** Transform your notes into an operational playbook. Paste a customer inquiry, and the AI will use your knowledge base to draft a professional, empathetic, and platform-compliant response. It's specifically trained to avoid direct links, protecting your third-party marketplace accounts.
+    - **General Assistant:** Your creative and strategic partner. Use this mode for brainstorming, drafting content, and asking general questions. It maintains a continuous conversational memory, allowing for natural follow-up questions.
 - **Semantic Search:** Go beyond simple keyword matching to find notes based on their conceptual meaning and context.
-- **AI Chat:** Engage in a conversation with your notes. Ask complex questions and receive synthesized answers with links to the source notes.
 - **Inline AI Assistant:** Select any text in the editor to:
     - Fix spelling and grammar.
     - Adjust the tone (e.g., professional, casual, concise).

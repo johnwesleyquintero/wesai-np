@@ -47,12 +47,14 @@ export const useModalAccessibility = (
                 if (e.key === 'Tab' && focusableElements.length > 0) {
                     if (e.shiftKey) { // Shift + Tab
                         if (document.activeElement === firstElement) {
-                            lastElement?.focus();
+                            // FIX: The `lastElement` is inferred as a generic `Element` or `unknown`, which may not have a `focus` method. Cast to `HTMLElement` to ensure `focus` is available.
+                            (lastElement as HTMLElement)?.focus();
                             e.preventDefault();
                         }
                     } else { // Tab
                         if (document.activeElement === lastElement) {
-                            firstElement?.focus();
+                            // FIX: The `firstElement` is inferred as a generic `Element` or `unknown`, which may not have a `focus` method. Cast to `HTMLElement` to ensure `focus` is available.
+                            (firstElement as HTMLElement)?.focus();
                             e.preventDefault();
                         }
                     }

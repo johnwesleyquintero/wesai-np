@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ChatMessage, Note, ChatMode } from '../types';
-import { Bars3Icon, SparklesIcon, DocumentTextIcon, PaperAirplaneIcon, MagnifyingGlassIcon, ClipboardDocumentIcon } from './Icons';
+import { Bars3Icon, SparklesIcon, DocumentTextIcon, PaperAirplaneIcon, MagnifyingGlassIcon, ClipboardDocumentIcon, PaperClipIcon, XMarkIcon } from './Icons';
 import MarkdownPreview from './MarkdownPreview';
 import { useUIContext, useStoreContext } from '../context/AppContext';
 import { useToast } from '../context/ToastContext';
@@ -12,8 +12,10 @@ const ChatView: React.FC = () => {
     const { showToast } = useToast();
 
     const [input, setInput] = useState('');
+    const [imageData, setImageData] = useState<string | null>(null);
     const [mode, setMode] = useState<ChatMode>('ASSISTANT');
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
     const isReplying = chatStatus !== 'idle';
 
     const scrollToBottom = () => {
@@ -24,15 +26,16 @@ const ChatView: React.FC = () => {
 
     const handleSend = (e: React.FormEvent) => {
         e.preventDefault();
-        if (input.trim() && !isReplying) {
+        if ((input.trim() || imageData) && !isReplying) {
             if (mode === 'ASSISTANT') {
-                onSendMessage(input);
+                onSendMessage(input, imageData);
             } else if (mode === 'RESPONDER') {
-                onGenerateServiceResponse(input);
+                onGenerateServiceResponse(input, imageData);
             } else {
-                onSendGeneralMessage(input);
+                onSendGeneralMessage(input, imageData);
             }
             setInput('');
+            setImageData(null);
         }
     };
     
@@ -60,6 +63,36 @@ const ChatView: React.FC = () => {
             setMode(newMode);
         }
     };
+
+    const handleFileSelect = (file: File | null) => {
+        if (!file) return;
+
+        if (!file.type.startsWith('image/')) {
+            showToast({ message: 'Please select an image file.', type: 'error' });
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            setImageData(e.target?.result as string);
+        };
+        reader.readAsDataURL(file);
+    };
+
+    const handleDragOver = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+    };
+
+    const handleDrop = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            handleFileSelect(e.dataTransfer.files[0]);
+            e.dataTransfer.clearData();
+        }
+    };
+
 
     const LoadingIndicator = () => {
         if (chatStatus === 'searching') {
@@ -126,7 +159,7 @@ const ChatView: React.FC = () => {
     };
 
     return (
-        <div className="flex-1 flex flex-col h-full bg-light-background dark:bg-dark-background">
+        <div className="flex-1 flex flex-col h-full bg-light-background dark:bg-dark-background" onDragOver={handleDragOver} onDrop={handleDrop}>
             <header className="p-4 border-b border-light-border dark:border-dark-border flex-shrink-0">
                  <div className="flex items-center">
                     {isMobileView && (
@@ -180,6 +213,9 @@ const ChatView: React.FC = () => {
                         <div key={index} className={`flex items-start gap-4 ${msg.role === 'user' ? 'justify-end' : ''}`}>
                             {msg.role === 'ai' && <div className="w-8 h-8 rounded-full bg-light-primary dark:bg-dark-primary flex items-center justify-center flex-shrink-0 mt-1"><SparklesIcon className="w-5 h-5 text-white" /></div>}
                             <div className={`relative group max-w-xl p-4 rounded-2xl ${msg.role === 'user' ? 'bg-light-primary text-white dark:bg-dark-primary dark:text-zinc-900' : 'bg-light-ui dark:bg-dark-ui'}`}>
+                                {msg.image && (
+                                    <img src={msg.image} alt="User upload" className="mb-2 rounded-lg max-w-xs max-h-64" />
+                                )}
                                 {msg.role === 'ai' ? (
                                     <>
                                         <div className="prose prose-sm sm:prose-base max-w-none text-light-text dark:text-dark-text">
@@ -190,7 +226,7 @@ const ChatView: React.FC = () => {
                                         </button>
                                     </>
                                 ) : (
-                                    <p>{msg.content}</p>
+                                    msg.content && <p>{msg.content}</p>
                                 )}
                                 {msg.sources && msg.sources.length > 0 && (
                                     <div className="mt-4 pt-3 border-t border-light-border dark:border-dark-border/50">
@@ -222,17 +258,41 @@ const ChatView: React.FC = () => {
                             AI features are temporarily unavailable due to high usage.
                         </div>
                     )}
+                    {imageData && (
+                        <div className="relative w-24 h-24 mb-2 p-1 border-2 border-dashed border-light-border dark:border-dark-border rounded-lg">
+                            <img src={imageData} alt="Preview" className="w-full h-full object-cover rounded" />
+                            <button onClick={() => setImageData(null)} className="absolute -top-2 -right-2 bg-light-background dark:bg-dark-background rounded-full p-0.5 border border-light-border dark:border-dark-border">
+                                <XMarkIcon className="w-4 h-4" />
+                            </button>
+                        </div>
+                    )}
                     <form onSubmit={handleSend} className="relative">
+                        <input
+                            type="file"
+                            ref={fileInputRef}
+                            onChange={(e) => handleFileSelect(e.target.files ? e.target.files[0] : null)}
+                            accept="image/*"
+                            className="hidden"
+                        />
+                        <button
+                            type="button"
+                            onClick={() => fileInputRef.current?.click()}
+                            disabled={isReplying || isAiRateLimited}
+                            className="absolute left-3 top-1/2 -translate-y-1/2 p-2 rounded-full hover:bg-light-background dark:hover:bg-dark-background disabled:opacity-50"
+                            aria-label="Attach image"
+                        >
+                            <PaperClipIcon />
+                        </button>
                         <textarea
                             value={input}
                             onChange={e => setInput(e.target.value)}
                             onKeyDown={handleKeyDown}
                             placeholder={placeholders[mode]}
                             rows={1}
-                            className="w-full p-3 pr-12 bg-light-ui dark:bg-dark-ui rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-light-primary dark:focus:ring-dark-primary disabled:opacity-70"
+                            className="w-full p-3 pl-12 pr-12 bg-light-ui dark:bg-dark-ui rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-light-primary dark:focus:ring-dark-primary disabled:opacity-70"
                             disabled={isReplying || isAiRateLimited}
                         />
-                        <button type="submit" disabled={isReplying || !input.trim() || isAiRateLimited} className="absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-full bg-light-primary dark:bg-dark-primary text-white disabled:bg-light-ui-hover dark:disabled:bg-dark-ui-hover disabled:text-light-text/50 dark:disabled:text-dark-text/50 transition-colors">
+                        <button type="submit" disabled={isReplying || (!input.trim() && !imageData) || isAiRateLimited} className="absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-full bg-light-primary dark:bg-dark-primary text-white disabled:bg-light-ui-hover dark:disabled:bg-dark-ui-hover disabled:text-light-text/50 dark:disabled:text-dark-text/50 transition-colors">
                            <PaperAirplaneIcon className="w-5 h-5" />
                         </button>
                     </form>

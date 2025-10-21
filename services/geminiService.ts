@@ -20,6 +20,14 @@ function safeJsonParse<T>(jsonString: string, defaultValue: T): T {
     }
 }
 
+const parseDataUrl = (dataUrl: string): { mimeType: string; data: string } => {
+    const match = dataUrl.match(/^data:(.+);base64,(.+)$/);
+    if (!match) {
+        throw new Error("Invalid data URL format");
+    }
+    return { mimeType: match[1], data: match[2] };
+};
+
 const getApiKey = (): string | undefined => {
     try {
         const storedKey = localStorage.getItem(API_KEY_STORAGE_KEY);
@@ -334,7 +342,8 @@ Note Content:
 
 export const getStreamingChatResponse = async (
     query: string,
-    contextNotes: Note[]
+    contextNotes: Note[],
+    image?: string | null
 ): Promise<AsyncGenerator<GenerateContentResponse>> => {
     try {
         const ai = getAi();
@@ -360,7 +369,13 @@ ${JSON.stringify(simplifiedNotes)}`
         
         const chat = ai.chats.create({ model: 'gemini-2.5-flash', history });
 
-        const result = await chat.sendMessageStream({ message: query });
+        const userParts: (string | { inlineData: { mimeType: string; data: string } })[] = [query];
+        if (image) {
+            const { mimeType, data } = parseDataUrl(image);
+            userParts.push({ inlineData: { mimeType, data } });
+        }
+
+        const result = await chat.sendMessageStream({ message: userParts });
         return result;
     } catch (error) {
         throw handleGeminiError(error, "AI chat");
@@ -369,7 +384,8 @@ ${JSON.stringify(simplifiedNotes)}`
 
 export const generateCustomerResponse = async (
     customerQuery: string,
-    contextNotes: Note[]
+    contextNotes: Note[],
+    image?: string | null
 ): Promise<string> => {
     try {
         const ai = getAi();
@@ -384,18 +400,22 @@ export const generateCustomerResponse = async (
 **Platform Compliance Rule:** If you infer the context is a third-party marketplace (like Amazon, eBay), DO NOT include any direct website links, URLs, or off-platform contact information. Instead, guide the user by name (e.g., 'Please visit our official website for more information'). Adhering to this is critical to protect account health.
 
 Format your response in clear, professional Markdown.`;
-
+        
         const prompt = `Here is the relevant knowledge base information:
 ${JSON.stringify(simplifiedNotes)}
 
-Here is the customer's message:
-"${customerQuery}"
+Here is the customer's message (and an attached image, if provided). Please draft a response.
+Customer message: "${customerQuery}"`;
 
-Please draft a response.`;
+        const userParts: any[] = [{ text: prompt }];
+        if (image) {
+            const { mimeType, data } = parseDataUrl(image);
+            userParts.push({ inlineData: { mimeType, data } });
+        }
         
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
-            contents: [{ role: 'user', parts: [{ text: prompt }] }],
+            contents: [{ role: 'user', parts: userParts }],
             config: {
                 systemInstruction,
             },
@@ -504,7 +524,8 @@ export const resetGeneralChat = () => {
 };
 
 export const getGeneralChatResponseStream = async (
-    query: string
+    query: string,
+    image?: string | null
 ): Promise<AsyncGenerator<GenerateContentResponse>> => {
     try {
         const ai = getAi();
@@ -517,7 +538,14 @@ export const getGeneralChatResponseStream = async (
                 }
             });
         }
-        const result = await generalChatSession.sendMessageStream({ message: query });
+
+        const userParts: (string | { inlineData: { mimeType: string; data: string } })[] = [query];
+        if (image) {
+            const { mimeType, data } = parseDataUrl(image);
+            userParts.unshift({ inlineData: { mimeType, data } });
+        }
+
+        const result = await generalChatSession.sendMessageStream({ message: userParts });
         return result;
     } catch (error) {
         const errorString = (error instanceof Error) ? error.message : JSON.stringify(error);

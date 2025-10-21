@@ -43,6 +43,7 @@ export interface ChatMessage {
     role: 'user' | 'ai';
     content: string;
     sources?: Note[];
+    image?: string;
 }
 
 export type FilterType = 'RECENT' | 'FAVORITES' | 'ALL';

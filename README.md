@@ -1,7 +1,8 @@
-
 # WesAI Notepad
 
 **A local-first, AI-enhanced notepad for the modern web.**
+
+[**Live Demo**](https://wesai-np.vercel.app/)
 
 WesAI Notepad is a powerful, privacy-focused note-taking application that runs entirely in your browser. It combines a fast, responsive, and offline-capable interface with the advanced capabilities of the Google Gemini API to create a truly intelligent writing environment. All your data stays with you, on your device.
 
@@ -49,7 +50,7 @@ This project is actively developed. Here are some of the features we envision fo
 
 ## Getting Started
 
-1.  **Open the App:** Simply load the application in your web browser.
+1.  **Open the App:** Visit the [**Live Demo**](https://wesai-np.vercel.app/).
 2.  **Get a Gemini API Key:** To use the AI features, you need a free API key from Google.
     - Visit [Google AI Studio](https://ai.google.dev/).
     - Click "Get API key" and follow the instructions to create a new key.
@@ -64,4 +65,3 @@ This project is actively developed. Here are some of the features we envision fo
 - **AI Integration:** Google Gemini API (`@google/genai`)
 - **State Management:** React Hooks & Context API
 - **Storage:** Browser `localStorage`
-

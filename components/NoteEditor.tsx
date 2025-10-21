@@ -419,17 +419,18 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onUpdate, onDelete, onTog
     const handleAddTag = (tagToAdd: string) => { if (!editorState.tags.includes(tagToAdd)) { setEditorState({ ...editorState, tags: [...editorState.tags, tagToAdd] }); } setSuggestedTags(prev => prev.filter(t => t !== tagToAdd)); };
     const handleApplyTitleSuggestion = (title: string) => { setEditorState({ ...editorState, title }); setSuggestedTitle(null); setTitleSuggestionError(null); };
 
-    const editorPaddingClass = isMobileView ? 'px-4 sm:px-12' : 'px-12';
+    const editorPaddingClass = 'px-4 sm:px-8';
     const sharedEditorClasses = 'w-full h-full text-base sm:text-lg resize-none focus:outline-none leading-relaxed whitespace-pre-wrap break-words font-sans';
 
     return (
-        <div className="flex-1 flex h-full relative" onDragOver={(e) => { e.preventDefault(); if (!isEffectivelyReadOnly) setIsDragOver(true); }} onDragLeave={() => setIsDragOver(false)} onDrop={handleDrop}>
-            <div className="flex-1 flex flex-col h-full">
-                <Toolbar note={note} onDelete={onDelete} onToggleFavorite={onToggleFavorite} saveStatus={saveStatus} contentToEnhance={editorState.content} onContentUpdate={(content) => setEditorState({...editorState, content})} onToggleHistory={() => setIsHistoryOpen(!isHistoryOpen)} isHistoryOpen={isHistoryOpen} templates={templates} onApplyTemplate={handleApplyTemplate} isMobileView={isMobileView} onToggleSidebar={onToggleSidebar} onUndo={undo} onRedo={redo} canUndo={canUndo} canRedo={canRedo} viewMode={viewMode} onToggleViewMode={() => setViewMode(prev => prev === 'edit' ? 'preview' : 'edit')} isCheckingSpelling={isCheckingSpelling} fullAiActionStatus={isFullAiActionLoading} isAiRateLimited={isAiRateLimited} />
-                {isAiRateLimited && <div className="bg-yellow-100 dark:bg-yellow-900/30 border-b border-yellow-300 dark:border-yellow-700/50 py-2 px-4 text-center text-sm text-yellow-800 dark:text-yellow-200 flex-shrink-0">AI features are temporarily paused due to high usage. They will be available again shortly.</div>}
-                {isVersionPreviewing && previewVersion && <div className={`bg-yellow-100 dark:bg-yellow-900/30 border-b border-t border-yellow-300 dark:border-yellow-700/50 py-2 text-center text-sm text-yellow-800 dark:text-yellow-200 flex items-center justify-center ${editorPaddingClass}`}>...</div>}
-                
-                <div ref={editorPaneRef} className={`flex-1 overflow-y-auto py-8 relative ${editorPaddingClass}`}>
+        <div className="flex-1 flex flex-col h-full relative bg-light-background dark:bg-dark-background" onDragOver={(e) => { e.preventDefault(); if (!isEffectivelyReadOnly) setIsDragOver(true); }} onDragLeave={() => setIsDragOver(false)} onDrop={handleDrop}>
+             <Toolbar note={note} onDelete={onDelete} onToggleFavorite={onToggleFavorite} saveStatus={saveStatus} contentToEnhance={editorState.content} onContentUpdate={(content) => setEditorState({...editorState, content})} onToggleHistory={() => setIsHistoryOpen(!isHistoryOpen)} isHistoryOpen={isHistoryOpen} templates={templates} onApplyTemplate={handleApplyTemplate} isMobileView={isMobileView} onToggleSidebar={onToggleSidebar} onUndo={undo} onRedo={redo} canUndo={canUndo} canRedo={canRedo} viewMode={viewMode} onToggleViewMode={() => setViewMode(prev => prev === 'edit' ? 'preview' : 'edit')} isCheckingSpelling={isCheckingSpelling} fullAiActionStatus={isFullAiActionLoading} isAiRateLimited={isAiRateLimited} />
+             {isAiRateLimited && <div className="bg-yellow-100 dark:bg-yellow-900/30 border-b border-yellow-300 dark:border-yellow-700/50 py-2 px-4 text-center text-sm text-yellow-800 dark:text-yellow-200 flex-shrink-0">AI features are temporarily paused due to high usage. They will be available again shortly.</div>}
+            
+            <div ref={editorPaneRef} className="flex-1 overflow-y-auto">
+                 {isVersionPreviewing && previewVersion && <div className={`bg-yellow-100 dark:bg-yellow-900/30 py-2 text-center text-sm text-yellow-800 dark:text-yellow-200 max-w-3xl mx-auto ${editorPaddingClass}`}>You are previewing a version from {new Date(previewVersion.savedAt).toLocaleString()}.</div>}
+
+                <div className={`max-w-3xl mx-auto py-12 ${editorPaddingClass}`}>
                     {viewMode === 'edit' ? (
                         <>
                             <input
@@ -437,7 +438,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onUpdate, onDelete, onTog
                                 value={displayedTitle}
                                 onChange={(e) => setEditorState({ ...editorState, title: e.target.value })}
                                 placeholder="Note Title"
-                                className={`w-full bg-transparent text-3xl sm:text-4xl font-bold focus:outline-none mb-2 rounded-md ${isVersionPreviewing ? 'cursor-not-allowed bg-light-ui/40 dark:bg-dark-ui/40 p-2' : ''}`}
+                                className={`w-full bg-transparent text-3xl sm:text-4xl font-bold focus:outline-none mb-2 rounded-md ${isVersionPreviewing ? 'cursor-not-allowed opacity-70' : ''}`}
                                 readOnly={isVersionPreviewing}
                             />
                             {!isEffectivelyReadOnly && <TitleSuggestion suggestion={suggestedTitle} onApply={handleApplyTitleSuggestion} isLoading={isSuggestingTitle} error={titleSuggestionError} />}
@@ -459,14 +460,17 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onUpdate, onDelete, onTog
                             </div>
                         </>
                     ) : <MarkdownPreview title={displayedTitle} content={displayedContent} onToggleTask={handleToggleTask} />}
-                    <BacklinksDisplay backlinks={backlinks} />
-                </div>
 
-                <div className={`flex-shrink-0 py-4 border-t border-light-border dark:border-dark-border ${editorPaddingClass} ${isEffectivelyReadOnly ? 'bg-light-ui/40 dark:bg-dark-ui/40' : ''}`}>
-                    <TagInput tags={displayedTags} setTags={(tags) => setEditorState({ ...editorState, tags })} readOnly={isEffectivelyReadOnly} />
-                    {!isEffectivelyReadOnly && <TagSuggestions suggestions={suggestedTags} onAddTag={handleAddTag} isLoading={isSuggestingTags} error={tagSuggestionError} />}
+                    <div className="mt-12 space-y-8">
+                        <BacklinksDisplay backlinks={backlinks} />
+                         <div className={`pt-6 border-t border-light-border dark:border-dark-border ${isEffectivelyReadOnly ? 'opacity-60' : ''}`}>
+                            <TagInput tags={displayedTags} setTags={(tags) => setEditorState({ ...editorState, tags })} readOnly={isEffectivelyReadOnly} />
+                            {!isEffectivelyReadOnly && <TagSuggestions suggestions={suggestedTags} onAddTag={handleAddTag} isLoading={isSuggestingTags} error={tagSuggestionError} />}
+                        </div>
+                    </div>
                 </div>
             </div>
+
             {noteLinker && <NoteLinker notes={notes} query={noteLinker.query} onSelect={handleInsertLink} onClose={() => setNoteLinker(null)} position={noteLinker.position} />}
             <InlineAiMenu selection={selection} onAction={handleAiAction} isLoading={isAiActionLoading} onClose={() => setSelection(null)} />
             <SpellcheckMenu activeError={activeSpellingError} suggestions={spellingSuggestions} onSelect={handleApplySuggestion} isLoading={isLoadingSuggestions} error={suggestionError} onClose={() => setActiveSpellingError(null)} />

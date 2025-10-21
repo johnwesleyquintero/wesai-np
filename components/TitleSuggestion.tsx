@@ -20,7 +20,7 @@ const TitleSuggestion: React.FC<TitleSuggestionProps> = ({ suggestion, onApply, 
     }
 
     return (
-        <div className="h-8 flex items-center text-sm">
+        <div className="min-h-[2rem] py-1 flex items-center text-sm">
             {isLoading && (
                 <div className="text-light-text/70 dark:text-dark-text/70 animate-pulse flex items-center">
                     <SparklesIcon className="w-4 h-4 mr-2 text-light-primary dark:text-dark-primary" />

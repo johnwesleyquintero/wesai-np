@@ -48,7 +48,7 @@ const handleGeminiError = (error: unknown, context: string): Error => {
         }
         if (error.message.includes('429') || error.message.toLowerCase().includes('quota')) {
             window.dispatchEvent(new CustomEvent('ai-rate-limit'));
-            return new Error("AI features are busy. Please wait a moment and try again.");
+            return new Error("You've exceeded your API quota. Please check your plan and billing details at ai.google.dev. Features will resume shortly.");
         }
         if (error.message.includes('fetch failed')) {
             return new Error("Network error. Please check your connection and try again.");

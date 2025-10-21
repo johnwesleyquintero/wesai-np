@@ -131,7 +131,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                             <div>
                                 <h3 className="text-lg font-semibold mb-2">Gemini API Key</h3>
                                 <p className="text-sm text-light-text/60 dark:text-dark-text/60 mb-2">
-                                    Your API key is stored locally in your browser and is required for all AI features. You can get a free key from <a href="https://ai.google.dev/" target="_blank" rel="noopener noreferrer" className="underline text-light-primary dark:text-dark-primary">Google AI Studio</a>.
+                                    Your API key is stored locally and is required for all AI features. You can get a key from <a href="https://ai.google.dev/" target="_blank" rel="noopener noreferrer" className="underline text-light-primary dark:text-dark-primary">Google AI Studio</a>. Free keys have usage limits; for heavy use, consider enabling billing for your key.
                                 </p>
                                 <input
                                     type="password"

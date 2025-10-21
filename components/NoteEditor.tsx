@@ -93,6 +93,25 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onUpdate, onDelete, onTog
     const isVersionPreviewing = !!previewVersion;
     const isEffectivelyReadOnly = isVersionPreviewing || viewMode === 'preview';
 
+    // Auto-resize textarea to fit content
+    useEffect(() => {
+        const textarea = textareaRef.current;
+        if (textarea && viewMode === 'edit') {
+            const resize = () => {
+                textarea.style.height = 'auto'; // Reset height to calculate scrollHeight correctly
+                const scrollHeight = textarea.scrollHeight;
+                textarea.style.height = `${scrollHeight}px`;
+                if (highlighterRef.current) {
+                    highlighterRef.current.style.height = `${scrollHeight}px`;
+                }
+            };
+            resize(); // Initial resize
+            window.addEventListener('resize', resize);
+            return () => window.removeEventListener('resize', resize);
+        }
+    }, [editorState.content, viewMode]);
+
+
     useEffect(() => {
         if (!previewVersion) {
             resetEditorState({ title: note.title, content: note.content, tags: note.tags });
@@ -420,7 +439,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onUpdate, onDelete, onTog
     const handleApplyTitleSuggestion = (title: string) => { setEditorState({ ...editorState, title }); setSuggestedTitle(null); setTitleSuggestionError(null); };
 
     const editorPaddingClass = 'px-4 sm:px-8';
-    const sharedEditorClasses = 'w-full h-full text-base sm:text-lg resize-none focus:outline-none leading-relaxed whitespace-pre-wrap break-words font-sans';
+    const sharedEditorClasses = 'w-full p-0 border-0 text-base sm:text-lg resize-none focus:outline-none leading-relaxed whitespace-pre-wrap break-words font-sans';
 
     return (
         <div className="flex-1 flex flex-col h-full relative bg-light-background dark:bg-dark-background" onDragOver={(e) => { e.preventDefault(); if (!isEffectivelyReadOnly) setIsDragOver(true); }} onDragLeave={() => setIsDragOver(false)} onDrop={handleDrop}>
@@ -443,7 +462,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onUpdate, onDelete, onTog
                             />
                             {!isEffectivelyReadOnly && <TitleSuggestion suggestion={suggestedTitle} onApply={handleApplyTitleSuggestion} isLoading={isSuggestingTitle} error={titleSuggestionError} />}
                             <div className="relative mt-4">
-                                <div ref={highlighterRef} className={`${sharedEditorClasses} markdown-highlighter absolute top-0 left-0 text-transparent pointer-events-none z-0`}>
+                                <div ref={highlighterRef} className={`${sharedEditorClasses} markdown-highlighter absolute top-0 left-0 text-transparent pointer-events-none z-0 overflow-y-hidden`}>
                                    <MarkdownHighlighter content={editorState.content} spellingErrors={spellingErrors} />
                                 </div>
                                 <textarea
@@ -453,7 +472,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onUpdate, onDelete, onTog
                                     value={displayedContent}
                                     onChange={handleChange}
                                     placeholder="Start writing, drop an image, or type [[ to link notes..."
-                                    className={`${sharedEditorClasses} relative z-10 caret-light-text dark:caret-dark-text bg-transparent`}
+                                    className={`${sharedEditorClasses} relative z-10 caret-light-text dark:caret-dark-text bg-transparent block overflow-y-hidden`}
                                     readOnly={isVersionPreviewing}
                                     spellCheck={false}
                                 />

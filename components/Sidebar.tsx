@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useRef } from 'react';
+import React, { useMemo, useState, useRef, useCallback, useEffect } from 'react';
 import { Note, FilterType, SearchMode, SmartCollection, Collection } from '../types';
 import NoteCard from './NoteCard';
 import {
@@ -136,6 +136,75 @@ const Sidebar: React.FC<SidebarProps> = ({
     });
 
     const fileTree = useMemo(() => buildTree(notes, collections), [notes, collections]);
+    const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({});
+    const [focusedNodeId, setFocusedNodeId] = useState<string | null>(null);
+
+    const toggleFolder = (folderId: string) => {
+        setExpandedFolders(prev => ({ ...prev, [folderId]: !(prev[folderId] ?? true) }));
+    };
+
+    const getVisibleNodes = useCallback((nodes: TreeNode[]): string[] => {
+        let ids: string[] = [];
+        for (const node of nodes) {
+            ids.push(node.id);
+            const isCollection = 'name' in node;
+            if (isCollection && (expandedFolders[node.id] ?? true)) {
+                ids = ids.concat(getVisibleNodes(node.children));
+            }
+        }
+        return ids;
+    }, [expandedFolders]);
+
+    const visibleNodeIds = useMemo(() => getVisibleNodes(fileTree), [fileTree, getVisibleNodes]);
+
+    useEffect(() => {
+        // Ensure focusedNodeId is always valid/visible
+        if (focusedNodeId && !visibleNodeIds.includes(focusedNodeId)) {
+            setFocusedNodeId(null);
+        }
+        // Set a default focus when no note is active and no focus is set
+        if (!activeNoteId && !focusedNodeId && visibleNodeIds.length > 0) {
+            setFocusedNodeId(visibleNodeIds[0]);
+        }
+        // If an active note is set, focus it for keyboard context
+        if (activeNoteId && focusedNodeId !== activeNoteId) {
+            setFocusedNodeId(activeNoteId);
+        }
+    }, [visibleNodeIds, activeNoteId, focusedNodeId]);
+
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+            e.preventDefault();
+            const currentIndex = focusedNodeId ? visibleNodeIds.indexOf(focusedNodeId) : -1;
+            const nextIndex = e.key === 'ArrowDown'
+                ? (currentIndex + 1) % visibleNodeIds.length
+                : (currentIndex - 1 + visibleNodeIds.length) % visibleNodeIds.length;
+            setFocusedNodeId(visibleNodeIds[nextIndex]);
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            if (focusedNodeId) {
+                const node = collections.find(c => c.id === focusedNodeId);
+                if (node) {
+                    toggleFolder(focusedNodeId);
+                } else {
+                    onSelectNote(focusedNodeId);
+                }
+            }
+        } else if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+            e.preventDefault();
+            if (focusedNodeId) {
+                const isCollection = collections.some(c => c.id === focusedNodeId);
+                if (isCollection) {
+                    const isExpanded = expandedFolders[focusedNodeId] ?? true;
+                    if (e.key === 'ArrowRight' && !isExpanded) {
+                        setExpandedFolders(prev => ({ ...prev, [focusedNodeId]: true }));
+                    } else if (e.key === 'ArrowLeft' && isExpanded) {
+                        setExpandedFolders(prev => ({ ...prev, [focusedNodeId]: false }));
+                    }
+                }
+            }
+        }
+    };
     
     const { allNotesCount, favoritesCount } = useMemo(() => ({
         allNotesCount: notes.length,
@@ -194,6 +263,9 @@ const Sidebar: React.FC<SidebarProps> = ({
                         activeNoteId={activeNoteId}
                         searchTerm={searchTerm}
                         onSelectNote={onSelectNote}
+                        isExpanded={expandedFolders[node.id] ?? true}
+                        onToggleExpand={() => toggleFolder(node.id)}
+                        isFocused={focusedNodeId === node.id}
                     />
                 ))}
             </div>
@@ -280,7 +352,11 @@ const Sidebar: React.FC<SidebarProps> = ({
                  {aiSearchError && <p className="text-red-500 text-xs mt-1">{aiSearchError}</p>}
             </div>
 
-            <div className="flex-1 overflow-y-auto">
+            <div 
+                className="flex-1 overflow-y-auto focus:outline-none"
+                tabIndex={0}
+                onKeyDown={handleKeyDown}
+            >
                 <div className="py-2">
                     {activeSmartCollection && (
                         <div className="px-4 mb-2">

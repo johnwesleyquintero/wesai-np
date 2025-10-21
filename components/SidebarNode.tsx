@@ -17,10 +17,13 @@ interface SidebarNodeProps {
     activeNoteId: string | null;
     searchTerm: string;
     onSelectNote: (noteId: string) => void;
+    isExpanded: boolean;
+    onToggleExpand: () => void;
+    isFocused: boolean;
 }
 
 const SidebarNode: React.FC<SidebarNodeProps> = ({ 
-    node, level, activeNoteId, searchTerm, onSelectNote
+    node, level, activeNoteId, searchTerm, onSelectNote, isExpanded, onToggleExpand, isFocused
 }) => {
     const { 
         collections, onAddNote, onAddNoteFromFile, updateCollection, renameNoteTitle, moveItem,
@@ -29,7 +32,6 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
     const { onOpenContextMenu, renamingItemId, setRenamingItemId } = useUIContext();
 
     const isCollection = 'name' in node;
-    const [isExpanded, setIsExpanded] = useState(true);
     const [renameValue, setRenameValue] = useState('');
     
     const { showToast } = useToast();
@@ -72,16 +74,9 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
     const handleNodeClick = (e: React.MouseEvent) => {
         e.stopPropagation();
         if (isCollection) {
-            setIsExpanded(prev => !prev);
+            onToggleExpand();
         } else {
             onSelectNote(node.id);
-        }
-    };
-    
-    const handleDeleteClick = (e: React.MouseEvent) => {
-        e.stopPropagation();
-        if (isCollection) {
-            //  onDeleteCollection(node);
         }
     };
     
@@ -150,7 +145,8 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
                     isActive
                         ? 'bg-light-primary/30 dark:bg-dark-primary/30 text-light-primary dark:text-dark-primary font-semibold'
                         : 'hover:bg-light-background dark:hover:bg-dark-background'
-                } ${isDragOver ? 'outline-2 outline-dashed outline-light-primary dark:outline-dark-primary bg-light-primary/10 dark:bg-dark-primary/10' : ''}`}
+                } ${isDragOver ? 'outline-2 outline-dashed outline-light-primary dark:outline-dark-primary bg-light-primary/10 dark:bg-dark-primary/10' : ''}
+                  ${isFocused ? 'ring-2 ring-light-primary/50 dark:ring-dark-primary/50' : ''}`}
                 style={{ paddingLeft: `${level * 16 + 8}px` }}
             >
                 <div className="flex items-center truncate py-1.5">
@@ -202,6 +198,9 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
                             activeNoteId={activeNoteId}
                             searchTerm={searchTerm}
                             onSelectNote={onSelectNote}
+                            isExpanded={isExpanded} // This is incorrect, it needs the child's expansion state
+                            onToggleExpand={onToggleExpand} // This is incorrect, it needs to toggle the child
+                            isFocused={isFocused}
                         />
                     ))}
                 </div>

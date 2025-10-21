@@ -264,14 +264,49 @@ export const useStore = (user: User | undefined) => {
         if (error) throw error;
     }, []);
 
-    const importTemplates = useCallback(async (importedTemplates: Template[]) => {
-        if (!user || !importedTemplates || importedTemplates.length === 0) return;
-        const dataToInsert = importedTemplates.map(t => toSupabase({ title: t.title, content: t.content, userId: user.id }));
-        const { error } = await supabase.from('templates').insert(dataToInsert);
-        if (error) throw error;
+    const importData = useCallback(async (data: { notes: Note[], collections: Collection[], smartCollections: SmartCollection[], templates: Template[] }) => {
+        if (!user) throw new Error("User must be logged in to import data.");
+    
+        const { id: currentUserId } = user;
+    
+        try {
+            // Delete all existing data for the user. Assuming ON DELETE CASCADE is set up for foreign keys.
+            await supabase.from('note_versions').delete().eq('user_id', currentUserId);
+            await supabase.from('notes').delete().eq('user_id', currentUserId);
+            await supabase.from('collections').delete().eq('user_id', currentUserId);
+            await supabase.from('smart_collections').delete().eq('user_id', currentUserId);
+            await supabase.from('templates').delete().eq('user_id', currentUserId);
+            
+            // Insert new data, ensuring the user_id is correct and preserving original IDs.
+            if (data.collections?.length > 0) {
+                const collectionsToInsert = data.collections.map(c => toSupabase({ ...c, userId: currentUserId }));
+                const { error } = await supabase.from('collections').insert(collectionsToInsert);
+                if (error) throw new Error(`Failed to import collections: ${error.message}`);
+            }
+    
+            if (data.notes?.length > 0) {
+                const notesToInsert = data.notes.map(n => toSupabase({ ...n, userId: currentUserId, history: n.history || [] }));
+                const { error } = await supabase.from('notes').insert(notesToInsert);
+                if (error) throw new Error(`Failed to import notes: ${error.message}`);
+            }
+    
+            if (data.smartCollections?.length > 0) {
+                const smartCollectionsToInsert = data.smartCollections.map(sc => toSupabase({ ...sc, userId: currentUserId }));
+                const { error } = await supabase.from('smart_collections').insert(smartCollectionsToInsert);
+                if (error) throw new Error(`Failed to import smart collections: ${error.message}`);
+            }
+    
+            if (data.templates?.length > 0) {
+                const templatesToInsert = data.templates.map(t => toSupabase({ ...t, userId: currentUserId }));
+                const { error } = await supabase.from('templates').insert(templatesToInsert);
+                if (error) throw new Error(`Failed to import templates: ${error.message}`);
+            }
+        } catch (error) {
+            console.error("Import failed:", error);
+            throw error; // Re-throw to be caught by the UI
+        }
     }, [user]);
     
-    const importData = (n: Note[], c: Collection[], sc: SmartCollection[]) => { console.warn("Import data not implemented for Supabase store yet")};
     const copyNote = (id: string) => { console.warn("Copy note not implemented for Supabase store yet")};
     const renameNoteTitle = async (id: string, title: string) => await updateNote(id, { title });
     
@@ -281,6 +316,7 @@ export const useStore = (user: User | undefined) => {
         addNote, addNoteFromFile, updateNote, deleteNote, getNoteById, toggleFavorite, restoreNoteVersion, copyNote, renameNoteTitle,
         addCollection, updateCollection, deleteCollection, getCollectionById, moveItem,
         addSmartCollection, updateSmartCollection, deleteSmartCollection,
-        addTemplate, updateTemplate, deleteTemplate, importTemplates, importData,
+        addTemplate, updateTemplate, deleteTemplate,
+        importData,
     };
 };

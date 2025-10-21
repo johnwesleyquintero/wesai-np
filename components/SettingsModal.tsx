@@ -15,7 +15,7 @@ interface SettingsModalProps {
 }
 
 const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
-    const { templates, addTemplate, updateTemplate, deleteTemplate, importTemplates, notes, collections, smartCollections, importData } = useStoreContext();
+    const { templates, addTemplate, updateTemplate, deleteTemplate, notes, collections, smartCollections, importData } = useStoreContext();
     const { apiKey, saveApiKey } = useApiKey();
     const { showToast } = useToast();
     
@@ -120,14 +120,19 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
         input.click();
     };
     
-    const handleImportConfirm = () => {
+    const handleImportConfirm = async () => {
         if (dataToImport) {
-            importData(dataToImport.notes, dataToImport.collections, dataToImport.smartCollections);
-            importTemplates(dataToImport.templates);
-            setIsImportConfirmOpen(false);
-            setDataToImport(null);
-            showToast({ message: 'Data imported! App will now reload.', type: 'success' });
-            setTimeout(() => window.location.reload(), 1500);
+            try {
+                await importData(dataToImport);
+                setIsImportConfirmOpen(false);
+                setDataToImport(null);
+                showToast({ message: 'Data imported! App will now reload.', type: 'success' });
+                setTimeout(() => window.location.reload(), 1500);
+            } catch (error) {
+                const message = error instanceof Error ? error.message : "An unknown error occurred during import.";
+                showToast({ message: `Import failed: ${message}`, type: 'error' });
+                setIsImportConfirmOpen(false);
+            }
         }
     };
 

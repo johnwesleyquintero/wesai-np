@@ -90,6 +90,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onUpdate, onDelete, onTog
     const backlinks = useBacklinks(note.id, notes);
 
     const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const titleInputRef = useRef<HTMLInputElement>(null);
     const editorPaneRef = useRef<HTMLDivElement>(null);
     const highlighterRef = useRef<HTMLDivElement>(null);
     
@@ -167,6 +168,14 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onUpdate, onDelete, onTog
         lastAnalyzedContentForTagsRef.current = null;
         lastAnalyzedContentForTitleRef.current = null;
         lastAnalyzedContentForSpellingRef.current = null;
+
+        // Auto-focus title for new, empty notes
+        if (note.title === 'Untitled Note' && note.content === '') {
+            setTimeout(() => {
+                titleInputRef.current?.focus();
+                titleInputRef.current?.select();
+            }, 100);
+        }
     }, [note.id, resetEditorState, note.title, note.content, note.tags]);
 
     // Handle auto-saving
@@ -692,6 +701,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onUpdate, onDelete, onTog
                     {viewMode === 'edit' ? (
                         <>
                             <input
+                                ref={titleInputRef}
                                 type="text"
                                 value={displayedTitle}
                                 onChange={(e) => setEditorState({ ...editorState, title: e.target.value })}

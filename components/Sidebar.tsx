@@ -118,6 +118,11 @@ const Sidebar: React.FC<SidebarProps> = ({
 
     const fileTree = useMemo(() => buildTree(notes, collections), [notes, collections]);
     const activeSmartCollection = useMemo(() => smartCollections.find(sc => sc.id === activeSmartCollectionId), [smartCollections, activeSmartCollectionId]);
+    
+    const { allNotesCount, favoritesCount } = useMemo(() => ({
+        allNotesCount: notes.length,
+        favoritesCount: notes.filter(n => n.isFavorite).length
+    }), [notes]);
 
     const handleDropFile = (file: File, parentId: string | null) => {
         const reader = new FileReader();
@@ -282,19 +287,19 @@ const Sidebar: React.FC<SidebarProps> = ({
                                     onClick={() => setFilter('RECENT')}
                                     className={`px-3 py-1 text-sm rounded-md ${filter === 'RECENT' ? 'bg-white dark:bg-dark-ui-hover shadow-sm' : ''}`}
                                 >
-                                    Recent
+                                    Recent <span className="text-light-text/50 dark:text-dark-text/50">({allNotesCount})</span>
                                 </button>
                                 <button
                                     onClick={() => setFilter('FAVORITES')}
                                     className={`px-3 py-1 text-sm rounded-md ${filter === 'FAVORITES' ? 'bg-white dark:bg-dark-ui-hover shadow-sm' : ''}`}
                                 >
-                                    Favorites
+                                    Favorites <span className="text-light-text/50 dark:text-dark-text/50">({favoritesCount})</span>
                                 </button>
                                 <button
                                     onClick={() => setFilter('ALL')}
                                     className={`px-3 py-1 text-sm rounded-md ${filter === 'ALL' ? 'bg-white dark:bg-dark-ui-hover shadow-sm' : ''}`}
                                 >
-                                    All
+                                    All <span className="text-light-text/50 dark:text-dark-text/50">({allNotesCount})</span>
                                 </button>
                             </div>
                         </div>

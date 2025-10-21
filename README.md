@@ -1,67 +1,62 @@
 # WesAI Notepad
 
-**A local-first, AI-enhanced notepad for the modern web.**
+**A local-first, AI-enhanced notepad built for privacy, performance, and productivity.**
 
 [**Live Demo**](https://wesai-np.vercel.app/)
 
-WesAI Notepad is a powerful, privacy-focused note-taking application that runs entirely in your browser. It combines a fast, responsive, and offline-capable interface with the advanced capabilities of the Google Gemini API to create a truly intelligent writing environment. All your data stays with you, on your device.
+WesAI Notepad is a powerful, privacy-focused note-taking application that runs entirely in your browser. It combines a fast, responsive, and offline-capable interface with the advanced capabilities of the Google Gemini API to create an intelligent writing environment. All your data is stored locally on your device.
 
-## Core Features
+## Key Features
 
-### 📝 Note-Taking & Organization
-- **Local-First Storage:** All notes, folders, and templates are stored directly in your browser's `localStorage`. No cloud, no sign-up required.
-- **Offline Capable:** Create, edit, and organize your notes even without an internet connection.
-- **Rich Markdown Editing:** Write in Markdown with a beautiful, syntax-highlighted editor.
-- **Preview Mode:** Instantly see your rendered Markdown, including tables, images, and embedded videos.
-- **Hierarchical Folders:** Organize your notes with nested folders for better structure.
-- **Smart Folders:** Create dynamic folders based on AI search queries (e.g., "all notes about marketing from last week").
-- **Bi-Directional Linking:** Connect your ideas by linking notes with `[[note-id|display text]]` syntax and see all "Linked Mentions" (backlinks) at the bottom of a note.
-- **Favorites:** Quickly access your most important notes.
+### Note-Taking and Organization
+- **Local-First Storage:** All notes, folders, and templates are stored in your browser's `localStorage`. No cloud services or user registration is required.
+- **Offline Capability:** Create, edit, and manage your notes with or without an internet connection.
+- **Rich Markdown Editor:** A full-featured Markdown editor with syntax highlighting and a live preview mode that supports tables, images, embedded videos, and more.
+- **Hierarchical Folders:** Organize notes with nested folders for a clear, tree-like structure.
+- **Smart Folders:** Create dynamic, saved searches that automatically display notes matching a specific AI-powered query.
+- **Bi-Directional Linking:** Connect ideas by linking notes using `[[note-id|display text]]` syntax. A "Linked Mentions" section automatically displays all backlinks to the current note.
+- **Tagging System:** Assign multiple tags to notes for flexible, cross-folder organization.
+- **Favorites:** Mark important notes as favorites for quick and easy access.
 
-### ✨ AI-Powered by Gemini
-- **Semantic Search:** Go beyond keywords. Find notes based on meaning and context.
-- **AI Chat:** Ask questions about your entire note collection and get synthesized answers with sourced links.
-- **Inline AI Assistant:** Select any text to:
+### AI-Powered by Google Gemini
+- **Semantic Search:** Go beyond simple keyword matching to find notes based on their conceptual meaning and context.
+- **AI Chat:** Engage in a conversation with your notes. Ask complex questions and receive synthesized answers with links to the source notes.
+- **Inline AI Assistant:** Select any text in the editor to:
     - Fix spelling and grammar.
-    - Change the tone (professional, casual, etc.).
-    - Make text shorter or longer.
+    - Adjust the tone (e.g., professional, casual, concise).
+    - Expand or shorten the selected text.
     - Simplify complex language.
 - **Content Generation:**
-    - Automatically suggest a title for your note based on its content.
-    - Get relevant tag suggestions to categorize your notes.
-- **Summarization & Action Items:** Generate a concise summary and extract a to-do list from your note with a single click.
+    - Automatically suggest a descriptive title for a new note based on its content.
+    - Generate relevant tag suggestions to help categorize your writing.
+- **Summarization and Action Items:** Generate a concise summary and extract a checklist of action items from your note content with a single command.
 
-### 🚀 Productivity & Customization
-- **Command Palette:** Access any action—from creating a new note to applying an AI function—with a quick keyboard command (`Ctrl/Cmd + K`).
-- **Full Data Portability:** Export your entire notepad (notes, folders, and templates) to a single JSON file for backup, and import it to restore your data on any browser or device.
-- **Note Templates:** Create reusable templates for common note types like meeting minutes or project plans.
-- **Version History:** Automatically saves previous versions of your notes, allowing you to preview or restore them at any time.
-- **Light & Dark Themes:** A beautiful and comfortable experience, day or night.
-- **Fully Responsive:** Works seamlessly on desktop, tablet, and mobile devices.
-
-## Roadmap: The Future of WesAI Notepad
-
-This project is actively developed. Here are some of the features we envision for the future:
-- **☁️ Optional Cloud Sync:** End-to-end encrypted synchronization between your devices.
-- **🤝 Real-time Collaboration:** Share and edit notes with others.
-- **🧠 Advanced AI Organization:** AI-powered suggestions for organizing notes into folders.
-- **🖼️ Rich Media Support:** Enhanced support for embedding and managing images, videos, and other file types.
-- **📱 Native Mobile Apps:** Dedicated applications for iOS and Android for the best mobile experience.
+### Productivity and Workflow
+- **Command Palette:** Press `Ctrl/Cmd + K` to open a command palette and access nearly every application feature, from creating notes to executing AI actions.
+- **Slash Commands:** Type `/` in the editor to quickly insert headings, lists, to-do items, and dividers, or to trigger AI actions.
+- **Full Data Portability:** Export your entire notepad—including all notes, folders, and templates—to a single JSON file for backup. Import a backup file to restore your data on any device.
+- **Note Templates:** Create and save reusable templates for frequently created documents, such as meeting minutes or project plans.
+- **Version History:** The application automatically saves previous versions of your notes, allowing you to preview or restore them at any time.
+- **Drag and Drop:**
+    - Reorganize notes and folders in the sidebar.
+    - Drag text files or images directly into the editor to import their content.
+- **Light and Dark Themes:** Choose between a light or dark interface for optimal viewing comfort.
+- **Responsive Design:** A seamless experience across desktop, tablet, and mobile devices.
 
 ## Getting Started
 
-1.  **Open the App:** Visit the [**Live Demo**](https://wesai-np.vercel.app/).
-2.  **Get a Gemini API Key:** To use the AI features, you need a free API key from Google.
-    - Visit [Google AI Studio](https://ai.google.dev/).
-    - Click "Get API key" and follow the instructions to create a new key.
-3.  **Add Your Key:**
-    - In the WesAI Notepad, click the **Settings** icon (⚙️) in the bottom-left corner.
+1.  **Open the Application:** Navigate to the [**Live Demo**](https://wesai-np.vercel.app/).
+2.  **Obtain a Gemini API Key:** The AI features require a free API key from Google.
+    - Go to [Google AI Studio](https://ai.google.dev/).
+    - Click "Get API key" and follow the on-screen instructions.
+3.  **Configure the Application:**
+    - In the WesAI Notepad, click the Settings icon in the bottom-left corner of the sidebar.
     - Paste your API key into the "Gemini API Key" field.
     - Click "Save Settings".
-4.  **Start Writing!** Your API key is saved securely in your browser's local storage, and all AI features are now unlocked.
+4.  **Begin Writing:** Your API key is saved securely in your browser's local storage, and all AI features are now available for use.
 
 ## Technology Stack
 - **Frontend:** React, TypeScript, Tailwind CSS
 - **AI Integration:** Google Gemini API (`@google/genai`)
-- **State Management:** React Hooks & Context API
+- **State Management:** React Hooks and Context API
 - **Storage:** Browser `localStorage`

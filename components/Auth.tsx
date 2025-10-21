@@ -1,0 +1,101 @@
+import React, { useState } from 'react';
+import { supabase } from '../lib/supabaseClient';
+
+const Auth: React.FC = () => {
+    const [isLogin, setIsLogin] = useState(true);
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    const handleAuth = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setLoading(true);
+        setError(null);
+
+        try {
+            if (isLogin) {
+                const { error } = await supabase.auth.signInWithPassword({ email, password });
+                if (error) throw error;
+            } else {
+                const { error } = await supabase.auth.signUp({ email, password });
+                if (error) throw error;
+                alert('Check your email for the confirmation link!');
+            }
+        } catch (error: any) {
+            setError(error.error_description || error.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div className="flex items-center justify-center h-screen w-screen bg-light-background dark:bg-dark-background">
+            <div className="w-full max-w-md p-8 space-y-8 bg-light-ui dark:bg-dark-ui rounded-xl shadow-lg">
+                <div>
+                    <h2 className="text-3xl font-bold text-center text-light-text dark:text-dark-text">
+                        WesAI Notepad
+                    </h2>
+                    <p className="mt-2 text-center text-sm text-light-text/70 dark:text-dark-text/70">
+                        {isLogin ? 'Sign in to your account' : 'Create a new account'}
+                    </p>
+                </div>
+                <form className="mt-8 space-y-6" onSubmit={handleAuth}>
+                    <div className="rounded-md shadow-sm -space-y-px">
+                        <div>
+                            <input
+                                id="email-address"
+                                name="email"
+                                type="email"
+                                autoComplete="email"
+                                required
+                                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-light-border dark:border-dark-border placeholder-light-text/50 dark:placeholder-dark-text/50 text-light-text dark:text-dark-text rounded-t-md focus:outline-none focus:ring-light-primary dark:focus:ring-dark-primary focus:border-light-primary dark:focus:border-dark-primary focus:z-10 sm:text-sm bg-light-background dark:bg-dark-background"
+                                placeholder="Email address"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                            />
+                        </div>
+                        <div>
+                            <input
+                                id="password"
+                                name="password"
+                                type="password"
+                                autoComplete="current-password"
+                                required
+                                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-light-border dark:border-dark-border placeholder-light-text/50 dark:placeholder-dark-text/50 text-light-text dark:text-dark-text rounded-b-md focus:outline-none focus:ring-light-primary dark:focus:ring-dark-primary focus:border-light-primary dark:focus:border-dark-primary focus:z-10 sm:text-sm bg-light-background dark:bg-dark-background"
+                                placeholder="Password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                            />
+                        </div>
+                    </div>
+                    
+                    {error && <p className="text-sm text-red-500 text-center">{error}</p>}
+
+                    <div>
+                        <button
+                            type="submit"
+                            disabled={loading}
+                            className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-light-primary hover:bg-light-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-light-primary-hover dark:focus:ring-dark-primary-hover disabled:opacity-50"
+                        >
+                            {loading ? 'Processing...' : (isLogin ? 'Sign In' : 'Sign Up')}
+                        </button>
+                    </div>
+                </form>
+                <div className="text-sm text-center">
+                    <button
+                        onClick={() => {
+                          setIsLogin(!isLogin);
+                          setError(null);
+                        }}
+                        className="font-medium text-light-primary hover:text-light-primary-hover dark:text-dark-primary dark:hover:text-dark-primary-hover"
+                    >
+                        {isLogin ? 'Don\'t have an account? Sign Up' : 'Already have an account? Sign In'}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+export default Auth;

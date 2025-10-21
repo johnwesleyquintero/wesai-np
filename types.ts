@@ -1,6 +1,11 @@
 import React from 'react';
+import { Session } from '@supabase/supabase-js';
+
+export type AuthSession = Session;
 
 export interface NoteVersion {
+    id?: string;
+    noteId?: string;
     savedAt: string;
     title: string;
     content: string;
@@ -9,6 +14,7 @@ export interface NoteVersion {
 
 export interface Note {
     id: string;
+    userId?: string;
     title: string;
     content: string;
     createdAt: string;
@@ -22,6 +28,7 @@ export interface Note {
 
 export interface Collection {
     id: string;
+    userId?: string;
     name: string;
     parentId: string | null;
     order: number;
@@ -29,6 +36,7 @@ export interface Collection {
 
 export interface SmartCollection {
     id: string;
+    userId?: string;
     name: string;
     query: string;
 }

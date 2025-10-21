@@ -14,6 +14,8 @@ import SidebarResizer from './components/SidebarResizer';
 import SuspenseLoader from './components/SuspenseLoader';
 import WelcomeModal from './components/WelcomeModal';
 import ApiKeyIndicator from './components/ApiKeyIndicator';
+import Auth from './components/Auth';
+import { isSupabaseConfigured } from './lib/supabaseClient';
 
 const NoteEditor = React.lazy(() => import('./components/NoteEditor'));
 const ChatView = React.lazy(() => import('./components/ChatView'));
@@ -45,6 +47,34 @@ const WelcomeScreen: React.FC<{ onToggleSidebar?: () => void; isMobileView?: boo
     </div>
 );
 
+const ConfigurationError: React.FC = () => (
+    <div className="flex items-center justify-center h-screen w-screen bg-light-background dark:bg-dark-background text-light-text dark:text-dark-text">
+        <div className="w-full max-w-lg p-8 text-center bg-light-ui dark:bg-dark-ui rounded-xl shadow-lg">
+             <h2 className="text-2xl font-bold text-red-500 mb-4">Configuration Required</h2>
+             <p className="mb-2">
+                 Welcome to WesAI Notepad! To get started, you need to connect to your Supabase project.
+             </p>
+             <p className="mb-4">
+                 Please open the file:
+                 <br />
+                 <code className="bg-light-background dark:bg-dark-background px-2 py-1 rounded-md my-2 inline-block font-mono">
+                    lib/supabaseClient.ts
+                 </code>
+                 <br />
+                 and replace the placeholder values with your project's URL and public anonymous key.
+             </p>
+             <a 
+                href="https://supabase.com/dashboard/project/_/settings/api" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="text-sm text-light-primary dark:text-dark-primary underline"
+             >
+                 Find your keys in Supabase Settings &rarr; API
+             </a>
+        </div>
+    </div>
+);
+
 function AppContent() {
     const {
         notes, activeNoteId, setActiveNoteId, onAddNote,
@@ -53,7 +83,8 @@ function AppContent() {
         handleDeleteNoteConfirm, handleDeleteSmartCollectionConfirm,
         filteredNotes, filter, setFilter, searchTerm, handleSearchTermChange, searchMode,
         setSearchMode, isAiSearching, aiSearchError, activeSmartCollection,
-        handleActivateSmartCollection, handleClearActiveSmartCollection, addSmartCollection, updateSmartCollection, templates
+        handleActivateSmartCollection, handleClearActiveSmartCollection, addSmartCollection, updateSmartCollection, templates,
+        restoreNoteVersion
     } = useStoreContext();
 
     const {
@@ -100,8 +131,6 @@ function AppContent() {
     }, [notes, activeNoteId, setActiveNoteId]);
 
     const handleRestoreVersion = (noteId: string, version: NoteVersion) => {
-        // FIX: The original code was missing `restoreNoteVersion` from context. Assuming it should exist on the store.
-        const { restoreNoteVersion } = useStoreContext();
         restoreNoteVersion(noteId, version);
     };
 
@@ -236,11 +265,30 @@ function AppContent() {
     );
 }
 
+
+function AppContainer() {
+    const { session, isSessionLoading } = useUIContext();
+
+    if (isSessionLoading) {
+        return <SuspenseLoader />;
+    }
+
+    if (!session) {
+        return <Auth />;
+    }
+
+    return <AppContent />;
+}
+
 export default function App() {
+    if (!isSupabaseConfigured) {
+        return <ConfigurationError />;
+    }
+    
     return (
         <ToastProvider>
             <AppProvider>
-                <AppContent />
+                <AppContainer />
             </AppProvider>
         </ToastProvider>
     );

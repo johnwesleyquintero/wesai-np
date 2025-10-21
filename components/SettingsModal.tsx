@@ -7,6 +7,7 @@ import { useStoreContext } from '../context/AppContext';
 import ConfirmationModal from './ConfirmationModal';
 import { useToast } from '../context/ToastContext';
 import { useModalAccessibility } from '../hooks/useModalAccessibility';
+import { supabase } from '../lib/supabaseClient';
 
 interface SettingsModalProps {
     isOpen: boolean;
@@ -32,7 +33,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
     useEffect(() => {
         if (isOpen) {
             setLocalApiKey(apiKey || '');
-            // FIX: Corrected ref name from `saveButton` to `saveButtonRef`.
             setTimeout(() => saveButtonRef.current?.focus(), 100);
         }
     }, [isOpen, apiKey]);
@@ -62,6 +62,14 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
         onClose();
     };
 
+    const handleSignOut = async () => {
+        await supabase.auth.signOut();
+        onClose();
+        // Clear local non-Supabase state if necessary
+        // e.g. localStorage.clear();
+        // window.location.reload(); // To ensure clean state
+    };
+    
     const handleExport = () => {
         const allData = {
             notes,
@@ -129,12 +137,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
         <>
             <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
                 <div ref={modalRef} role="dialog" aria-modal="true" aria-labelledby="settings-modal-title" className="bg-light-background dark:bg-dark-background rounded-lg shadow-xl w-full max-w-lg flex flex-col max-h-full" onClick={e => e.stopPropagation()}>
-                    {/* Modal Header */}
                     <div className="p-6 border-b border-light-border dark:border-dark-border flex-shrink-0">
                          <h2 id="settings-modal-title" className="text-2xl font-bold">Settings</h2>
                     </div>
                     
-                    {/* Scrollable Content */}
                     <div className="overflow-y-auto p-6">
                         <div className="space-y-6">
                             <div>
@@ -149,6 +155,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                                     placeholder="Enter your Gemini API Key"
                                     className="w-full p-2 bg-light-ui dark:bg-dark-ui rounded-md border border-light-border dark:border-dark-border focus:ring-2 focus:ring-light-primary focus:outline-none"
                                 />
+                            </div>
+
+                             <div>
+                                <h3 className="text-lg font-semibold mb-3">Account</h3>
+                                 <button onClick={handleSignOut} className="w-full text-center px-4 py-2 rounded-md bg-light-ui dark:bg-dark-ui hover:bg-light-ui-hover dark:hover:bg-dark-ui-hover">Sign Out</button>
                             </div>
 
                             <div>
@@ -185,7 +196,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                         </div>
                     </div>
 
-                    {/* Modal Footer */}
                     <div className="flex justify-end items-center space-x-4 p-6 border-t border-light-border dark:border-dark-border flex-shrink-0">
                         <button onClick={onClose} className="px-4 py-2 rounded-md hover:bg-light-ui dark:hover:bg-dark-ui">Cancel</button>
                         <button ref={saveButtonRef} onClick={handleSaveSettings} className="px-4 py-2 bg-light-primary text-white rounded-md hover:bg-light-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover">Save Settings</button>

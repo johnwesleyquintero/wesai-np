@@ -67,33 +67,46 @@ export const useStore = (user: User | undefined) => {
      useEffect(() => {
         if (!user) return;
 
-        const notesChannel = supabase.channel('public:notes')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'notes' }, payload => {
-                if (payload.eventType === 'INSERT') setNotes(prev => [...prev, fromSupabase(payload.new as Note)]);
-                if (payload.eventType === 'UPDATE') setNotes(prev => prev.map(n => n.id === payload.new.id ? fromSupabase(payload.new as Note) : n));
-                if (payload.eventType === 'DELETE') setNotes(prev => prev.filter(n => n.id !== (payload.old as any).id));
-            }).subscribe();
-        
-        const collectionsChannel = supabase.channel('public:collections')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'collections' }, payload => {
-                if (payload.eventType === 'INSERT') setCollections(prev => [...prev, fromSupabase(payload.new as Collection)]);
-                if (payload.eventType === 'UPDATE') setCollections(prev => prev.map(c => c.id === payload.new.id ? fromSupabase(payload.new as Collection) : c));
-                if (payload.eventType === 'DELETE') setCollections(prev => prev.filter(c => c.id !== (payload.old as any).id));
-            }).subscribe();
+        const handleNoteChange = (payload: any) => {
+            const record = payload.new || payload.old;
+            if ((record as any)?.user_id !== user.id) return;
             
-        const smartCollectionsChannel = supabase.channel('public:smart_collections')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'smart_collections' }, payload => {
-                 if (payload.eventType === 'INSERT') setSmartCollections(prev => [...prev, fromSupabase(payload.new as SmartCollection)]);
-                 if (payload.eventType === 'UPDATE') setSmartCollections(prev => prev.map(sc => sc.id === payload.new.id ? fromSupabase(payload.new as SmartCollection) : sc));
-                 if (payload.eventType === 'DELETE') setSmartCollections(prev => prev.filter(sc => sc.id !== (payload.old as any).id));
-            }).subscribe();
+            if (payload.eventType === 'INSERT') setNotes(prev => [...prev, fromSupabase(payload.new as Note)]);
+            if (payload.eventType === 'UPDATE') setNotes(prev => prev.map(n => n.id === payload.new.id ? fromSupabase(payload.new as Note) : n));
+            if (payload.eventType === 'DELETE') setNotes(prev => prev.filter(n => n.id !== (payload.old as any).id));
+        };
+        
+        const handleCollectionChange = (payload: any) => {
+            const record = payload.new || payload.old;
+            if ((record as any)?.user_id !== user.id) return;
 
-        const templatesChannel = supabase.channel('public:templates')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'templates' }, payload => {
-                 if (payload.eventType === 'INSERT') setTemplates(prev => [...prev, fromSupabase(payload.new as Template)]);
-                 if (payload.eventType === 'UPDATE') setTemplates(prev => prev.map(t => t.id === payload.new.id ? fromSupabase(payload.new as Template) : t));
-                 if (payload.eventType === 'DELETE') setTemplates(prev => prev.filter(t => t.id !== (payload.old as any).id));
-            }).subscribe();
+            if (payload.eventType === 'INSERT') setCollections(prev => [...prev, fromSupabase(payload.new as Collection)]);
+            if (payload.eventType === 'UPDATE') setCollections(prev => prev.map(c => c.id === payload.new.id ? fromSupabase(payload.new as Collection) : c));
+            if (payload.eventType === 'DELETE') setCollections(prev => prev.filter(c => c.id !== (payload.old as any).id));
+        };
+
+        const handleSmartCollectionChange = (payload: any) => {
+            const record = payload.new || payload.old;
+            if ((record as any)?.user_id !== user.id) return;
+            
+            if (payload.eventType === 'INSERT') setSmartCollections(prev => [...prev, fromSupabase(payload.new as SmartCollection)]);
+            if (payload.eventType === 'UPDATE') setSmartCollections(prev => prev.map(sc => sc.id === payload.new.id ? fromSupabase(payload.new as SmartCollection) : sc));
+            if (payload.eventType === 'DELETE') setSmartCollections(prev => prev.filter(sc => sc.id !== (payload.old as any).id));
+        };
+
+        const handleTemplateChange = (payload: any) => {
+            const record = payload.new || payload.old;
+            if ((record as any)?.user_id !== user.id) return;
+
+            if (payload.eventType === 'INSERT') setTemplates(prev => [...prev, fromSupabase(payload.new as Template)]);
+            if (payload.eventType === 'UPDATE') setTemplates(prev => prev.map(t => t.id === payload.new.id ? fromSupabase(payload.new as Template) : t));
+            if (payload.eventType === 'DELETE') setTemplates(prev => prev.filter(t => t.id !== (payload.old as any).id));
+        };
+
+        const notesChannel = supabase.channel('public:notes').on('postgres_changes', { event: '*', schema: 'public', table: 'notes' }, handleNoteChange).subscribe();
+        const collectionsChannel = supabase.channel('public:collections').on('postgres_changes', { event: '*', schema: 'public', table: 'collections' }, handleCollectionChange).subscribe();
+        const smartCollectionsChannel = supabase.channel('public:smart_collections').on('postgres_changes', { event: '*', schema: 'public', table: 'smart_collections' }, handleSmartCollectionChange).subscribe();
+        const templatesChannel = supabase.channel('public:templates').on('postgres_changes', { event: '*', schema: 'public', table: 'templates' }, handleTemplateChange).subscribe();
 
         return () => {
             supabase.removeChannel(notesChannel);

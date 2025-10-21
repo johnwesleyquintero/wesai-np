@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Note } from '../types';
 import { ChevronDownIcon, ChevronRightIcon, DocumentTextIcon, FolderIcon, TrashIcon, PencilSquareIcon, DocumentDuplicateIcon, ClipboardDocumentIcon, GripVerticalIcon } from './Icons';
-import { ContextMenuItem } from './ContextMenu';
+import { ContextMenuItem } from '../types';
 import { useAppContext } from '../context/AppContext';
 import { useToast } from '../context/ToastContext';
 import Highlight from './Highlight';
@@ -191,7 +191,9 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
             <div
                 onClick={handleNodeClick}
                 onDoubleClick={handleDoubleClick}
-                className={`group flex items-center justify-between w-full text-left rounded-md pr-2 my-0.5 text-sm cursor-pointer transition-all duration-150 ${
+                draggable={!isRenaming}
+                onDragStart={handleDragStart}
+                className={`group flex items-center justify-between w-full text-left rounded-md pr-2 my-0.5 text-sm cursor-grab transition-all duration-150 ${
                     isActive
                         ? 'bg-light-primary/30 dark:bg-dark-primary/30 text-light-primary dark:text-dark-primary font-semibold'
                         : 'hover:bg-light-background dark:hover:bg-dark-background'
@@ -200,9 +202,7 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
             >
                 <div className="flex items-center truncate py-1.5">
                     <div 
-                        draggable={!isRenaming}
-                        onDragStart={handleDragStart}
-                        className="opacity-0 group-hover:opacity-60 transition-opacity cursor-grab -ml-2 mr-1 p-0.5 rounded"
+                        className="opacity-0 group-hover:opacity-60 transition-opacity -ml-2 mr-1 p-0.5 rounded"
                         onClick={(e) => e.stopPropagation()}
                     >
                        <GripVerticalIcon className="w-4 h-4" />

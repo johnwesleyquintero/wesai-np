@@ -50,7 +50,20 @@ const buildTree = (notes: Note[], collections: Collection[]): TreeNode[] => {
     });
 
     const sortNodes = (nodes: TreeNode[]) => {
-        nodes.sort((a, b) => (a.itemOrder || 0) - (b.itemOrder || 0));
+        nodes.sort((a, b) => {
+            const aIsCollection = 'type' in a && a.type === 'collection';
+            const bIsCollection = 'type' in b && b.type === 'collection';
+
+            // Collections should come before notes
+            if (aIsCollection && !bIsCollection) return -1;
+            if (!aIsCollection && bIsCollection) return 1;
+
+            // Sort alphabetically within type
+            const aName = aIsCollection ? (a as Collection).name : (a as Note).title;
+            const bName = bIsCollection ? (b as Collection).name : (b as Note).title;
+            return aName.localeCompare(bName);
+        });
+
         nodes.forEach(node => {
             if ('children' in node && node.children.length > 0) {
                 sortNodes(node.children);

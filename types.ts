@@ -24,7 +24,6 @@ export interface Note {
     tags: string[];
     history: NoteVersion[];
     parentId: string | null;
-    itemOrder: number;
 }
 
 export interface Collection {
@@ -32,7 +31,6 @@ export interface Collection {
     userId?: string;
     name: string;
     parentId: string | null;
-    itemOrder: number;
 }
 
 export interface SmartCollection {

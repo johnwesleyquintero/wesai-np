@@ -1,5 +1,5 @@
 {
   "name": "WesAI Notepad",
-  "description": "A local-first, AI-enhanced notepad for fast, offline-capable note creation and management, with Gemini API integration for text enhancement.",
+  "description": "A secure, AI-enhanced notepad with real-time cloud sync via Supabase, featuring a multi-mode Gemini assistant for powerful note creation and management.",
   "requestFramePermissions": []
 }

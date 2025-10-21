@@ -50,7 +50,7 @@ const buildTree = (notes: Note[], collections: Collection[]): TreeNode[] => {
     });
 
     const sortNodes = (nodes: TreeNode[]) => {
-        nodes.sort((a, b) => (a.order || 0) - (b.order || 0));
+        nodes.sort((a, b) => (a.itemOrder || 0) - (b.itemOrder || 0));
         nodes.forEach(node => {
             if ('children' in node && node.children.length > 0) {
                 sortNodes(node.children);

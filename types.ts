@@ -6,6 +6,7 @@ export type AuthSession = Session;
 export interface NoteVersion {
     id?: string;
     noteId?: string;
+    userId?: string;
     savedAt: string;
     title: string;
     content: string;
@@ -23,7 +24,7 @@ export interface Note {
     tags: string[];
     history: NoteVersion[];
     parentId: string | null;
-    order: number;
+    itemOrder: number;
 }
 
 export interface Collection {
@@ -31,7 +32,7 @@ export interface Collection {
     userId?: string;
     name: string;
     parentId: string | null;
-    order: number;
+    itemOrder: number;
 }
 
 export interface SmartCollection {

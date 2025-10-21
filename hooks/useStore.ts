@@ -105,18 +105,32 @@ export const useStore = (user: User | undefined) => {
 
     const addNote = useCallback(async (parentId: string | null = null) => {
         const siblings = notes.filter(n => n.parentId === parentId);
-        const maxOrder = siblings.reduce((max, n) => Math.max(max, n.order || 0), 0);
-        const newNote: Omit<Note, 'id' | 'createdAt' | 'updatedAt' | 'history'> = { title: "Untitled Note", content: "", isFavorite: false, tags: [], parentId, order: maxOrder + 1 };
-        const { data, error } = await supabase.from('notes').insert(toSupabase(newNote)).select().single();
+        const maxOrder = siblings.reduce((max, n) => Math.max(max, n.itemOrder || 0), 0);
+        const newNoteForDb = { 
+            title: "Untitled Note", 
+            content: "", 
+            is_favorite: false, 
+            tags: [], 
+            parent_id: parentId, 
+            item_order: maxOrder + 1 
+        };
+        const { data, error } = await supabase.from('notes').insert(newNoteForDb).select().single();
         if (error) throw error;
         return data.id;
     }, [notes]);
 
     const addNoteFromFile = useCallback(async (title: string, content: string, parentId: string | null) => {
         const siblings = notes.filter(n => n.parentId === parentId);
-        const maxOrder = siblings.reduce((max, n) => Math.max(max, n.order || 0), 0);
-        const newNote = { title: title.replace(/\.(md|txt)$/i, ''), content, isFavorite: false, tags: [], parentId, order: maxOrder + 1 };
-        const { data, error } = await supabase.from('notes').insert(toSupabase(newNote)).select().single();
+        const maxOrder = siblings.reduce((max, n) => Math.max(max, n.itemOrder || 0), 0);
+        const newNoteForDb = { 
+            title: title.replace(/\.(md|txt)$/i, ''), 
+            content, 
+            is_favorite: false, 
+            tags: [], 
+            parent_id: parentId, 
+            item_order: maxOrder + 1 
+        };
+        const { data, error } = await supabase.from('notes').insert(newNoteForDb).select().single();
         if (error) throw error;
         return data.id;
     }, [notes]);
@@ -124,9 +138,16 @@ export const useStore = (user: User | undefined) => {
     const updateNote = useCallback(async (id: string, updatedFields: Partial<Omit<Note, 'id' | 'createdAt'>>) => {
         const noteToUpdate = notes.find(note => note.id === id);
         if (!noteToUpdate) return;
-        
-        // FIX: Added user_id to the type definition for newVersion to match the object being created.
-        const newVersion: Omit<NoteVersion, 'id'|'noteId'> & {note_id: string; user_id?: string} = { user_id: noteToUpdate.userId, note_id: id, savedAt: noteToUpdate.updatedAt, title: noteToUpdate.title, content: noteToUpdate.content, tags: noteToUpdate.tags };
+
+        // Create a version based on the state *before* the update
+        const newVersion: Omit<NoteVersion, 'id'> = {
+            userId: noteToUpdate.userId,
+            noteId: id,
+            savedAt: noteToUpdate.updatedAt,
+            title: noteToUpdate.title,
+            content: noteToUpdate.content,
+            tags: noteToUpdate.tags
+        };
         
         const { error: versionError } = await supabase.from('note_versions').insert(toSupabase(newVersion));
         if(versionError) console.error("Failed to save note version:", versionError);
@@ -155,8 +176,8 @@ export const useStore = (user: User | undefined) => {
 
     const addCollection = useCallback(async (name: string, parentId: string | null = null) => {
         const siblings = collections.filter(c => c.parentId === parentId);
-        const maxOrder = siblings.reduce((max, c) => Math.max(max, c.order || 0), 0);
-        const newCollection = { name, parentId, order: maxOrder + 1 };
+        const maxOrder = siblings.reduce((max, c) => Math.max(max, c.itemOrder || 0), 0);
+        const newCollection = { name, parentId, itemOrder: maxOrder + 1 };
         const { data, error } = await supabase.from('collections').insert(toSupabase(newCollection)).select().single();
         if (error) throw error;
         return data.id;
@@ -186,7 +207,7 @@ export const useStore = (user: User | undefined) => {
         if (targetItemId === null) {
             newParentId = null;
             const rootSiblings = allItems.filter(item => item.parentId === null && item.id !== draggedItemId);
-            newOrder = (rootSiblings.reduce((max, item) => Math.max(max, item.order || 0), 0)) + 1;
+            newOrder = (rootSiblings.reduce((max, item) => Math.max(max, item.itemOrder || 0), 0)) + 1;
         } else {
             const targetItem = allItems.find(item => item.id === targetItemId);
             if (!targetItem) return;
@@ -194,15 +215,15 @@ export const useStore = (user: User | undefined) => {
             if (position === 'inside') {
                 newParentId = targetItem.id;
                 const newSiblings = allItems.filter(item => item.parentId === newParentId && item.id !== draggedItemId);
-                newOrder = (newSiblings.reduce((max, item) => Math.max(max, item.order || 0), 0)) + 1;
+                newOrder = (newSiblings.reduce((max, item) => Math.max(max, item.itemOrder || 0), 0)) + 1;
             } else {
                 newParentId = targetItem.parentId;
-                const siblings = allItems.filter(item => item.parentId === newParentId && item.id !== draggedItemId).sort((a, b) => (a.order || 0) - (b.order || 0));
+                const siblings = allItems.filter(item => item.parentId === newParentId && item.id !== draggedItemId).sort((a, b) => (a.itemOrder || 0) - (b.itemOrder || 0));
                 const targetIndex = siblings.findIndex(item => item.id === targetItemId);
                 if (targetIndex === -1) return;
 
-                const prevOrder = siblings[position === 'top' ? targetIndex - 1 : targetIndex]?.order || 0;
-                const nextOrder = siblings[position === 'top' ? targetIndex : targetIndex + 1]?.order;
+                const prevOrder = siblings[position === 'top' ? targetIndex - 1 : targetIndex]?.itemOrder || 0;
+                const nextOrder = siblings[position === 'top' ? targetIndex : targetIndex + 1]?.itemOrder;
 
                 if (nextOrder !== undefined) {
                     newOrder = (prevOrder + nextOrder) / 2;
@@ -213,7 +234,7 @@ export const useStore = (user: User | undefined) => {
         }
         
         const table = isNote ? 'notes' : 'collections';
-        const { error } = await supabase.from(table).update({ parent_id: newParentId, order: newOrder }).eq('id', draggedItemId);
+        const { error } = await supabase.from(table).update({ parent_id: newParentId, item_order: newOrder }).eq('id', draggedItemId);
         if (error) throw error;
     }, [notes, collections]);
 

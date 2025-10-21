@@ -1,25 +1,30 @@
 import React, { useMemo } from 'react';
-import { useAppContext } from '../context/AppContext';
+import { useStoreContext, useUIContext, useEditorContext } from '../context/AppContext';
 import { Command } from '../types';
 import {
     PencilSquareIcon, Bars3Icon, SunIcon, Cog6ToothIcon, SparklesIcon, TrashIcon, StarIcon,
-    HistoryIcon, ArrowUturnLeftIcon, ArrowUturnRightIcon, DocumentTextIcon, TagIcon, LightBulbIcon
+    DocumentTextIcon, TagIcon, LightBulbIcon, ArrowUturnLeftIcon, ArrowUturnRightIcon
 } from '../components/Icons';
 
 export const useCommands = (onComplete: () => void): Command[] => {
     const {
         onAddNote,
+        activeNote,
+        setNoteToDelete,
+        toggleFavorite,
+    } = useStoreContext();
+    
+    const {
         setIsSidebarOpen,
         toggleTheme,
         openSettings,
-        onSetView,
+        setView,
         view,
-        activeNote,
-        onDeleteNote,
-        onToggleFavorite,
-        editorActions,
         isAiRateLimited,
-    } = useAppContext();
+        onToggleSidebar
+    } = useUIContext();
+
+    const { editorActions } = useEditorContext();
 
     const commands = useMemo<Command[]>(() => {
         const allCommands: Command[] = [];
@@ -37,7 +42,7 @@ export const useCommands = (onComplete: () => void): Command[] => {
             {
                 id: 'toggle-sidebar',
                 name: 'Toggle Sidebar',
-                action: () => { setIsSidebarOpen(prev => !prev); onComplete(); },
+                action: () => { onToggleSidebar(); onComplete(); },
                 icon: React.createElement(Bars3Icon),
                 keywords: 'panel menu hide show',
                 section: 'Navigation',
@@ -45,7 +50,7 @@ export const useCommands = (onComplete: () => void): Command[] => {
             {
                 id: 'switch-to-notes',
                 name: 'Switch to Notes',
-                action: () => { onSetView('NOTES'); onComplete(); },
+                action: () => { setView('NOTES'); onComplete(); },
                 icon: React.createElement(DocumentTextIcon),
                 keywords: 'view notes editor',
                 section: 'Navigation',
@@ -53,7 +58,7 @@ export const useCommands = (onComplete: () => void): Command[] => {
             {
                 id: 'switch-to-chat',
                 name: 'Switch to Chat',
-                action: () => { onSetView('CHAT'); onComplete(); },
+                action: () => { setView('CHAT'); onComplete(); },
                 icon: React.createElement(SparklesIcon),
                 keywords: 'view chat ask ai',
                 section: 'Navigation',
@@ -66,7 +71,7 @@ export const useCommands = (onComplete: () => void): Command[] => {
                 {
                     id: 'delete-note',
                     name: 'Delete Note',
-                    action: () => { onDeleteNote(activeNote); onComplete(); },
+                    action: () => { setNoteToDelete(activeNote); onComplete(); },
                     icon: React.createElement(TrashIcon),
                     keywords: 'remove trash',
                     section: 'Note',
@@ -74,7 +79,7 @@ export const useCommands = (onComplete: () => void): Command[] => {
                 {
                     id: 'toggle-favorite',
                     name: 'Toggle Favorite',
-                    action: () => { onToggleFavorite(activeNote.id); onComplete(); },
+                    action: () => { toggleFavorite(activeNote.id); onComplete(); },
                     icon: React.createElement(StarIcon, { filled: activeNote.isFavorite }),
                     keywords: 'star favorite pin',
                     section: 'Note',
@@ -191,14 +196,15 @@ export const useCommands = (onComplete: () => void): Command[] => {
         setIsSidebarOpen,
         toggleTheme,
         openSettings,
-        onSetView,
+        setView,
         view,
         activeNote,
-        onDeleteNote,
-        onToggleFavorite,
+        setNoteToDelete,
+        toggleFavorite,
         editorActions,
         isAiRateLimited,
-        onComplete
+        onComplete,
+        onToggleSidebar
     ]);
 
     return commands;

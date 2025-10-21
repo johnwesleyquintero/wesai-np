@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useRef } from 'react';
-import { Note, FilterType, SearchMode, SmartCollection } from '../types';
+import { Note, FilterType, SearchMode, SmartCollection, Collection } from '../types';
 import NoteCard from './NoteCard';
 import {
     PencilSquareIcon, Cog6ToothIcon, SunIcon, MoonIcon, XMarkIcon, MagnifyingGlassIcon, SparklesIcon,
@@ -7,7 +7,7 @@ import {
 } from './Icons';
 import SidebarNode, { TreeNode } from './SidebarNode';
 import Highlight from './Highlight';
-import { useAppContext } from '../context/AppContext';
+import { useStoreContext, useUIContext } from '../context/AppContext';
 import { useDragAndDrop } from '../hooks/useDragAndDrop';
 
 interface SidebarProps {
@@ -22,12 +22,13 @@ interface SidebarProps {
     isAiSearching: boolean;
     aiSearchError: string | null;
     width: number;
-    activeSmartCollectionId: string | null;
+    activeSmartCollection: SmartCollection | null;
     onActivateSmartCollection: (collection: SmartCollection) => void;
     onClearActiveSmartCollection: () => void;
+    onSelectNote: (noteId: string) => void;
 }
 
-const buildTree = (notes: Note[], collections: import('../types').Collection[]): TreeNode[] => {
+const buildTree = (notes: Note[], collections: Collection[]): TreeNode[] => {
     const noteMap = new Map(notes.map(note => [note.id, { ...note, children: [] as TreeNode[] }]));
     const collectionMap = new Map(collections.map(c => [c.id, { ...c, type: 'collection' as const, children: [] as TreeNode[] }]));
     
@@ -68,7 +69,8 @@ const FooterButton: React.FC<{
     children: React.ReactNode;
     isActive?: boolean;
     className?: string;
-}> = ({ onClick, tooltip, children, isActive = false, className = '' }) => (
+    hasIndicator?: boolean;
+}> = ({ onClick, tooltip, children, isActive = false, className = '', hasIndicator = false }) => (
     <div className="relative group">
         <button
             onClick={onClick}
@@ -80,6 +82,7 @@ const FooterButton: React.FC<{
              aria-label={tooltip}
         >
             {children}
+            {hasIndicator && <div className="absolute top-1.5 right-1.5 w-2 h-2 bg-yellow-400 rounded-full border-2 border-light-ui dark:border-dark-ui"></div>}
         </button>
         <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-zinc-800 dark:bg-zinc-700 text-white dark:text-dark-text text-xs font-semibold rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
             {tooltip}
@@ -90,20 +93,23 @@ const FooterButton: React.FC<{
 
 const Sidebar: React.FC<SidebarProps> = ({
     filteredNotes, activeNoteId, filter, setFilter, searchTerm, setSearchTerm, searchMode, setSearchMode, isAiSearching, aiSearchError, width,
-    activeSmartCollectionId, onActivateSmartCollection, onClearActiveSmartCollection
+    activeSmartCollection, onActivateSmartCollection, onClearActiveSmartCollection, onSelectNote
 }) => {
     const {
-        notes, collections, smartCollections, onSelectNote, onAddNote, onAddCollection,
-        theme, toggleTheme, isMobileView, isSidebarOpen, setIsSidebarOpen, view, onSetView,
-        isAiRateLimited, onOpenSmartFolderModal, onDeleteSmartCollection, onMoveItem,
-        onOpenContextMenu, openSettings, onAddNoteFromFile
-    } = useAppContext();
+        notes, collections, smartCollections, onAddNote, addCollection, moveItem,
+        deleteSmartCollection, onAddNoteFromFile,
+    } = useStoreContext();
+    
+    const {
+        theme, toggleTheme, isMobileView, isSidebarOpen, setIsSidebarOpen, view, setView,
+        isAiRateLimited, openSmartFolderModal, onOpenContextMenu, openSettings, isApiKeyMissing,
+    } = useUIContext();
     
     const rootDropRef = useRef<HTMLDivElement>(null);
     const { isFileOver: isRootFileOver, dragAndDropProps: rootDragAndDropProps } = useDragAndDrop(rootDropRef, {
         id: null,
         type: 'root',
-        onMoveItem: onMoveItem,
+        onMoveItem: moveItem,
         onDropFile: (file, parentId) => {
             const reader = new FileReader();
             reader.onload = (loadEvent) => {
@@ -117,29 +123,17 @@ const Sidebar: React.FC<SidebarProps> = ({
     });
 
     const fileTree = useMemo(() => buildTree(notes, collections), [notes, collections]);
-    const activeSmartCollection = useMemo(() => smartCollections.find(sc => sc.id === activeSmartCollectionId), [smartCollections, activeSmartCollectionId]);
     
     const { allNotesCount, favoritesCount } = useMemo(() => ({
         allNotesCount: notes.length,
         favoritesCount: notes.filter(n => n.isFavorite).length
     }), [notes]);
-
-    const handleDropFile = (file: File, parentId: string | null) => {
-        const reader = new FileReader();
-        reader.onload = (loadEvent) => {
-            const content = loadEvent.target?.result as string;
-            if (content !== null) {
-                onAddNoteFromFile(file.name, content, parentId);
-            }
-        };
-        reader.readAsText(file);
-    };
     
     const renderSmartCollections = () => (
         <div className="px-2 mt-4">
              <div className="flex justify-between items-center mb-1 px-2">
                 <h3 className="text-sm font-semibold text-light-text/60 dark:text-dark-text/60">Smart Folders</h3>
-                <button onClick={() => onOpenSmartFolderModal(null)} className="p-1 rounded text-light-text/60 dark:text-dark-text/60 hover:text-light-text dark:hover:text-dark-text hover:bg-light-ui dark:hover:bg-dark-ui" aria-label="Add new smart folder">
+                <button onClick={() => openSmartFolderModal(null)} className="p-1 rounded text-light-text/60 dark:text-dark-text/60 hover:text-light-text dark:hover:text-dark-text hover:bg-light-ui dark:hover:bg-dark-ui" aria-label="Add new smart folder">
                     <PlusIcon className="w-4 h-4" />
                 </button>
             </div>
@@ -148,8 +142,8 @@ const Sidebar: React.FC<SidebarProps> = ({
                     className={`group flex items-center justify-between w-full text-left rounded-md px-2 py-1.5 my-0.5 text-sm cursor-pointer hover:bg-light-background dark:hover:bg-dark-background`}
                      onClick={() => onActivateSmartCollection(sc)}
                      onContextMenu={(e) => onOpenContextMenu(e, [
-                         { label: 'Edit Smart Folder', action: () => onOpenSmartFolderModal(sc), icon: <PencilSquareIcon /> },
-                         { label: 'Delete Smart Folder', action: () => onDeleteSmartCollection(sc), isDestructive: true, icon: <TrashIcon /> },
+                         { label: 'Edit Smart Folder', action: () => openSmartFolderModal(sc), icon: <PencilSquareIcon /> },
+                         { label: 'Delete Smart Folder', action: () => deleteSmartCollection(sc.id), isDestructive: true, icon: <TrashIcon /> },
                      ])}
                 >
                      <div className="flex items-center truncate">
@@ -175,7 +169,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             <div className="px-2 mt-2">
                  <div className="flex justify-between items-center mb-1 px-2">
                     <h3 className="text-sm font-semibold text-light-text/60 dark:text-dark-text/60">Folders</h3>
-                     <button onClick={() => onAddCollection('New Folder', null)} className="p-1 rounded text-light-text/60 dark:text-dark-text/60 hover:text-light-text dark:hover:text-dark-text hover:bg-light-ui dark:hover:bg-dark-ui" aria-label="Add new folder">
+                     <button onClick={() => addCollection('New Folder', null)} className="p-1 rounded text-light-text/60 dark:text-dark-text/60 hover:text-light-text dark:hover:text-dark-text hover:bg-light-ui dark:hover:bg-dark-ui" aria-label="Add new folder">
                         <FolderPlusIcon className="w-4 h-4" />
                     </button>
                 </div>
@@ -186,6 +180,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                         level={0} 
                         activeNoteId={activeNoteId}
                         searchTerm={searchTerm}
+                        onSelectNote={onSelectNote}
                     />
                 ))}
             </div>
@@ -205,8 +200,15 @@ const Sidebar: React.FC<SidebarProps> = ({
                     />
                 ))
             ) : (
-                <div className="text-center py-8 text-sm text-light-text/60 dark:text-dark-text/60">
-                    {isAiSearching ? 'Searching...' : 'No notes found.'}
+                <div className="text-center px-4 py-8 text-sm text-light-text/60 dark:text-dark-text/60">
+                    {isAiSearching && 'AI is searching...'}
+                    {!isAiSearching && searchTerm && (
+                        <>
+                            <p className="font-semibold">No results for "{searchTerm}"</p>
+                            <p className="mt-1">Try a different keyword or use AI Search for conceptual matches.</p>
+                        </>
+                    )}
+                    {!isAiSearching && !searchTerm && 'No notes in this view.'}
                 </div>
             )}
         </div>
@@ -214,7 +216,7 @@ const Sidebar: React.FC<SidebarProps> = ({
 
     return (
         <aside 
-            className={`absolute md:relative z-30 flex flex-col h-full bg-light-ui dark:bg-dark-ui border-r border-light-border dark:border-dark-border transition-transform transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 flex-shrink-0`}
+            className={`absolute md:relative z-30 flex flex-col h-full bg-light-ui dark:bg-dark-ui border-r border-light-border dark:border-dark-border transition-transform transform duration-300 ease-in-out ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 flex-shrink-0`}
             style={{ width: isMobileView ? '20rem' : `${width}px` }} // 20rem is 320px
         >
             <div className="p-4 flex-shrink-0 border-b border-light-border dark:border-dark-border">
@@ -304,7 +306,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                             </div>
                         </div>
                     </div>
-                    {searchTerm ? renderFlatList() : (
+                    {searchTerm || activeSmartCollection ? renderFlatList() : (
                         filter === 'ALL' ? (
                             <div
                                 ref={rootDropRef}
@@ -322,7 +324,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             <div className="p-2 flex-shrink-0 border-t border-light-border dark:border-dark-border">
                 <div className="flex justify-end items-center space-x-1">
                     <FooterButton
-                        onClick={() => onSetView('CHAT')}
+                        onClick={() => setView('CHAT')}
                         tooltip="Ask AI"
                         isActive={view === 'CHAT'}
                     >
@@ -339,6 +341,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                     <FooterButton
                         onClick={openSettings}
                         tooltip="Settings"
+                        hasIndicator={isApiKeyMissing}
                     >
                         <Cog6ToothIcon />
                     </FooterButton>

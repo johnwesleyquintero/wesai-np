@@ -1,14 +1,21 @@
 import React from 'react';
-import { Note } from '../types';
 import { LinkIcon } from './Icons';
-import { useAppContext } from '../context/AppContext';
+import { useUIContext } from '../context/AppContext';
+import { useStoreContext } from '../context/AppContext';
+
 
 interface BacklinksDisplayProps {
     backlinks: { sourceNoteId: string; sourceNoteTitle: string }[];
 }
 
 const BacklinksDisplay: React.FC<BacklinksDisplayProps> = ({ backlinks }) => {
-    const { onSelectNote } = useAppContext();
+    const { setActiveNoteId } = useStoreContext();
+    const { setView } = useUIContext();
+
+    const handleSelectNote = (noteId: string) => {
+        setActiveNoteId(noteId);
+        setView('NOTES');
+    };
 
     if (backlinks.length === 0) {
         return null;
@@ -24,7 +31,7 @@ const BacklinksDisplay: React.FC<BacklinksDisplayProps> = ({ backlinks }) => {
                 {backlinks.map(({ sourceNoteId, sourceNoteTitle }) => (
                     <button
                         key={sourceNoteId}
-                        onClick={() => onSelectNote(sourceNoteId)}
+                        onClick={() => handleSelectNote(sourceNoteId)}
                         className="w-full text-left p-2 rounded-md hover:bg-light-ui dark:hover:bg-dark-ui transition-colors"
                     >
                         <p className="font-medium text-sm truncate">{sourceNoteTitle}</p>

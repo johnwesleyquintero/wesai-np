@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Note } from '../types';
 import { ChevronDownIcon, ChevronRightIcon, DocumentTextIcon, FolderIcon, TrashIcon, PencilSquareIcon, DocumentDuplicateIcon, ClipboardDocumentIcon, GripVerticalIcon } from './Icons';
 import { ContextMenuItem } from '../types';
-import { useAppContext } from '../context/AppContext';
+import { useStoreContext, useUIContext } from '../context/AppContext';
 import { useToast } from '../context/ToastContext';
 import Highlight from './Highlight';
 import { useDragAndDrop } from '../hooks/useDragAndDrop';
@@ -16,15 +16,17 @@ interface SidebarNodeProps {
     level: number;
     activeNoteId: string | null;
     searchTerm: string;
+    onSelectNote: (noteId: string) => void;
 }
 
 const SidebarNode: React.FC<SidebarNodeProps> = ({ 
-    node, level, activeNoteId, searchTerm
+    node, level, activeNoteId, searchTerm, onSelectNote
 }) => {
     const { 
-        collections, onSelectNote, onAddNote, onAddNoteFromFile, onDeleteCollection, onUpdateCollection, onRenameNote, onMoveItem,
-        onOpenContextMenu, renamingItemId, setRenamingItemId, onCopyNote, onDeleteNote
-    } = useAppContext();
+        collections, onAddNote, onAddNoteFromFile, deleteCollection, updateCollection, renameNoteTitle, moveItem,
+        copyNote, deleteNote, setNoteToDelete
+    } = useStoreContext();
+    const { onOpenContextMenu, renamingItemId, setRenamingItemId } = useUIContext();
 
     const isCollection = 'name' in node;
     const [isExpanded, setIsExpanded] = useState(true);
@@ -53,7 +55,7 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
         id: node.id,
         parentId: node.parentId,
         type: isCollection ? 'collection' : 'note',
-        onMoveItem,
+        onMoveItem: moveItem,
         onDropFile: isCollection ? handleDropFile : undefined,
         collections,
         isDisabled: isRenaming,
@@ -79,7 +81,7 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
     const handleDeleteClick = (e: React.MouseEvent) => {
         e.stopPropagation();
         if (isCollection) {
-             onDeleteCollection(node);
+            //  onDeleteCollection(node);
         }
     };
     
@@ -89,13 +91,13 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
             menuItems = [
                 { label: 'New Note in Folder', action: () => onAddNote(node.id), icon: <PencilSquareIcon /> },
                 { label: 'Rename Folder', action: () => setRenamingItemId(node.id), icon: <PencilSquareIcon /> },
-                { label: 'Delete Folder', action: () => onDeleteCollection(node), icon: <TrashIcon />, isDestructive: true },
+                { label: 'Delete Folder', action: () => deleteCollection(node.id), icon: <TrashIcon />, isDestructive: true },
             ];
         } else {
             const noteAsNote = node as Note;
             menuItems = [
                 { label: 'Rename Note', action: () => setRenamingItemId(node.id), icon: <PencilSquareIcon /> },
-                { label: 'Copy Note', action: () => onCopyNote(node.id), icon: <DocumentDuplicateIcon /> },
+                { label: 'Copy Note', action: () => copyNote(node.id), icon: <DocumentDuplicateIcon /> },
                 { 
                     label: 'Copy as Markdown', 
                     action: () => {
@@ -105,7 +107,7 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
                     }, 
                     icon: <ClipboardDocumentIcon /> 
                 },
-                { label: 'Delete Note', action: () => onDeleteNote(noteAsNote), icon: <TrashIcon />, isDestructive: true },
+                { label: 'Delete Note', action: () => setNoteToDelete(noteAsNote), icon: <TrashIcon />, isDestructive: true },
             ];
         }
         onOpenContextMenu(e, menuItems);
@@ -118,9 +120,9 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
     const handleRename = () => {
         if (renameValue.trim() && renameValue.trim() !== name) {
             if (isCollection) {
-                onUpdateCollection(node.id, { name: renameValue.trim() });
+                updateCollection(node.id, { name: renameValue.trim() });
             } else {
-                onRenameNote(node.id, renameValue.trim());
+                renameNoteTitle(node.id, renameValue.trim());
             }
         }
         setRenamingItemId(null);
@@ -182,11 +184,6 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
                         </span>
                     )}
                 </div>
-                 {isCollection && !isRenaming && (
-                    <button onClick={handleDeleteClick} className="p-1 rounded hover:bg-red-500/20 text-light-text/60 dark:text-dark-text/60 hover:text-red-600 dark:hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
-                        <TrashIcon className="w-4 h-4" />
-                    </button>
-                )}
             </div>
             {dropPosition === 'bottom' && <div className="absolute -bottom-0.5 left-2 right-2 h-0.5 bg-light-primary dark:bg-dark-primary rounded-full z-10" style={{ marginLeft: `${level * 16}px` }} />}
             {isCollection && isExpanded && (
@@ -203,6 +200,7 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
                             level={level + 1}
                             activeNoteId={activeNoteId}
                             searchTerm={searchTerm}
+                            onSelectNote={onSelectNote}
                         />
                     ))}
                 </div>

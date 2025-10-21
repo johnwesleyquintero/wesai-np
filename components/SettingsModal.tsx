@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { PlusIcon } from './Icons';
-import { useTemplates } from '../hooks/useTemplates';
 import TemplateEditorModal from './TemplateEditorModal';
 import { Template } from '../types';
 import { useApiKey } from '../hooks/useApiKey';
-import { useStore } from '../hooks/useStore';
+import { useStoreContext } from '../context/AppContext';
 import ConfirmationModal from './ConfirmationModal';
 import { useToast } from '../context/ToastContext';
 import { useModalAccessibility } from '../hooks/useModalAccessibility';
@@ -15,9 +14,8 @@ interface SettingsModalProps {
 }
 
 const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
-    const { templates, addTemplate, updateTemplate, deleteTemplate, importTemplates } = useTemplates();
+    const { templates, addTemplate, updateTemplate, deleteTemplate, importTemplates, notes, collections, smartCollections, importData } = useStoreContext();
     const { apiKey, saveApiKey } = useApiKey();
-    const { notes, collections, smartCollections, importData } = useStore();
     const { showToast } = useToast();
     
     const [isTemplateEditorOpen, setIsTemplateEditorOpen] = useState(false);

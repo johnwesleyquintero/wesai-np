@@ -1,16 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Note } from '../types';
 import { DocumentTextIcon } from './Icons';
+import { useStoreContext } from '../context/AppContext';
 
 interface NoteLinkerProps {
-    notes: Note[];
     query: string;
     onSelect: (noteId: string, noteTitle: string) => void;
     onClose: () => void;
     position: { top: number; left: number };
 }
 
-const NoteLinker: React.FC<NoteLinkerProps> = ({ notes, query, onSelect, onClose, position }) => {
+const NoteLinker: React.FC<NoteLinkerProps> = ({ query, onSelect, onClose, position }) => {
+    const { notes } = useStoreContext();
     const [selectedIndex, setSelectedIndex] = useState(0);
     const resultsRef = useRef<HTMLDivElement>(null);
 

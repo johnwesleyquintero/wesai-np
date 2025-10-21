@@ -2,18 +2,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ChatMessage, Note } from '../types';
 import { Bars3Icon, SparklesIcon, DocumentTextIcon, PaperAirplaneIcon, MagnifyingGlassIcon } from './Icons';
 import MarkdownPreview from './MarkdownPreview';
+import { useUIContext, useStoreContext } from '../context/AppContext';
 
-interface ChatViewProps {
-    messages: ChatMessage[];
-    onSendMessage: (query: string) => void;
-    chatStatus: 'idle' | 'searching' | 'replying';
-    onSelectNote: (noteId: string) => void;
-    isMobileView: boolean;
-    onToggleSidebar: () => void;
-    isAiRateLimited: boolean;
-}
+const ChatView: React.FC = () => {
+    const { chatMessages: messages, onSendMessage, chatStatus } = useStoreContext();
+    const { isMobileView, onToggleSidebar, setView, isAiRateLimited } = useUIContext();
+    const { setActiveNoteId } = useStoreContext();
 
-const ChatView: React.FC<ChatViewProps> = ({ messages, onSendMessage, chatStatus, onSelectNote, isMobileView, onToggleSidebar, isAiRateLimited }) => {
     const [input, setInput] = useState('');
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const isReplying = chatStatus !== 'idle';
@@ -30,6 +25,11 @@ const ChatView: React.FC<ChatViewProps> = ({ messages, onSendMessage, chatStatus
             onSendMessage(input);
             setInput('');
         }
+    };
+    
+    const onSelectNote = (noteId: string) => {
+        setActiveNoteId(noteId);
+        setView('NOTES');
     };
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Note, NoteVersion, Collection, SmartCollection } from '../types';
+import { useTemplates } from './useTemplates';
 
 const NOTES_STORAGE_key = 'wesai-notes';
 const COLLECTIONS_STORAGE_KEY = 'wesai-collections';
@@ -51,6 +52,8 @@ export const useStore = () => {
             return [];
         }
     });
+    
+    const { templates, addTemplate, updateTemplate, deleteTemplate, importTemplates } = useTemplates();
 
 
     useEffect(() => {
@@ -364,5 +367,10 @@ export const useStore = () => {
         updateSmartCollection,
         deleteSmartCollection,
         importData,
+        templates,
+        addTemplate,
+        updateTemplate,
+        deleteTemplate,
+        importTemplates,
     };
 };

@@ -2,15 +2,16 @@ import React, { useState, useEffect, useRef } from 'react';
 import { SmartCollection } from '../types';
 import { BrainIcon } from './Icons';
 import { useModalAccessibility } from '../hooks/useModalAccessibility';
+import { useStoreContext } from '../context/AppContext';
 
 interface SmartFolderModalProps {
     isOpen: boolean;
     onClose: () => void;
+    folderToEdit: SmartCollection | null;
     onSave: (data: Omit<SmartCollection, 'id'>) => void;
-    folderToEdit: Omit<SmartCollection, 'id'> | SmartCollection | null;
 }
 
-const SmartFolderModal: React.FC<SmartFolderModalProps> = ({ isOpen, onClose, onSave, folderToEdit }) => {
+const SmartFolderModal: React.FC<SmartFolderModalProps> = ({ isOpen, onClose, folderToEdit, onSave }) => {
     const [name, setName] = useState('');
     const [query, setQuery] = useState('');
     const nameInputRef = useRef<HTMLInputElement>(null);
@@ -34,7 +35,6 @@ const SmartFolderModal: React.FC<SmartFolderModalProps> = ({ isOpen, onClose, on
     const handleSave = () => {
         if (name.trim() && query.trim()) {
             onSave({ name: name.trim(), query: query.trim() });
-            onClose();
         }
     };
 

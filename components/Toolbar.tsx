@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { Note, Template } from '../types';
 import { enhanceText, summarizeAndExtractActions } from '../services/geminiService';
-import { StarIcon, TrashIcon, SparklesIcon, HistoryIcon, ArrowDownTrayIcon, DocumentDuplicateIcon, Bars3Icon, ArrowUturnLeftIcon, ArrowUturnRightIcon, EyeIcon, PencilSquareIcon, CheckBadgeIcon, ClipboardDocumentIcon } from './Icons';
+import { StarIcon, TrashIcon, SparklesIcon, HistoryIcon, ArrowDownTrayIcon, DocumentDuplicateIcon, Bars3Icon, ArrowUturnLeftIcon, ArrowUturnRightIcon, EyeIcon, PencilSquareIcon, CheckBadgeIcon, ClipboardDocumentIcon, InformationCircleIcon } from './Icons';
 import { useToast } from '../context/ToastContext';
+import NoteInfoPopover from './NoteInfoPopover';
+import { useStoreContext } from '../context/AppContext';
 
 interface ToolbarProps {
     note: Note;
-    onDelete: (note: Note) => void;
+    onDelete: (noteId: string) => void;
     onToggleFavorite: (id: string) => void;
     saveStatus: 'saved' | 'saving' | 'unsaved';
     contentToEnhance: string;
@@ -25,6 +27,8 @@ interface ToolbarProps {
     onToggleViewMode: () => void;
     isCheckingSpelling: boolean;
     isAiRateLimited: boolean;
+    wordCount: number;
+    charCount: number;
 }
 
 interface StatusIndicatorProps {
@@ -252,10 +256,12 @@ const ExportMenu: React.FC<{ note: Note }> = ({ note }) => {
 const Toolbar: React.FC<ToolbarProps> = ({ 
     note, onDelete, onToggleFavorite, saveStatus, contentToEnhance, onContentUpdate, onToggleHistory, isHistoryOpen, 
     templates, onApplyTemplate, isMobileView, onToggleSidebar, onUndo, onRedo, canUndo, canRedo,
-    viewMode, onToggleViewMode, isCheckingSpelling, isAiRateLimited
+    viewMode, onToggleViewMode, isCheckingSpelling, isAiRateLimited, wordCount, charCount
 }) => {
+    const { setNoteToDelete } = useStoreContext();
     const [aiActionInProgress, setAiActionInProgress] = useState<'enhancing' | 'summarizing' | null>(null);
     const [aiActionError, setAiActionError] = useState<string | null>(null);
+    const [isInfoOpen, setIsInfoOpen] = useState(false);
 
     // Clear error after a delay
     React.useEffect(() => {
@@ -319,12 +325,19 @@ const Toolbar: React.FC<ToolbarProps> = ({
                         {viewMode === 'preview' ? <PencilSquareIcon /> : <EyeIcon />}
                     </button>
                     
+                    <div className="relative">
+                        <button onClick={() => setIsInfoOpen(prev => !prev)} className={`p-2 rounded-md transition-colors ${isInfoOpen ? 'bg-light-ui dark:bg-dark-ui' : 'hover:bg-light-ui dark:hover:bg-dark-ui'}`} aria-label="Note Information">
+                            <InformationCircleIcon />
+                        </button>
+                        {isInfoOpen && <NoteInfoPopover note={note} wordCount={wordCount} charCount={charCount} />}
+                    </div>
+
                     <ExportMenu note={note} />
 
                     <button onClick={() => onToggleFavorite(note.id)} className="p-2 rounded-md hover:bg-light-ui dark:hover:bg-dark-ui transition-colors" aria-label={note.isFavorite ? 'Remove from favorites' : 'Add to favorites'}>
                         <StarIcon className={`w-5 h-5 ${note.isFavorite ? 'text-yellow-500' : ''}`} filled={note.isFavorite} />
                     </button>
-                    <button onClick={() => onDelete(note)} className="p-2 rounded-md hover:bg-light-ui dark:hover:bg-dark-ui transition-colors text-red-500" aria-label="Delete note">
+                    <button onClick={() => setNoteToDelete(note)} className="p-2 rounded-md hover:bg-light-ui dark:hover:bg-dark-ui transition-colors text-red-500" aria-label="Delete note">
                         <TrashIcon />
                     </button>
                 </div>

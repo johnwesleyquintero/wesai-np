@@ -23,7 +23,7 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isActive, onClick, searchTerm
     return (
         <div
             onClick={onClick}
-            className={`p-3 mb-2 rounded-lg cursor-pointer transition-colors ${
+            className={`p-3 mb-2 rounded-lg cursor-pointer transition-colors active:scale-95 transform transition-transform ${
                 isActive
                     ? 'bg-light-primary/30 dark:bg-dark-primary/30'
                     : 'hover:bg-light-background dark:hover:bg-dark-background'

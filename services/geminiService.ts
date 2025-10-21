@@ -112,7 +112,7 @@ export const performInlineEdit = async (text: string, action: InlineAction): Pro
         const ai = getAi();
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
-            contents: prompt,
+            contents: [{ parts: [{ text: prompt }] }],
         });
         return response.text.trim();
     } catch (error) {
@@ -134,7 +134,7 @@ export const enhanceText = async (text: string, tone: string): Promise<string> =
         
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
-            contents: prompt,
+            contents: [{ parts: [{ text: prompt }] }],
         });
 
         return response.text;
@@ -174,7 +174,7 @@ export const summarizeAndExtractActions = async (text: string): Promise<{ summar
 
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
-            contents: prompt,
+            contents: [{ parts: [{ text: prompt }] }],
             config: {
                 responseMimeType: "application/json",
                 responseSchema: schema,
@@ -239,7 +239,7 @@ ${JSON.stringify(simplifiedNotes)}`;
 
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
-            contents: prompt,
+            contents: [{ parts: [{ text: prompt }] }],
             config: {
                 responseMimeType: "application/json",
                 responseSchema: schema,
@@ -288,7 +288,7 @@ Return a JSON object with a single key "tags" containing an array of your sugges
 
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
-            contents: prompt,
+            contents: [{ parts: [{ text: prompt }] }],
             config: {
                 responseMimeType: "application/json",
                 responseSchema: schema,
@@ -319,7 +319,7 @@ Note Content:
 
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
-            contents: prompt,
+            contents: [{ parts: [{ text: prompt }] }],
         });
 
         // Trim whitespace and remove any surrounding quotes that the model might add
@@ -399,7 +399,7 @@ TEXT: """${text}"""`;
 
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
-            contents: prompt,
+            contents: [{ parts: [{ text: prompt }] }],
             config: {
                 responseMimeType: "application/json",
                 responseSchema: schema,
@@ -441,7 +441,7 @@ export const getSpellingSuggestions = async (word: string): Promise<string[]> =>
 
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
-            contents: prompt,
+            contents: [{ parts: [{ text: prompt }] }],
             config: {
                 responseMimeType: "application/json",
                 responseSchema: schema,

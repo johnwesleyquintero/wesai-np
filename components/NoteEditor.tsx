@@ -11,7 +11,7 @@ import TagSuggestions from './TagSuggestions';
 import TitleSuggestion from './TitleSuggestion';
 import InlineAiMenu from './InlineAiMenu';
 import SpellcheckMenu from './SpellcheckMenu';
-import { useAppContext } from '../context/AppContext';
+import { useEditorContext, useStoreContext, useUIContext } from '../context/AppContext';
 import MarkdownHighlighter from './MarkdownHighlighter';
 import NoteLinker from './NoteLinker';
 import BacklinksDisplay from './BacklinksDisplay';
@@ -20,14 +20,8 @@ import SlashCommandMenu from './SlashCommandMenu';
 
 interface NoteEditorProps {
     note: Note;
-    onUpdate: (id: string, updatedFields: Partial<Omit<Note, 'id' | 'createdAt'>>) => void;
-    onDelete: (note: Note) => void;
-    onToggleFavorite: (id: string) => void;
     onRestoreVersion: (noteId: string, version: NoteVersion) => void;
     templates: Template[];
-    isMobileView: boolean;
-    onToggleSidebar: () => void;
-    isAiRateLimited: boolean;
 }
 
 type NoteState = { title: string; content: string; tags: string[] };
@@ -43,7 +37,11 @@ const StatusBar: React.FC<{ wordCount: number; charCount: number }> = ({ wordCou
     </div>
 );
 
-const NoteEditor: React.FC<NoteEditorProps> = ({ note, onUpdate, onDelete, onToggleFavorite, onRestoreVersion, templates, isMobileView, onToggleSidebar, isAiRateLimited }) => {
+const NoteEditor: React.FC<NoteEditorProps> = ({ note, onRestoreVersion, templates }) => {
+    const { updateNote, deleteNote, toggleFavorite, notes } = useStoreContext();
+    const { isMobileView, onToggleSidebar, isAiRateLimited } = useUIContext();
+    const { registerEditorActions, unregisterEditorActions } = useEditorContext();
+
     const {
         state: editorState,
         set: setEditorState,
@@ -86,7 +84,6 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onUpdate, onDelete, onTog
     const [slashCommand, setSlashCommand] = useState<SlashCommandState | null>(null);
     const [isDragOver, setIsDragOver] = useState(false);
 
-    const { registerEditorActions, unregisterEditorActions, notes } = useAppContext();
     const backlinks = useBacklinks(note.id, notes);
 
     const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -193,7 +190,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onUpdate, onDelete, onTog
 
         if (saveStatus === 'unsaved' && isDifferentFromPersisted) {
             setSaveStatus('saving');
-            onUpdate(note.id, debouncedEditorState);
+            updateNote(note.id, debouncedEditorState);
             setTimeout(() => setSaveStatus('saved'), 1000);
         }
 
@@ -232,7 +229,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onUpdate, onDelete, onTog
                 });
             }
         }
-    }, [debouncedEditorState, note.id, onUpdate, saveStatus, isVersionPreviewing, isAiRateLimited, note.title, note.content, note.tags]);
+    }, [debouncedEditorState, note.id, updateNote, saveStatus, isVersionPreviewing, isAiRateLimited, note.title, note.content, note.tags]);
 
     // Debounced spell check
     useEffect(() => {
@@ -685,7 +682,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onUpdate, onDelete, onTog
 
     return (
         <div className="flex-1 flex flex-col h-full relative bg-light-background dark:bg-dark-background" onDragOver={(e) => { e.preventDefault(); if (!isEffectivelyReadOnly) setIsDragOver(true); }} onDragLeave={() => setIsDragOver(false)} onDrop={handleDrop}>
-             <Toolbar note={note} onDelete={onDelete} onToggleFavorite={onToggleFavorite} saveStatus={saveStatus} contentToEnhance={editorState.content} onContentUpdate={(content) => setEditorState({...editorState, content})} onToggleHistory={() => setIsHistoryOpen(!isHistoryOpen)} isHistoryOpen={isHistoryOpen} templates={templates} onApplyTemplate={handleApplyTemplate} isMobileView={isMobileView} onToggleSidebar={onToggleSidebar} onUndo={undo} onRedo={redo} canUndo={canUndo} canRedo={canRedo} viewMode={viewMode} onToggleViewMode={() => setViewMode(prev => prev === 'edit' ? 'preview' : 'edit')} isCheckingSpelling={isCheckingSpelling} isAiRateLimited={isAiRateLimited} />
+             <Toolbar note={note} onDelete={() => deleteNote(note.id)} onToggleFavorite={() => toggleFavorite(note.id)} saveStatus={saveStatus} contentToEnhance={editorState.content} onContentUpdate={(content) => setEditorState({...editorState, content})} onToggleHistory={() => setIsHistoryOpen(!isHistoryOpen)} isHistoryOpen={isHistoryOpen} templates={templates} onApplyTemplate={handleApplyTemplate} isMobileView={isMobileView} onToggleSidebar={onToggleSidebar} onUndo={undo} onRedo={redo} canUndo={canUndo} canRedo={canRedo} viewMode={viewMode} onToggleViewMode={() => setViewMode(prev => prev === 'edit' ? 'preview' : 'edit')} isCheckingSpelling={isCheckingSpelling} isAiRateLimited={isAiRateLimited} wordCount={wordCount} charCount={charCount} />
              {isAiRateLimited && <div className="bg-yellow-100 dark:bg-yellow-900/30 border-b border-yellow-300 dark:border-yellow-700/50 py-2 px-4 text-center text-sm text-yellow-800 dark:text-yellow-200 flex-shrink-0">AI features are temporarily paused due to high usage. They will be available again shortly.</div>}
             
             <div ref={editorPaneRef} className="flex-1 overflow-y-auto relative">
@@ -741,7 +738,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onUpdate, onDelete, onTog
             
             <StatusBar wordCount={wordCount} charCount={charCount} />
 
-            {(noteLinker || noteLinkerForSelection) && <NoteLinker notes={notes} query={noteLinker?.query || ''} onSelect={handleInsertLink} onClose={() => { setNoteLinker(null); setNoteLinkerForSelection(null); }} position={noteLinker?.position || { top: noteLinkerForSelection!.rect.bottom, left: noteLinkerForSelection!.rect.left }} />}
+            {(noteLinker || noteLinkerForSelection) && <NoteLinker query={noteLinker?.query || ''} onSelect={handleInsertLink} onClose={() => { setNoteLinker(null); setNoteLinkerForSelection(null); }} position={noteLinker?.position || { top: noteLinkerForSelection!.rect.bottom, left: noteLinkerForSelection!.rect.left }} />}
             {slashCommand && <SlashCommandMenu query={slashCommand.query} position={slashCommand.position} onSelect={handleSelectCommand} onClose={() => setSlashCommand(null)} textareaRef={textareaRef} />}
             <InlineAiMenu selection={selection} onAction={handleAiAction} onFormat={handleFormatSelection} isLoading={isAiActionLoading} onClose={() => setSelection(null)} />
             <SpellcheckMenu activeError={activeSpellingError} suggestions={spellingSuggestions} onSelect={handleApplySuggestion} isLoading={isLoadingSuggestions} error={suggestionError} onClose={() => setActiveSpellingError(null)} />

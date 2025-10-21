@@ -1,5 +1,5 @@
 import React from 'react';
-import { useAppContext } from '../context/AppContext';
+import { useStoreContext, useUIContext } from '../context/AppContext';
 
 const getYoutubeVideoId = (url: string) => {
     const regex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
@@ -26,7 +26,13 @@ const sanitizeUrl = (url: string): string => {
 };
 
 const InlineParser: React.FC<{ text: string }> = ({ text }) => {
-    const { getNoteById, onSelectNote } = useAppContext();
+    const { getNoteById, setActiveNoteId } = useStoreContext();
+    const { setView } = useUIContext();
+
+    const onSelectNote = (noteId: string) => {
+        setActiveNoteId(noteId);
+        setView('NOTES');
+    };
 
     const elements: React.ReactNode[] = [];
     let lastIndex = 0;

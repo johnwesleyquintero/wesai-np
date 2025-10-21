@@ -3,6 +3,56 @@ import { Note, Template } from '../types';
 import { enhanceText, summarizeAndExtractActions } from '../services/geminiService';
 import { StarIcon, TrashIcon, SparklesIcon, HistoryIcon, ArrowDownTrayIcon, DocumentDuplicateIcon, Bars3Icon, ArrowUturnLeftIcon, ArrowUturnRightIcon, EyeIcon, PencilSquareIcon, CheckBadgeIcon } from './Icons';
 
+interface StatusIndicatorProps {
+    saveStatus: 'saved' | 'saving' | 'unsaved';
+    isAiRateLimited: boolean;
+    isCheckingSpelling: boolean;
+    aiActionInProgress: 'enhancing' | 'summarizing' | null;
+}
+
+const StatusIndicator: React.FC<StatusIndicatorProps> = ({
+    saveStatus,
+    isAiRateLimited,
+    isCheckingSpelling,
+    aiActionInProgress,
+}) => {
+    let colorClass = 'bg-yellow-500';
+    let text = 'Unsaved changes';
+    let pulse = false;
+
+    if (isAiRateLimited) {
+        colorClass = 'bg-red-500';
+        text = 'AI Paused';
+    } else if (isCheckingSpelling) {
+        colorClass = 'bg-blue-500';
+        text = 'Checking...';
+        pulse = true;
+    } else if (aiActionInProgress) {
+        colorClass = 'bg-blue-500';
+        text = aiActionInProgress === 'enhancing' ? 'Enhancing...' : 'Summarizing...';
+        pulse = true;
+    } else {
+        switch (saveStatus) {
+            case 'saving':
+                colorClass = 'bg-yellow-500';
+                text = 'Saving...';
+                pulse = true;
+                break;
+            case 'saved':
+                colorClass = 'bg-green-500';
+                text = 'Saved';
+                break;
+        }
+    }
+
+    return (
+        <div className="flex items-center space-x-2">
+            <span className={`w-2.5 h-2.5 rounded-full ${colorClass} ${pulse ? 'animate-pulse' : ''}`}></span>
+            <span className="text-sm text-light-text/60 dark:text-dark-text/60">{text}</span>
+        </div>
+    );
+};
+
 interface ToolbarProps {
     note: Note;
     onDelete: (note: Note) => void;
@@ -23,7 +73,6 @@ interface ToolbarProps {
     viewMode: 'edit' | 'preview';
     onToggleViewMode: () => void;
     isCheckingSpelling: boolean;
-    fullAiActionStatus: string | null;
     isAiRateLimited: boolean;
 }
 
@@ -36,7 +85,7 @@ const ErrorIcon = () => (
 const Toolbar: React.FC<ToolbarProps> = ({ 
     note, onDelete, onToggleFavorite, saveStatus, contentToEnhance, onContentUpdate, onToggleHistory, isHistoryOpen, 
     templates, onApplyTemplate, isMobileView, onToggleSidebar, onUndo, onRedo, canUndo, canRedo,
-    viewMode, onToggleViewMode, isCheckingSpelling, fullAiActionStatus, isAiRateLimited
+    viewMode, onToggleViewMode, isCheckingSpelling, isAiRateLimited
 }) => {
     const [isAiMenuOpen, setIsAiMenuOpen] = useState(false);
     const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
@@ -137,49 +186,6 @@ const Toolbar: React.FC<ToolbarProps> = ({
     
     const tones = ["Professional", "Casual", "Poetic", "Concise", "Expanded"];
 
-    const StatusIndicator = () => {
-        let colorClass = 'bg-yellow-500';
-        let text = 'Unsaved changes';
-        let pulse = false;
-        
-        if (isAiRateLimited) {
-            colorClass = 'bg-red-500';
-            text = 'AI Paused';
-        } else if (fullAiActionStatus) {
-            colorClass = 'bg-blue-500';
-            text = fullAiActionStatus;
-            pulse = true;
-        } else if (isCheckingSpelling) {
-            colorClass = 'bg-blue-500';
-            text = 'Checking...';
-            pulse = true;
-        } else if (aiActionInProgress) {
-             colorClass = 'bg-blue-500';
-             text = aiActionInProgress === 'enhancing' ? 'Enhancing...' : 'Summarizing...';
-             pulse = true;
-        } else {
-            switch (saveStatus) {
-                case 'saving':
-                    colorClass = 'bg-yellow-500';
-                    text = 'Saving...';
-                    pulse = true;
-                    break;
-                case 'saved':
-                    colorClass = 'bg-green-500';
-                    text = 'Saved';
-                    break;
-            }
-        }
-
-        return (
-            <div className="flex items-center space-x-2">
-                <span className={`w-2.5 h-2.5 rounded-full ${colorClass} ${pulse ? 'animate-pulse' : ''}`}></span>
-                <span className="text-sm text-light-text/60 dark:text-dark-text/60">{text}</span>
-            </div>
-        );
-    };
-
-
     return (
         <>
             {aiActionError && (
@@ -200,7 +206,12 @@ const Toolbar: React.FC<ToolbarProps> = ({
                             <Bars3Icon />
                         </button>
                     )}
-                    <StatusIndicator />
+                    <StatusIndicator 
+                        saveStatus={saveStatus} 
+                        isAiRateLimited={isAiRateLimited}
+                        isCheckingSpelling={isCheckingSpelling}
+                        aiActionInProgress={aiActionInProgress}
+                    />
                 </div>
                 <div className="flex items-center space-x-0.5 sm:space-x-2">
                     <button onClick={onUndo} disabled={!canUndo} className="p-2 rounded-md hover:bg-light-ui dark:hover:bg-dark-ui transition-colors disabled:opacity-50 disabled:cursor-not-allowed">

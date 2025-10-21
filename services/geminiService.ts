@@ -31,12 +31,25 @@ const getApiKey = (): string | undefined => {
     }
 }
 
+let ai: GoogleGenAI | null = null;
+let lastUsedApiKey: string | undefined | null = null;
+
 const getAi = () => {
     const key = getApiKey();
-    if (!key) {
-        throw new Error("API key is not configured. Please add it in the settings.");
+
+    // Invalidate and reset if the key has changed
+    if (lastUsedApiKey !== key) {
+        ai = null;
+        lastUsedApiKey = key;
     }
-    return new GoogleGenAI({ apiKey: key });
+
+    if (!ai) {
+        if (!key) {
+            throw new Error("API key is not configured. Please add it in the settings.");
+        }
+        ai = new GoogleGenAI({ apiKey: key });
+    }
+    return ai;
 };
 
 

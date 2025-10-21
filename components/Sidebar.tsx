@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Note, Collection, SmartCollection, FilterType, SearchMode } from '../types';
 import NoteCard from './NoteCard';
 import {
@@ -123,8 +123,34 @@ const Sidebar: React.FC<SidebarProps> = ({
     filter, setFilter, searchTerm, setSearchTerm, searchMode, setSearchMode, isAiSearching, aiSearchError, onSettingsClick, theme, toggleTheme,
     isMobileView, isOpen, onClose, view, onSetView, renamingItemId, setRenamingItemId, isAiRateLimited, onOpenSmartFolderModal, onDeleteSmartCollection,
 }) => {
-
+    const [isRootDragOver, setIsRootDragOver] = useState(false);
     const fileTree = useMemo(() => buildTree(notes, collections), [notes, collections]);
+    
+    const handleRootDragOver = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsRootDragOver(true);
+    };
+
+    const handleRootDragLeave = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsRootDragOver(false);
+    };
+
+    const handleRootDrop = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsRootDragOver(false);
+        try {
+            const data = JSON.parse(e.dataTransfer.getData('application/json'));
+             if (data.id && data.parentId !== null) { // Only move if it's not already at root
+                onMoveItem(data.id, null);
+            }
+        } catch (error) {
+            console.error("Failed to parse drag-and-drop data:", error);
+        }
+    };
     
     const renderSmartCollections = () => (
         <div className="px-2 mt-4">
@@ -277,10 +303,15 @@ const Sidebar: React.FC<SidebarProps> = ({
                     </div>
                     {searchTerm ? renderFlatList() : (
                         filter === 'ALL' ? (
-                            <>
+                            <div
+                                onDragOver={handleRootDragOver}
+                                onDragLeave={handleRootDragLeave}
+                                onDrop={handleRootDrop}
+                                className={`transition-colors p-1 rounded-md ${isRootDragOver ? 'bg-light-primary/10' : ''}`}
+                            >
                                {renderSmartCollections()}
                                {renderFileTree()}
-                            </>
+                            </div>
                         ) : renderFlatList()
                     )}
                 </div>

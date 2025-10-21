@@ -443,10 +443,16 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onUpdate, onDelete, onTog
 
     return (
         <div className="flex-1 flex flex-col h-full relative bg-light-background dark:bg-dark-background" onDragOver={(e) => { e.preventDefault(); if (!isEffectivelyReadOnly) setIsDragOver(true); }} onDragLeave={() => setIsDragOver(false)} onDrop={handleDrop}>
-             <Toolbar note={note} onDelete={onDelete} onToggleFavorite={onToggleFavorite} saveStatus={saveStatus} contentToEnhance={editorState.content} onContentUpdate={(content) => setEditorState({...editorState, content})} onToggleHistory={() => setIsHistoryOpen(!isHistoryOpen)} isHistoryOpen={isHistoryOpen} templates={templates} onApplyTemplate={handleApplyTemplate} isMobileView={isMobileView} onToggleSidebar={onToggleSidebar} onUndo={undo} onRedo={redo} canUndo={canUndo} canRedo={canRedo} viewMode={viewMode} onToggleViewMode={() => setViewMode(prev => prev === 'edit' ? 'preview' : 'edit')} isCheckingSpelling={isCheckingSpelling} fullAiActionStatus={isFullAiActionLoading} isAiRateLimited={isAiRateLimited} />
+             <Toolbar note={note} onDelete={onDelete} onToggleFavorite={onToggleFavorite} saveStatus={saveStatus} contentToEnhance={editorState.content} onContentUpdate={(content) => setEditorState({...editorState, content})} onToggleHistory={() => setIsHistoryOpen(!isHistoryOpen)} isHistoryOpen={isHistoryOpen} templates={templates} onApplyTemplate={handleApplyTemplate} isMobileView={isMobileView} onToggleSidebar={onToggleSidebar} onUndo={undo} onRedo={redo} canUndo={canUndo} canRedo={canRedo} viewMode={viewMode} onToggleViewMode={() => setViewMode(prev => prev === 'edit' ? 'preview' : 'edit')} isCheckingSpelling={isCheckingSpelling} isAiRateLimited={isAiRateLimited} />
              {isAiRateLimited && <div className="bg-yellow-100 dark:bg-yellow-900/30 border-b border-yellow-300 dark:border-yellow-700/50 py-2 px-4 text-center text-sm text-yellow-800 dark:text-yellow-200 flex-shrink-0">AI features are temporarily paused due to high usage. They will be available again shortly.</div>}
             
-            <div ref={editorPaneRef} className="flex-1 overflow-y-auto">
+            <div ref={editorPaneRef} className="flex-1 overflow-y-auto relative">
+                 {isFullAiActionLoading && (
+                    <div className="absolute inset-0 bg-light-background/80 dark:bg-dark-background/80 z-30 flex flex-col items-center justify-center backdrop-blur-sm">
+                        <div className="w-8 h-8 border-4 border-light-ui dark:border-dark-ui border-t-light-primary dark:border-t-dark-primary rounded-full animate-spin mb-4"></div>
+                        <p className="text-lg font-semibold text-light-text dark:text-dark-text">{isFullAiActionLoading}</p>
+                    </div>
+                 )}
                  {isVersionPreviewing && previewVersion && <div className={`bg-yellow-100 dark:bg-yellow-900/30 py-2 text-center text-sm text-yellow-800 dark:text-yellow-200 max-w-3xl mx-auto ${editorPaddingClass}`}>You are previewing a version from {new Date(previewVersion.savedAt).toLocaleString()}.</div>}
 
                 <div className={`max-w-3xl mx-auto py-12 ${editorPaddingClass}`}>

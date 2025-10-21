@@ -21,7 +21,7 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
     node, level, activeNoteId, searchTerm
 }) => {
     const { 
-        collections, onSelectNote, onAddNote, onDeleteCollection, onUpdateCollection, onRenameNote, onMoveItem,
+        collections, onSelectNote, onAddNote, onAddNoteFromFile, onDeleteCollection, onUpdateCollection, onRenameNote, onMoveItem,
         onOpenContextMenu, renamingItemId, setRenamingItemId, onCopyNote, onDeleteNote
     } = useAppContext();
 
@@ -122,6 +122,15 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
     const handleDragOver = (e: React.DragEvent) => {
         e.preventDefault();
         e.stopPropagation();
+
+        const hasFiles = e.dataTransfer.types.includes('Files');
+        if (hasFiles) {
+            if (isCollection) {
+                setIsDragOver(true);
+                setDropPosition(null);
+            }
+            return;
+        }
         
         try {
             const data = JSON.parse(e.dataTransfer.getData('application/json'));
@@ -171,6 +180,25 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
         e.preventDefault();
         e.stopPropagation();
         
+        // Handle file drop first
+        if (isCollection && e.dataTransfer.files.length > 0) {
+            const validFiles = Array.from(e.dataTransfer.files).filter(f => f.type === 'text/plain' || f.name.endsWith('.md'));
+            validFiles.forEach(file => {
+                const reader = new FileReader();
+                reader.onload = (loadEvent) => {
+                    const content = loadEvent.target?.result as string;
+                    if (content) {
+                        onAddNoteFromFile(file.name, content, node.id);
+                    }
+                };
+                reader.readAsText(file);
+            });
+            setIsDragOver(false);
+            setDropPosition(null);
+            return;
+        }
+        
+        // Handle note/folder reordering
         try {
             const data = JSON.parse(e.dataTransfer.getData('application/json'));
             if (data.id) {

@@ -91,7 +91,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         notes, collections, smartCollections, onSelectNote, onAddNote, onAddCollection,
         theme, toggleTheme, isMobileView, isSidebarOpen, setIsSidebarOpen, view, onSetView,
         isAiRateLimited, onOpenSmartFolderModal, onDeleteSmartCollection, onMoveItem,
-        onOpenContextMenu, openSettings
+        onOpenContextMenu, openSettings, onAddNoteFromFile
     } = useAppContext();
 
     const [isRootDragOver, setIsRootDragOver] = useState(false);
@@ -100,7 +100,10 @@ const Sidebar: React.FC<SidebarProps> = ({
     const handleRootDragOver = (e: React.DragEvent) => {
         e.preventDefault();
         e.stopPropagation();
-        setIsRootDragOver(true);
+        // Check if files are being dragged
+        if (e.dataTransfer.types.includes('Files')) {
+            setIsRootDragOver(true);
+        }
     };
 
     const handleRootDragLeave = (e: React.DragEvent) => {
@@ -113,6 +116,24 @@ const Sidebar: React.FC<SidebarProps> = ({
         e.preventDefault();
         e.stopPropagation();
         setIsRootDragOver(false);
+
+        // Handle file drop
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            const validFiles = Array.from(e.dataTransfer.files).filter(f => f.type === 'text/plain' || f.name.endsWith('.md'));
+            validFiles.forEach(file => {
+                const reader = new FileReader();
+                reader.onload = (loadEvent) => {
+                    const content = loadEvent.target?.result as string;
+                    if (content) {
+                        onAddNoteFromFile(file.name, content, null);
+                    }
+                };
+                reader.readAsText(file);
+            });
+            return;
+        }
+
+        // Handle note/folder reorder drop
         try {
             const data = JSON.parse(e.dataTransfer.getData('application/json'));
              if (data.id && data.parentId !== null) { // Only move if it's not already at root

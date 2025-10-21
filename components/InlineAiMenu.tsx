@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { InlineAction } from '../services/geminiService';
-import { SparklesIcon, XMarkIcon } from './Icons';
+import { SparklesIcon, BoldIcon, ItalicIcon, CodeIcon, LinkIcon, ChevronDownIcon } from './Icons';
 
 interface SelectionData {
     rect: DOMRect;
@@ -9,6 +9,7 @@ interface SelectionData {
 interface InlineAiMenuProps {
     selection: SelectionData | null;
     onAction: (action: InlineAction) => void;
+    onFormat: (format: 'bold' | 'italic' | 'code' | 'link') => void;
     isLoading: boolean;
     onClose: () => void;
 }
@@ -22,56 +23,67 @@ const actionMap: { action: InlineAction; label: string }[] = [
     { action: 'makeCasual', label: 'Make Casual' },
 ];
 
-const InlineAiMenu: React.FC<InlineAiMenuProps> = ({ selection, onAction, isLoading, onClose }) => {
-    const [isMenuOpen, setIsMenuOpen] = useState(false);
+const FormatButton: React.FC<{ onClick: () => void, 'aria-label': string, children: React.ReactNode }> = ({ onClick, children, ...props }) => (
+    <button onClick={onClick} className="p-2 rounded-md hover:bg-light-ui dark:hover:bg-dark-ui transition-colors" {...props}>
+        {children}
+    </button>
+);
+
+
+const InlineAiMenu: React.FC<InlineAiMenuProps> = ({ selection, onAction, onFormat, isLoading, onClose }) => {
+    const [isAiMenuOpen, setIsAiMenuOpen] = useState(false);
 
     if (!selection) return null;
 
     const handleActionClick = (action: InlineAction) => {
-        setIsMenuOpen(false);
+        setIsAiMenuOpen(false);
         onAction(action);
+    };
+
+    const handleFormatClick = (format: 'bold' | 'italic' | 'code' | 'link') => {
+        onFormat(format);
     };
     
     // Position the menu below the selection. Adjust left position to not go off-screen.
-    const leftPosition = Math.max(5, Math.min(selection.rect.left + window.scrollX, window.innerWidth - 230)); // 224px width + padding
+    const menuWidth = 240;
+    const leftPosition = Math.max(5, Math.min(selection.rect.left + window.scrollX, window.innerWidth - (menuWidth + 10)));
     const menuStyle: React.CSSProperties = {
         position: 'fixed',
-        top: `${selection.rect.bottom + window.scrollY + 8}px`,
+        top: `${selection.rect.bottom + 8}px`,
         left: `${leftPosition}px`,
         zIndex: 50,
+        width: `${menuWidth}px`,
     };
 
     if (isLoading) {
         return (
-            <div style={menuStyle} className="bg-light-ui dark:bg-dark-ui p-2 rounded-full shadow-xl flex items-center animate-pulse">
+            <div style={{...menuStyle, width: 'auto'}} className="bg-light-ui dark:bg-dark-ui p-2 rounded-full shadow-xl flex items-center animate-pulse">
                  <SparklesIcon className="w-5 h-5 text-light-primary dark:text-dark-primary"/>
             </div>
         )
     }
 
-    // When the menu is first shown, open it automatically.
-    // The user can close it, but the next selection will open it again.
-    if (!isMenuOpen) {
-        setIsMenuOpen(true);
-    }
-    
     return (
-        <div style={menuStyle}>
-            {isMenuOpen ? (
-                <div className="bg-light-background dark:bg-dark-background rounded-lg shadow-xl border border-light-border dark:border-dark-border w-56 animate-fade-in-down"
-                    // Prevent the editor from losing focus when interacting with the menu
-                    onMouseDown={(e) => e.preventDefault()}
+        <div style={menuStyle} onMouseDown={(e) => e.preventDefault()}>
+            <div className="bg-light-background dark:bg-dark-background rounded-lg shadow-xl border border-light-border dark:border-dark-border animate-fade-in-down">
+                <div className="flex justify-around items-center p-1 border-b border-light-border dark:border-dark-border">
+                    <FormatButton onClick={() => handleFormatClick('bold')} aria-label="Bold"><BoldIcon /></FormatButton>
+                    <FormatButton onClick={() => handleFormatClick('italic')} aria-label="Italic"><ItalicIcon /></FormatButton>
+                    <FormatButton onClick={() => handleFormatClick('code')} aria-label="Code"><CodeIcon /></FormatButton>
+                    <FormatButton onClick={() => handleFormatClick('link')} aria-label="Link"><LinkIcon /></FormatButton>
+                </div>
+                <button 
+                    onClick={() => setIsAiMenuOpen(prev => !prev)}
+                    className="w-full flex justify-between items-center p-2 text-sm font-semibold hover:bg-light-ui dark:hover:bg-dark-ui"
                 >
-                    <div className="flex justify-between items-center p-2 border-b border-light-border dark:border-dark-border">
-                        <h3 className="text-sm font-semibold ml-2 flex items-center gap-2">
-                            <SparklesIcon className="w-4 h-4 text-light-primary dark:text-dark-primary"/>
-                            AI Assistant
-                        </h3>
-                        <button onClick={() => { setIsMenuOpen(false); onClose(); }} className="p-1 rounded-md hover:bg-light-ui dark:hover:bg-dark-ui">
-                            <XMarkIcon className="w-4 h-4" />
-                        </button>
-                    </div>
-                    <div className="py-1">
+                    <span className="flex items-center gap-2">
+                        <SparklesIcon className="w-4 h-4 text-light-primary dark:text-dark-primary"/>
+                        AI Assistant
+                    </span>
+                    <ChevronDownIcon className={`w-4 h-4 transition-transform ${isAiMenuOpen ? 'rotate-180' : ''}`} />
+                </button>
+                {isAiMenuOpen && (
+                    <div className="py-1 border-t border-light-border dark:border-dark-border">
                         {actionMap.map(({ action, label }) => (
                             <button
                                 key={action}
@@ -82,8 +94,8 @@ const InlineAiMenu: React.FC<InlineAiMenuProps> = ({ selection, onAction, isLoad
                             </button>
                         ))}
                     </div>
-                </div>
-            ) : null}
+                )}
+            </div>
         </div>
     );
 };

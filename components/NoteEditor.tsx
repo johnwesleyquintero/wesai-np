@@ -81,8 +81,9 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onUpdate, onDelete, onTog
     const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
     const [suggestionError, setSuggestionError] = useState<string | null>(null);
 
-    const [noteLinker, setNoteLinker] = useState<NoteLinkerState>(null);
-    const [slashCommand, setSlashCommand] = useState<SlashCommandState>(null);
+    const [noteLinker, setNoteLinker] = useState<NoteLinkerState | null>(null);
+    const [noteLinkerForSelection, setNoteLinkerForSelection] = useState<SelectionState | null>(null);
+    const [slashCommand, setSlashCommand] = useState<SlashCommandState | null>(null);
     const [isDragOver, setIsDragOver] = useState(false);
 
     const { registerEditorActions, unregisterEditorActions, notes } = useAppContext();
@@ -350,6 +351,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onUpdate, onDelete, onTog
             setSelection(null);
             setActiveSpellingError(null);
             setNoteLinker(null);
+            setNoteLinkerForSelection(null);
             setSlashCommand(null);
         };
         pane?.addEventListener('scroll', handleScroll);
@@ -395,6 +397,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onUpdate, onDelete, onTog
          setSelection(null);
          setActiveSpellingError(null);
          setNoteLinker(null);
+         setNoteLinkerForSelection(null);
          setSlashCommand(null);
     };
 
@@ -434,21 +437,30 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onUpdate, onDelete, onTog
     
     const handleInsertLink = (noteId: string, noteTitle: string) => {
         const textarea = textareaRef.current;
-        if (!textarea || !noteLinker) return;
-        const { selectionStart } = textarea;
-        const currentContent = editorState.content;
+        if (!textarea) return;
 
-        const startIndex = selectionStart - noteLinker.query.length - 2;
-        const newContent = `${currentContent.substring(0, startIndex)}[[${noteId}|${noteTitle}]]${currentContent.substring(selectionStart)}`;
-        
-        setEditorState({ ...editorState, content: newContent });
-        setNoteLinker(null);
-
-        setTimeout(() => {
-            textarea.focus();
-            const newCursorPos = startIndex + noteId.length + noteTitle.length + 5;
-            textarea.selectionStart = textarea.selectionEnd = newCursorPos;
-        }, 0);
+        if (noteLinkerForSelection) {
+            const { start, end, text } = noteLinkerForSelection;
+            const newContent = `${editorState.content.substring(0, start)}[[${noteId}|${text}]]${editorState.content.substring(end)}`;
+            setEditorState({ ...editorState, content: newContent });
+            setNoteLinkerForSelection(null);
+            setTimeout(() => {
+                textarea.focus();
+                const newCursorPos = start + noteId.length + text.length + 5;
+                textarea.selectionStart = textarea.selectionEnd = newCursorPos;
+            }, 0);
+        } else if (noteLinker) {
+            const { selectionStart } = textarea;
+            const startIndex = selectionStart - noteLinker.query.length - 2;
+            const newContent = `${editorState.content.substring(0, startIndex)}[[${noteId}|${noteTitle}]]${editorState.content.substring(selectionStart)}`;
+            setEditorState({ ...editorState, content: newContent });
+            setNoteLinker(null);
+            setTimeout(() => {
+                textarea.focus();
+                const newCursorPos = startIndex + noteId.length + noteTitle.length + 5;
+                textarea.selectionStart = textarea.selectionEnd = newCursorPos;
+            }, 0);
+        }
     };
 
     const getCursorPositionRect = (textarea: HTMLTextAreaElement, position: number): DOMRect => {
@@ -578,6 +590,35 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onUpdate, onDelete, onTog
             setIsAiActionLoading(false);
         }
     };
+
+    const handleFormatSelection = (format: 'bold' | 'italic' | 'code' | 'link') => {
+        if (!selection) return;
+
+        if (format === 'link') {
+            setNoteLinkerForSelection(selection);
+            setSelection(null);
+            return;
+        }
+        
+        const { start, end, text } = selection;
+        let prefix = '';
+        let suffix = '';
+        switch(format) {
+            case 'bold': prefix = suffix = '**'; break;
+            case 'italic': prefix = suffix = '*'; break;
+            case 'code': prefix = suffix = '`'; break;
+        }
+
+        const newContent = editorState.content.substring(0, start) + prefix + text + suffix + editorState.content.substring(end);
+        setEditorState({...editorState, content: newContent });
+        setSelection(null);
+
+        setTimeout(() => {
+            textareaRef.current?.focus();
+            const newCursorPos = end + prefix.length + suffix.length;
+            textareaRef.current?.setSelectionRange(newCursorPos, newCursorPos);
+        }, 0);
+    };
     
     const handleApplySuggestion = (suggestion: string) => {
         if (!activeSpellingError) return;
@@ -593,18 +634,31 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onUpdate, onDelete, onTog
         if (isEffectivelyReadOnly) return;
 
         const file = e.dataTransfer.files[0];
-        if (file && file.type.startsWith('image/')) {
-            const reader = new FileReader();
-            reader.onload = (loadEvent) => {
-                const base64 = loadEvent.target?.result;
-                if (typeof base64 === 'string') {
-                    const markdownImage = `\n![${file.name}](${base64})\n`;
-                    const { selectionStart } = textareaRef.current!;
-                    const newContent = editorState.content.slice(0, selectionStart) + markdownImage + editorState.content.slice(selectionStart);
-                    setEditorState({ ...editorState, content: newContent });
-                }
-            };
-            reader.readAsDataURL(file);
+        if (file) {
+            if (file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = (loadEvent) => {
+                    const base64 = loadEvent.target?.result;
+                    if (typeof base64 === 'string') {
+                        const markdownImage = `\n![${file.name}](${base64})\n`;
+                        const { selectionStart } = textareaRef.current!;
+                        const newContent = editorState.content.slice(0, selectionStart) + markdownImage + editorState.content.slice(selectionStart);
+                        setEditorState({ ...editorState, content: newContent });
+                    }
+                };
+                reader.readAsDataURL(file);
+            } else if (file.type.startsWith('text/') || file.name.endsWith('.md')) {
+                 const reader = new FileReader();
+                reader.onload = (loadEvent) => {
+                    const textContent = loadEvent.target?.result;
+                    if (typeof textContent === 'string') {
+                        const { selectionStart } = textareaRef.current!;
+                        const newContent = editorState.content.slice(0, selectionStart) + `\n\n${textContent}\n\n` + editorState.content.slice(selectionStart);
+                        setEditorState({ ...editorState, content: newContent });
+                    }
+                };
+                reader.readAsText(file);
+            }
         }
     };
     
@@ -654,7 +708,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onUpdate, onDelete, onTog
                                     onScroll={handleScroll}
                                     value={displayedContent}
                                     onChange={handleChange}
-                                    placeholder="Start writing, drop an image, or type / for commands..."
+                                    placeholder="Start writing, drop a file, or type / for commands..."
                                     className={`${sharedEditorClasses} relative z-10 caret-light-text dark:caret-dark-text bg-transparent block overflow-y-hidden`}
                                     readOnly={isVersionPreviewing}
                                     spellCheck={false}
@@ -675,12 +729,12 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onUpdate, onDelete, onTog
             
             <StatusBar wordCount={wordCount} charCount={charCount} />
 
-            {noteLinker && <NoteLinker notes={notes} query={noteLinker.query} onSelect={handleInsertLink} onClose={() => setNoteLinker(null)} position={noteLinker.position} />}
+            {(noteLinker || noteLinkerForSelection) && <NoteLinker notes={notes} query={noteLinker?.query || ''} onSelect={handleInsertLink} onClose={() => { setNoteLinker(null); setNoteLinkerForSelection(null); }} position={noteLinker?.position || { top: noteLinkerForSelection!.rect.bottom, left: noteLinkerForSelection!.rect.left }} />}
             {slashCommand && <SlashCommandMenu query={slashCommand.query} position={slashCommand.position} onSelect={handleSelectCommand} onClose={() => setSlashCommand(null)} textareaRef={textareaRef} />}
-            <InlineAiMenu selection={selection} onAction={handleAiAction} isLoading={isAiActionLoading} onClose={() => setSelection(null)} />
+            <InlineAiMenu selection={selection} onAction={handleAiAction} onFormat={handleFormatSelection} isLoading={isAiActionLoading} onClose={() => setSelection(null)} />
             <SpellcheckMenu activeError={activeSpellingError} suggestions={spellingSuggestions} onSelect={handleApplySuggestion} isLoading={isLoadingSuggestions} error={suggestionError} onClose={() => setActiveSpellingError(null)} />
             {isHistoryOpen && <VersionHistorySidebar history={note.history || []} onClose={handleCloseHistory} onPreview={setPreviewVersion} onRestore={handleRestore} activeVersionTimestamp={previewVersion?.savedAt} />}
-            {isDragOver && <div className="absolute inset-0 bg-light-primary/10 dark:bg-dark-primary/10 border-4 border-dashed border-light-primary dark:border-dark-primary rounded-2xl m-4 pointer-events-none flex items-center justify-center"><p className="text-light-primary dark:text-dark-primary font-bold text-2xl">Drop image to upload</p></div>}
+            {isDragOver && <div className="absolute inset-0 bg-light-primary/10 dark:bg-dark-primary/10 border-4 border-dashed border-light-primary dark:border-dark-primary rounded-2xl m-4 pointer-events-none flex items-center justify-center"><p className="text-light-primary dark:text-dark-primary font-bold text-2xl">Drop file to import</p></div>}
         </div>
     );
 };

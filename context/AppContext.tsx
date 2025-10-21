@@ -19,6 +19,7 @@ interface AppContextType {
 
     // Actions
     onAddNote: (parentId?: string | null) => void;
+    onAddNoteFromFile: (title: string, content: string, parentId: string | null) => string;
     onAddCollection: (name: string, parentId?: string | null) => void;
     onCopyNote: (noteId: string) => void;
     onSelectNote: (id: string) => void;

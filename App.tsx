@@ -50,6 +50,7 @@ const WelcomeScreen: React.FC<{ onToggleSidebar?: () => void; isMobileView?: boo
 function AppContent() {
     const { 
         notes, addNote, updateNote, deleteNote, getNoteById, toggleFavorite, restoreNoteVersion, renameNoteTitle, copyNote,
+        addNoteFromFile,
         collections, addCollection, updateCollection, deleteCollection, moveItem,
         smartCollections, addSmartCollection, updateSmartCollection, deleteSmartCollection
     } = useStore();
@@ -150,6 +151,15 @@ function AppContent() {
             setIsSidebarOpen(false);
         }
     }, [addNote, isMobileView]);
+    
+    const handleAddNoteFromFile = useCallback((title: string, content: string, parentId: string | null) => {
+        const newNoteId = addNoteFromFile(title, content, parentId);
+        setActiveNoteId(newNoteId);
+        setView('NOTES');
+        if (isMobileView) setIsSidebarOpen(false);
+        showToast({ message: `Imported "${title}"`, type: 'success'});
+        return newNoteId;
+    }, [addNoteFromFile, isMobileView, showToast]);
 
     const handleCopyNote = useCallback((noteId: string) => {
         const newId = copyNote(noteId);
@@ -452,6 +462,7 @@ function AppContent() {
         isSidebarOpen,
         isAiRateLimited,
         onAddNote: () => handleAddNote(),
+        onAddNoteFromFile: handleAddNoteFromFile,
         onAddCollection: handleAddCollection,
         onCopyNote: handleCopyNote,
         onSelectNote: handleSelectNote,
@@ -476,7 +487,7 @@ function AppContent() {
         onOpenContextMenu: handleOpenContextMenu,
     }), [
         notes, collections, smartCollections, activeNote, templates, theme, view, isMobileView, isSidebarOpen, isAiRateLimited,
-        handleAddNote, handleAddCollection, handleCopyNote, handleSelectNote, handleDeleteNoteRequest, handleDeleteCollectionRequest,
+        handleAddNote, handleAddNoteFromFile, handleAddCollection, handleCopyNote, handleSelectNote, handleDeleteNoteRequest, handleDeleteCollectionRequest,
         handleDeleteSmartCollectionRequest, openSmartFolderModal, toggleFavorite, updateCollection, renameNoteTitle, moveItem,
         renamingItemId, setRenamingItemId, toggleTheme, setView, setIsSidebarOpen, getNoteById, editorActions, registerEditorActions, unregisterEditorActions, handleOpenContextMenu
     ]);

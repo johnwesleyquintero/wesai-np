@@ -10,13 +10,18 @@ export const useStore = () => {
     const [notes, setNotes] = useState<Note[]>(() => {
         try {
             const storedNotes = localStorage.getItem(NOTES_STORAGE_key);
-            const parsedNotes = storedNotes ? JSON.parse(storedNotes) : [];
-            // Data migration for old notes without parentId or order
-            return parsedNotes.map((note: Note, index: number) => ({
-                ...note,
-                parentId: note.parentId !== undefined ? note.parentId : null,
-                order: note.order !== undefined ? note.order : index,
-            }));
+            if (storedNotes) {
+                const parsedNotes = JSON.parse(storedNotes);
+                // Data migration for old notes without parentId or order
+                return parsedNotes.map((note: Note, index: number) => ({
+                    ...note,
+                    parentId: note.parentId !== undefined ? note.parentId : null,
+                    order: note.order !== undefined ? note.order : index,
+                }));
+            }
+
+            return [];
+
         } catch (error) {
             console.error("Error parsing notes from localStorage", error);
             return [];
@@ -80,6 +85,26 @@ export const useStore = () => {
             id: crypto.randomUUID(),
             title: "Untitled Note",
             content: "",
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            isFavorite: false,
+            tags: [],
+            history: [],
+            parentId,
+            order: maxOrder + 1,
+        };
+        setNotes(prevNotes => [newNote, ...prevNotes]);
+        return newNote.id;
+    }, [notes]);
+
+    const addNoteFromFile = useCallback((title: string, content: string, parentId: string | null) => {
+        const siblings = notes.filter(n => n.parentId === parentId);
+        const maxOrder = siblings.reduce((max, n) => Math.max(max, n.order || 0), 0);
+        
+        const newNote: Note = {
+            id: crypto.randomUUID(),
+            title: title.replace(/\.(md|txt)$/i, ''), // remove extension from title
+            content,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
             isFavorite: false,
@@ -317,7 +342,8 @@ export const useStore = () => {
 
     return { 
         notes, 
-        addNote, 
+        addNote,
+        addNoteFromFile,
         copyNote,
         updateNote, 
         renameNoteTitle,

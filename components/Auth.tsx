@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
 
 const Auth: React.FC = () => {
@@ -7,11 +7,22 @@ const Auth: React.FC = () => {
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [notification, setNotification] = useState<string | null>(null);
+
+    useEffect(() => {
+        const hash = window.location.hash;
+        if (hash.includes('error_code=otp_expired')) {
+            setError('Your confirmation link has expired. Please sign up again or try logging in.');
+            // Clean up the URL hash
+            window.history.replaceState(null, '', window.location.pathname + window.location.search);
+        }
+    }, []);
 
     const handleAuth = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
         setError(null);
+        setNotification(null);
 
         try {
             if (isLogin) {
@@ -26,10 +37,14 @@ const Auth: React.FC = () => {
                     },
                 });
                 if (error) throw error;
-                alert('Check your email for the confirmation link!');
+                setNotification('Check your email for the confirmation link!');
             }
         } catch (error: any) {
-            setError(error.error_description || error.message);
+             if (error.message && error.message.includes('already been registered')) {
+                setNotification('This email is already registered. Please check your inbox for a confirmation link.');
+            } else {
+                setError(error.error_description || error.message);
+            }
         } finally {
             setLoading(false);
         }
@@ -76,9 +91,10 @@ const Auth: React.FC = () => {
                         </div>
                     </div>
                     
-                    {error && <p className="text-sm text-red-500 text-center">{error}</p>}
+                    {error && <p className="text-sm text-red-500 text-center pt-4">{error}</p>}
+                    {notification && <p className="text-sm text-green-600 dark:text-green-400 text-center pt-4">{notification}</p>}
 
-                    <div>
+                    <div className="pt-2">
                         <button
                             type="submit"
                             disabled={loading}
@@ -93,6 +109,7 @@ const Auth: React.FC = () => {
                         onClick={() => {
                           setIsLogin(!isLogin);
                           setError(null);
+                          setNotification(null);
                         }}
                         className="font-medium text-light-primary hover:text-light-primary-hover dark:text-dark-primary dark:hover:text-dark-primary-hover"
                     >

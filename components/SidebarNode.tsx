@@ -51,8 +51,7 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
         reader.readAsText(file);
     };
 
-    // FIX: Destructure isFileOver from useDragAndDrop hook.
-    const { isDragOver, isFileOver, dropPosition, dragAndDropProps } = useDragAndDrop(nodeRef, {
+    const { isDragOver, dropPosition, dragAndDropProps } = useDragAndDrop(nodeRef, {
         id: node.id,
         parentId: node.parentId,
         type: isCollection ? 'collection' : 'note',
@@ -151,7 +150,7 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
                     isActive
                         ? 'bg-light-primary/30 dark:bg-dark-primary/30 text-light-primary dark:text-dark-primary font-semibold'
                         : 'hover:bg-light-background dark:hover:bg-dark-background'
-                } ${isDragOver || isFileOver ? 'outline-2 outline-dashed outline-light-primary dark:outline-dark-primary bg-light-primary/10 dark:bg-dark-primary/10' : ''}`}
+                } ${isDragOver ? 'outline-2 outline-dashed outline-light-primary dark:outline-dark-primary bg-light-primary/10 dark:bg-dark-primary/10' : ''}`}
                 style={{ paddingLeft: `${level * 16 + 8}px` }}
             >
                 <div className="flex items-center truncate py-1.5">

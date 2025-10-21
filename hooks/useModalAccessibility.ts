@@ -30,7 +30,6 @@ export const useModalAccessibility = (
                 modalElement.querySelectorAll<HTMLElement>(
                     'a[href]:not([disabled]), button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled])'
                 )
-            // FIX: Cast `el` to HTMLElement to ensure `offsetParent` property is available.
             ).filter(el => (el as HTMLElement).offsetParent !== null); // Ensure they are visible
 
             const firstElement = focusableElements[0];
@@ -47,13 +46,11 @@ export const useModalAccessibility = (
                 if (e.key === 'Tab' && focusableElements.length > 0) {
                     if (e.shiftKey) { // Shift + Tab
                         if (document.activeElement === firstElement) {
-                            // FIX: The `lastElement` is inferred as a generic `Element` or `unknown`, which may not have a `focus` method. Cast to `HTMLElement` to ensure `focus` is available.
                             (lastElement as HTMLElement)?.focus();
                             e.preventDefault();
                         }
                     } else { // Tab
                         if (document.activeElement === lastElement) {
-                            // FIX: The `firstElement` is inferred as a generic `Element` or `unknown`, which may not have a `focus` method. Cast to `HTMLElement` to ensure `focus` is available.
                             (firstElement as HTMLElement)?.focus();
                             e.preventDefault();
                         }

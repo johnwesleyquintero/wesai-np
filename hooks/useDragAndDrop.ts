@@ -134,7 +134,6 @@ export const useDragAndDrop = (
         } 
         // --- Handle File Drop as a fallback ---
         else if (onDropFile && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-            // FIX: Cast the FileList to an array of Files to ensure correct typing.
             const validFiles = (Array.from(e.dataTransfer.files) as File[]).filter((f) => f.type === 'text/plain' || f.name.endsWith('.md') || f.type === 'text/markdown');
             if (validFiles.length > 0) {
                 validFiles.forEach(file => onDropFile(file, id));

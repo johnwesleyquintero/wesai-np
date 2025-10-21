@@ -19,10 +19,11 @@ WesAI Notepad is a local-first, AI-enhanced application designed for privacy, pe
 - **Favorites:** Mark important notes as favorites for quick and easy access.
 
 ### AI-Powered by Google Gemini
+- **Multimodal Input:** Provide visual context to the AI by attaching images to your prompts in any assistant mode via drag-and-drop or a file picker. The AI analyzes the image alongside your text for more accurate and relevant responses.
 - **Multi-Mode AI Assistant:** The core of the application is a versatile AI assistant with three distinct modes for different tasks:
-    - **Knowledge Assistant:** Engage in a conversation with your notes. Ask complex questions and receive synthesized answers with direct links to the source notes for verification.
-    - **Service Responder:** Transform your notes into an operational playbook. Paste a customer inquiry, and the AI will use your knowledge base to draft a professional, empathetic, and platform-compliant response. It's specifically trained to avoid direct links, protecting your third-party marketplace accounts.
-    - **General Assistant:** Your creative and strategic partner. Use this mode for brainstorming, drafting content, and asking general questions. It maintains a continuous conversational memory, allowing for natural follow-up questions.
+    - **Knowledge Assistant:** Engage in a conversation with your notes. Ask complex questions about your text and images and receive synthesized answers with direct links to the source notes for verification.
+    - **Service Responder:** Transform your notes into an operational playbook. Paste a customer inquiry (including images of products or issues), and the AI will use your knowledge base to draft a professional, empathetic, and platform-compliant response.
+    - **General Assistant:** Your creative and strategic partner. Use this mode for brainstorming, drafting content, and asking general questions. It can now access and reference your entire knowledge base (text and images) to provide deeply contextual answers while maintaining a continuous conversational memory.
 - **Semantic Search:** Go beyond simple keyword matching to find notes based on their conceptual meaning and context.
 - **Inline AI Assistant:** Select any text in the editor to:
     - Fix spelling and grammar.

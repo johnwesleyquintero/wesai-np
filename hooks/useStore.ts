@@ -3,8 +3,6 @@ import { Note, NoteVersion, Collection, SmartCollection, Template } from '../typ
 import { supabase } from '../lib/supabaseClient';
 import { User } from '@supabase/supabase-js';
 
-const MAX_HISTORY_LENGTH = 50;
-
 const fromSupabase = <T extends { [key: string]: any }>(data: T) => {
     const result: { [key: string]: any } = {};
     for (const key in data) {
@@ -73,27 +71,35 @@ export const useStore = (user: User | undefined) => {
             .on('postgres_changes', { event: '*', schema: 'public', table: 'notes' }, payload => {
                 if (payload.eventType === 'INSERT') setNotes(prev => [...prev, fromSupabase(payload.new as Note)]);
                 if (payload.eventType === 'UPDATE') setNotes(prev => prev.map(n => n.id === payload.new.id ? fromSupabase(payload.new as Note) : n));
-                if (payload.eventType === 'DELETE') setNotes(prev => prev.filter(n => n.id !== payload.old.id));
+                if (payload.eventType === 'DELETE') setNotes(prev => prev.filter(n => n.id !== (payload.old as any).id));
             }).subscribe();
         
         const collectionsChannel = supabase.channel('public:collections')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'collections' }, payload => {
                 if (payload.eventType === 'INSERT') setCollections(prev => [...prev, fromSupabase(payload.new as Collection)]);
                 if (payload.eventType === 'UPDATE') setCollections(prev => prev.map(c => c.id === payload.new.id ? fromSupabase(payload.new as Collection) : c));
-                if (payload.eventType === 'DELETE') setCollections(prev => prev.filter(c => c.id !== payload.old.id));
+                if (payload.eventType === 'DELETE') setCollections(prev => prev.filter(c => c.id !== (payload.old as any).id));
             }).subscribe();
             
         const smartCollectionsChannel = supabase.channel('public:smart_collections')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'smart_collections' }, payload => {
                  if (payload.eventType === 'INSERT') setSmartCollections(prev => [...prev, fromSupabase(payload.new as SmartCollection)]);
                  if (payload.eventType === 'UPDATE') setSmartCollections(prev => prev.map(sc => sc.id === payload.new.id ? fromSupabase(payload.new as SmartCollection) : sc));
-                 if (payload.eventType === 'DELETE') setSmartCollections(prev => prev.filter(sc => sc.id !== payload.old.id));
+                 if (payload.eventType === 'DELETE') setSmartCollections(prev => prev.filter(sc => sc.id !== (payload.old as any).id));
+            }).subscribe();
+
+        const templatesChannel = supabase.channel('public:templates')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'templates' }, payload => {
+                 if (payload.eventType === 'INSERT') setTemplates(prev => [...prev, fromSupabase(payload.new as Template)]);
+                 if (payload.eventType === 'UPDATE') setTemplates(prev => prev.map(t => t.id === payload.new.id ? fromSupabase(payload.new as Template) : t));
+                 if (payload.eventType === 'DELETE') setTemplates(prev => prev.filter(t => t.id !== (payload.old as any).id));
             }).subscribe();
 
         return () => {
             supabase.removeChannel(notesChannel);
             supabase.removeChannel(collectionsChannel);
             supabase.removeChannel(smartCollectionsChannel);
+            supabase.removeChannel(templatesChannel);
         };
     }, [user]);
 
@@ -119,7 +125,8 @@ export const useStore = (user: User | undefined) => {
         const noteToUpdate = notes.find(note => note.id === id);
         if (!noteToUpdate) return;
         
-        const newVersion: Omit<NoteVersion, 'id'> = { noteId: id, savedAt: noteToUpdate.updatedAt, title: noteToUpdate.title, content: noteToUpdate.content, tags: noteToUpdate.tags };
+        // FIX: Added user_id to the type definition for newVersion to match the object being created.
+        const newVersion: Omit<NoteVersion, 'id'|'noteId'> & {note_id: string; user_id?: string} = { user_id: noteToUpdate.userId, note_id: id, savedAt: noteToUpdate.updatedAt, title: noteToUpdate.title, content: noteToUpdate.content, tags: noteToUpdate.tags };
         
         const { error: versionError } = await supabase.from('note_versions').insert(toSupabase(newVersion));
         if(versionError) console.error("Failed to save note version:", versionError);
@@ -163,8 +170,6 @@ export const useStore = (user: User | undefined) => {
     const deleteCollection = useCallback(async (collectionId: string) => {
         const { data, error } = await supabase.rpc('delete_collection_and_descendants', { p_collection_id: collectionId });
         if (error) throw error;
-        // The realtime subscription should handle UI updates, but we can force a refresh if needed.
-        // For now, we rely on realtime. The RPC returns deleted note IDs if we need them.
         return (data as any)?.deleted_note_ids || [];
     }, []);
 
@@ -228,15 +233,28 @@ export const useStore = (user: User | undefined) => {
         if (error) throw error;
     }, []);
     
-    // Templates still use localStorage as they are less critical and user-wide
-    const { addTemplate, updateTemplate, deleteTemplate, importTemplates } = {
-        addTemplate: async (title: string, content: string) => setTemplates(p => [...p, {id: crypto.randomUUID(), title, content}]),
-        updateTemplate: async (id: string, data: any) => setTemplates(p => p.map(t => t.id === id ? {...t, ...data} : t)),
-        deleteTemplate: async (id: string) => setTemplates(p => p.filter(t => t.id !== id)),
-        importTemplates: async (data: Template[]) => setTemplates(data),
-    };
+    const addTemplate = useCallback(async (title: string, content: string) => {
+        const { error } = await supabase.from('templates').insert(toSupabase({ title, content }));
+        if (error) throw error;
+    }, []);
+
+    const updateTemplate = useCallback(async (id: string, updatedFields: Partial<Omit<Template, 'id'>>) => {
+        const { error } = await supabase.from('templates').update(toSupabase(updatedFields)).eq('id', id);
+        if (error) throw error;
+    }, []);
+
+    const deleteTemplate = useCallback(async (id: string) => {
+        const { error } = await supabase.from('templates').delete().eq('id', id);
+        if (error) throw error;
+    }, []);
+
+    const importTemplates = useCallback(async (importedTemplates: Template[]) => {
+        if (!user || !importedTemplates || importedTemplates.length === 0) return;
+        const dataToInsert = importedTemplates.map(t => toSupabase({ title: t.title, content: t.content, user_id: user.id }));
+        const { error } = await supabase.from('templates').insert(dataToInsert);
+        if (error) throw error;
+    }, [user]);
     
-    // Data import/export logic would need to be updated to handle async operations if it were to write to Supabase
     const importData = (n: Note[], c: Collection[], sc: SmartCollection[]) => { console.warn("Import data not implemented for Supabase store yet")};
     const copyNote = (id: string) => { console.warn("Copy note not implemented for Supabase store yet")};
     const renameNoteTitle = async (id: string, title: string) => await updateNote(id, { title });

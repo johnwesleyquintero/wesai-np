@@ -7,7 +7,7 @@ WesAI Notepad is a secure, AI-enhanced application designed for privacy, perform
 ## Key Features
 
 ### Note-Taking and Organization
-- **Secure Cloud Sync with Supabase:** All notes, folders, and templates are stored in your private Supabase project. Your data is secure and synced in real-time across any device you log into.
+- **Secure & Private Cloud Sync:** All data is stored in your private Supabase project and protected by granular row-level security policies, ensuring only you can access your notes. Real-time, authenticated subscriptions keep all your devices perfectly in sync without compromising privacy.
 - **Flexible Authentication:** Sign up quickly with an email and password or use the convenient one-click Google Sign-In option.
 - **Drag & Drop Organization:** Intuitively organize your workspace by dragging notes and folders to reorder them or nest them within each other.
 - **Rich Markdown Editor:** A full-featured Markdown editor with syntax highlighting and a live preview mode that supports tables, images, embedded videos, and more.
@@ -27,7 +27,7 @@ WesAI Notepad is a secure, AI-enhanced application designed for privacy, perform
 - **Summarization & Action Items:** Generate a concise summary and extract a checklist of action items from your note with a single command.
 
 ### Productivity and Workflow
-- **Optimized Performance:** Lazy-loading components and an efficient architecture ensure a snappy experience, even with a large number of notes.
+- **Optimized for Performance & Scale:** A highly-optimized Supabase backend with custom database indexing ensures data retrieval is instantaneous, providing a snappy experience even as your knowledge base grows to thousands of notes. The frontend is built with lazy-loading components for a fast initial load.
 - **Command Palette:** Press `Ctrl/Cmd + K` to access nearly every application feature, from creating notes to executing AI actions.
 - **Slash Commands:** Type `/` in the editor to quickly insert headings, lists, to-do items, and more.
 - **Drag & Drop Import:** Drag text or markdown files directly into the editor or onto a folder in the sidebar to instantly create new notes.

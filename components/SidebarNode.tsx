@@ -29,6 +29,7 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
     const [isExpanded, setIsExpanded] = useState(true);
     const [renameValue, setRenameValue] = useState('');
     const [isDragOver, setIsDragOver] = useState(false);
+    const [dropPosition, setDropPosition] = useState<'top' | 'bottom' | null>(null);
     
     const { showToast } = useToast();
     const inputRef = useRef<HTMLInputElement>(null);
@@ -112,27 +113,10 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
         }
     };
 
-    // --- Drag and Drop Handlers ---
     const handleDragStart = (e: React.DragEvent) => {
         e.stopPropagation();
         e.dataTransfer.setData('application/json', JSON.stringify({ id: node.id, type: isCollection ? 'collection' : 'note', parentId: node.parentId }));
         e.dataTransfer.effectAllowed = 'move';
-    
-        const dragGhost = document.createElement('div');
-        const iconSvg = isCollection 
-            ? `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z" /></svg>`
-            : `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /></svg>`;
-        
-        dragGhost.style.cssText = 'position: absolute; top: -1000px; padding: 8px 12px; background-color: #3f3f46; color: #f5f5f4; border-radius: 8px; display: flex; align-items: center; gap: 8px; font-family: sans-serif; font-size: 14px;';
-        dragGhost.innerHTML = `${iconSvg} <span>${name}</span>`;
-
-        document.body.appendChild(dragGhost);
-        e.dataTransfer.setDragImage(dragGhost, -10, 15);
-    
-        // Clean up the ghost element after the drag operation has started
-        setTimeout(() => {
-            document.body.removeChild(dragGhost);
-        }, 0);
     };
     
     const handleDragOver = (e: React.DragEvent) => {
@@ -143,56 +127,80 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
             const data = JSON.parse(e.dataTransfer.getData('application/json'));
             if (data.id === node.id) return; // Can't drop on self
 
-            // Prevent dropping a folder into its own descendant
             if (data.type === 'collection') {
-                let currentParentId = isCollection ? node.id : node.parentId;
-                while(currentParentId) {
-                    if(currentParentId === data.id) {
-                        setIsDragOver(false);
-                        return;
+                let currentParentId = node.id;
+                while (currentParentId) {
+                    if (currentParentId === data.id) {
+                        return; // Invalid move: dropping folder into its own descendant
                     }
                     const parent = collections.find(c => c.id === currentParentId);
                     currentParentId = parent ? parent.parentId : null;
                 }
             }
+            
+            const targetRect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+            const verticalMidpoint = targetRect.top + targetRect.height / 2;
 
-            setIsDragOver(true);
-        } catch (error) {
-            // Ignore if data is not available (e.g., dragging from outside)
-        }
+            if (isCollection) {
+                const dropZoneThreshold = targetRect.height * 0.25;
+                if (e.clientY < targetRect.top + dropZoneThreshold) {
+                    setDropPosition('top');
+                    setIsDragOver(false);
+                } else if (e.clientY > targetRect.bottom - dropZoneThreshold) {
+                    setDropPosition('bottom');
+                    setIsDragOver(false);
+                } else {
+                    setDropPosition(null);
+                    setIsDragOver(true);
+                }
+            } else { // It's a note
+                setDropPosition(e.clientY < verticalMidpoint ? 'top' : 'bottom');
+                setIsDragOver(false);
+            }
+        } catch (error) {}
     };
 
     const handleDragLeave = (e: React.DragEvent) => {
         e.preventDefault();
         e.stopPropagation();
         setIsDragOver(false);
+        setDropPosition(null);
     };
 
     const handleDrop = (e: React.DragEvent) => {
         e.preventDefault();
         e.stopPropagation();
-        setIsDragOver(false);
-        const data = JSON.parse(e.dataTransfer.getData('application/json'));
-        const newParentId = isCollection ? node.id : node.parentId;
-
-        if (data.id && data.id !== newParentId) {
-            onMoveItem(data.id, newParentId);
+        
+        try {
+            const data = JSON.parse(e.dataTransfer.getData('application/json'));
+            if (data.id) {
+                if (isDragOver) {
+                    onMoveItem(data.id, node.id, 'inside');
+                } else if (dropPosition) {
+                    onMoveItem(data.id, node.id, dropPosition);
+                }
+            }
+        } catch (err) {
+            console.error("Drop failed", err);
+        } finally {
+            setIsDragOver(false);
+            setDropPosition(null);
         }
     };
 
 
     return (
-        <div 
-             onDragOver={handleDragOver}
-             onDragLeave={handleDragLeave}
-             onDrop={handleDrop}
-             onContextMenu={handleContextMenu}
-        >
+        <div className="relative">
+            {dropPosition === 'top' && <div className="absolute -top-0.5 left-2 right-2 h-0.5 bg-light-primary dark:bg-dark-primary rounded-full z-10" style={{ marginLeft: `${level * 16}px` }} />}
             <div
                 onClick={handleNodeClick}
                 onDoubleClick={handleDoubleClick}
-                draggable={!isRenaming}
                 onDragStart={handleDragStart}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                onContextMenu={handleContextMenu}
+                draggable={!isRenaming}
                 className={`group flex items-center justify-between w-full text-left rounded-md pr-2 my-0.5 text-sm cursor-grab transition-all duration-150 ${
                     isActive
                         ? 'bg-light-primary/30 dark:bg-dark-primary/30 text-light-primary dark:text-dark-primary font-semibold'
@@ -238,11 +246,12 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
                     </button>
                 )}
             </div>
-            {isCollection && isExpanded && node.children && (
+            {dropPosition === 'bottom' && <div className="absolute -bottom-0.5 left-2 right-2 h-0.5 bg-light-primary dark:bg-dark-primary rounded-full z-10" style={{ marginLeft: `${level * 16}px` }} />}
+            {isCollection && isExpanded && (
                 <div>
-                    {node.children.length === 0 && !isDragOver && (
+                    {node.children.length === 0 && (
                         <p style={{ paddingLeft: `${(level + 1) * 16 + 28}px` }} className="py-1.5 text-xs text-light-text/50 dark:text-dark-text/50">
-                            Empty folder
+                           Empty folder
                         </p>
                     )}
                     {node.children.map(childNode => (

@@ -45,15 +45,7 @@ const buildTree = (notes: Note[], collections: import('../types').Collection[]):
     });
 
     const sortNodes = (nodes: TreeNode[]) => {
-        nodes.sort((a, b) => {
-            const aIsCollection = 'name' in a;
-            const bIsCollection = 'name' in b;
-            if (aIsCollection && !bIsCollection) return -1;
-            if (!aIsCollection && bIsCollection) return 1;
-            const aName = aIsCollection ? a.name : a.title;
-            const bName = bIsCollection ? b.name : b.title;
-            return aName.localeCompare(bName);
-        });
+        nodes.sort((a, b) => (a.order || 0) - (b.order || 0));
         nodes.forEach(node => {
             if ('children' in node && node.children.length > 0) {
                 sortNodes(node.children);
@@ -98,7 +90,8 @@ const Sidebar: React.FC<SidebarProps> = ({
     const {
         notes, collections, smartCollections, onSelectNote, onAddNote, onAddCollection,
         theme, toggleTheme, isMobileView, isSidebarOpen, setIsSidebarOpen, view, onSetView,
-        isAiRateLimited, onOpenSmartFolderModal, onDeleteSmartCollection, onMoveItem
+        isAiRateLimited, onOpenSmartFolderModal, onDeleteSmartCollection, onMoveItem,
+        onOpenContextMenu, openSettings
     } = useAppContext();
 
     const [isRootDragOver, setIsRootDragOver] = useState(false);
@@ -123,7 +116,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         try {
             const data = JSON.parse(e.dataTransfer.getData('application/json'));
              if (data.id && data.parentId !== null) { // Only move if it's not already at root
-                onMoveItem(data.id, null);
+                onMoveItem(data.id, null, 'inside');
             }
         } catch (error) {
             console.error("Failed to parse drag-and-drop data:", error);
@@ -142,7 +135,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                 <div key={sc.id} 
                     className={`group flex items-center justify-between w-full text-left rounded-md px-2 py-1.5 my-0.5 text-sm cursor-pointer hover:bg-light-background dark:hover:bg-dark-background`}
                      onClick={() => { setSearchTerm(sc.query); setSearchMode('AI'); }}
-                     onContextMenu={(e) => useAppContext().onOpenContextMenu(e, [
+                     onContextMenu={(e) => onOpenContextMenu(e, [
                          { label: 'Edit Smart Folder', action: () => onOpenSmartFolderModal(sc), icon: <PencilSquareIcon /> },
                          { label: 'Delete Smart Folder', action: () => onDeleteSmartCollection(sc), isDestructive: true, icon: <TrashIcon /> },
                      ])}
@@ -292,7 +285,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                                 onDragOver={handleRootDragOver}
                                 onDragLeave={handleRootDragLeave}
                                 onDrop={handleRootDrop}
-                                className={`transition-colors p-1 rounded-md ${isRootDragOver ? 'bg-light-primary/10' : ''}`}
+                                className={`transition-colors p-1 rounded-md min-h-[10rem] ${isRootDragOver ? 'bg-light-primary/10' : ''}`}
                             >
                                {renderSmartCollections()}
                                {renderFileTree()}
@@ -320,7 +313,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                     </FooterButton>
 
                     <FooterButton
-                        onClick={() => useAppContext().openSettings()}
+                        onClick={openSettings}
                         tooltip="Settings"
                     >
                         <Cog6ToothIcon />

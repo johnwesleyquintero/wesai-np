@@ -29,7 +29,7 @@ interface AppContextType {
     onToggleFavorite: (id: string) => void;
     onUpdateCollection: (id: string, updatedFields: Partial<Omit<Collection, 'id'>>) => void;
     onRenameNote: (id: string, newTitle: string) => void;
-    onMoveItem: (itemId: string, newParentId: string | null) => void;
+    onMoveItem: (draggedItemId: string, targetItemId: string | null, position: 'top' | 'bottom' | 'inside') => void;
     setRenamingItemId: (id: string | null) => void;
     toggleTheme: () => void;
     onSetView: (view: 'NOTES' | 'CHAT') => void;

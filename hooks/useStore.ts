@@ -11,10 +11,11 @@ export const useStore = () => {
         try {
             const storedNotes = localStorage.getItem(NOTES_STORAGE_key);
             const parsedNotes = storedNotes ? JSON.parse(storedNotes) : [];
-            // Data migration for old notes without parentId
-            return parsedNotes.map((note: Note) => ({
+            // Data migration for old notes without parentId or order
+            return parsedNotes.map((note: Note, index: number) => ({
                 ...note,
                 parentId: note.parentId !== undefined ? note.parentId : null,
+                order: note.order !== undefined ? note.order : index,
             }));
         } catch (error) {
             console.error("Error parsing notes from localStorage", error);
@@ -25,7 +26,11 @@ export const useStore = () => {
     const [collections, setCollections] = useState<Collection[]>(() => {
         try {
             const storedCollections = localStorage.getItem(COLLECTIONS_STORAGE_KEY);
-            return storedCollections ? JSON.parse(storedCollections) : [];
+            const parsedCollections = storedCollections ? JSON.parse(storedCollections) : [];
+            return parsedCollections.map((c: Collection, index: number) => ({
+                ...c,
+                order: c.order !== undefined ? c.order : index,
+            }));
         } catch (error) {
             console.error("Error parsing collections from localStorage", error);
             return [];
@@ -68,6 +73,9 @@ export const useStore = () => {
     }, [smartCollections]);
 
     const addNote = useCallback((parentId: string | null = null) => {
+        const siblings = notes.filter(n => n.parentId === parentId);
+        const maxOrder = siblings.reduce((max, n) => Math.max(max, n.order || 0), 0);
+
         const newNote: Note = {
             id: crypto.randomUUID(),
             title: "Untitled Note",
@@ -78,14 +86,18 @@ export const useStore = () => {
             tags: [],
             history: [],
             parentId,
+            order: maxOrder + 1,
         };
         setNotes(prevNotes => [newNote, ...prevNotes]);
         return newNote.id;
-    }, []);
+    }, [notes]);
 
     const copyNote = useCallback((noteId: string) => {
         const noteToCopy = notes.find(n => n.id === noteId);
         if (!noteToCopy) return;
+
+        const siblings = notes.filter(n => n.parentId === noteToCopy.parentId);
+        const maxOrder = siblings.reduce((max, n) => Math.max(max, n.order || 0), 0);
 
         const newNote: Note = {
             id: crypto.randomUUID(),
@@ -97,6 +109,7 @@ export const useStore = () => {
             updatedAt: new Date().toISOString(),
             isFavorite: false, // Copied notes are not favorited by default
             history: [],
+            order: maxOrder + 1,
         };
 
         setNotes(prev => [newNote, ...prev]);
@@ -158,14 +171,17 @@ export const useStore = () => {
 
     // Collection Management
     const addCollection = useCallback((name: string, parentId: string | null = null) => {
+        const siblings = collections.filter(c => c.parentId === parentId);
+        const maxOrder = siblings.reduce((max, c) => Math.max(max, c.order || 0), 0);
         const newCollection: Collection = {
             id: crypto.randomUUID(),
             name,
             parentId,
+            order: maxOrder + 1,
         };
         setCollections(prev => [...prev, newCollection]);
         return newCollection.id;
-    }, []);
+    }, [collections]);
     
     const updateCollection = useCallback((id: string, updatedFields: Partial<Omit<Collection, 'id'>>) => {
         setCollections(prev => prev.map(c => c.id === id ? { ...c, ...updatedFields } : c));
@@ -207,27 +223,66 @@ export const useStore = () => {
         return collections.find(c => c.id === id);
     }, [collections]);
 
-    const moveItem = useCallback((itemId: string, newParentId: string | null) => {
-        const isNote = notes.some(n => n.id === itemId);
-        const isCollection = collections.some(c => c.id === itemId);
-
+    const moveItem = useCallback((draggedItemId: string, targetItemId: string | null, position: 'top' | 'bottom' | 'inside') => {
+        const isNote = notes.some(n => n.id === draggedItemId);
+        const isCollection = collections.some(c => c.id === draggedItemId);
+        if (!isNote && !isCollection) return;
+    
+        const allItems = [
+            ...notes,
+            ...collections,
+        ];
+    
+        let newParentId: string | null;
+        let newOrder: number;
+    
+        if (targetItemId === null) { // Dropping on root
+            newParentId = null;
+            const rootSiblings = allItems.filter(item => item.parentId === null && item.id !== draggedItemId);
+            newOrder = (rootSiblings.reduce((max, item) => Math.max(max, item.order || 0), 0)) + 1;
+        } else {
+            const targetItem = allItems.find(item => item.id === targetItemId);
+            if (!targetItem) return;
+    
+            if (position === 'inside') {
+                newParentId = targetItem.id;
+                const newSiblings = allItems.filter(item => item.parentId === newParentId && item.id !== draggedItemId);
+                newOrder = (newSiblings.reduce((max, item) => Math.max(max, item.order || 0), 0)) + 1;
+            } else { // 'top' or 'bottom' for reordering
+                newParentId = targetItem.parentId;
+                const siblings = allItems
+                    .filter(item => item.parentId === newParentId && item.id !== draggedItemId)
+                    .sort((a, b) => (a.order || 0) - (b.order || 0));
+    
+                const targetIndex = siblings.findIndex(item => item.id === targetItemId);
+                if (targetIndex === -1) return; // Should not happen
+    
+                if (position === 'top') {
+                    const prevItemOrder = siblings[targetIndex - 1]?.order || 0;
+                    const nextItemOrder = siblings[targetIndex].order;
+                    newOrder = (prevItemOrder + nextItemOrder) / 2;
+                } else { // 'bottom'
+                    const prevItemOrder = siblings[targetIndex].order;
+                    const nextItemOrder = siblings[targetIndex + 1]?.order;
+                    if (nextItemOrder !== undefined) {
+                        newOrder = (prevItemOrder + nextItemOrder) / 2;
+                    } else {
+                        newOrder = prevItemOrder + 1;
+                    }
+                }
+            }
+        }
+    
         if (isNote) {
-            setNotes(prev => prev.map(n => n.id === itemId ? { ...n, parentId: newParentId } : n));
-        } else if (isCollection) {
-            if (itemId === newParentId) return; // Can't drop on self
-
+            setNotes(prev => prev.map(n => n.id === draggedItemId ? { ...n, parentId: newParentId, order: newOrder, updatedAt: new Date().toISOString() } : n));
+        } else { // isCollection
             // Circular dependency check
             let currentParentId = newParentId;
             while (currentParentId) {
-                if (currentParentId === itemId) {
-                    console.error("Cannot move a folder into itself or a descendant.");
-                    return; // Abort move
-                }
-                const parent = collections.find(c => c.id === currentParentId);
-                currentParentId = parent ? parent.parentId : null;
+                if (currentParentId === draggedItemId) return;
+                currentParentId = collections.find(c => c.id === currentParentId)?.parentId || null;
             }
-
-            setCollections(prev => prev.map(c => c.id === itemId ? { ...c, parentId: newParentId } : c));
+            setCollections(prev => prev.map(c => c.id === draggedItemId ? { ...c, parentId: newParentId, order: newOrder } : c));
         }
     }, [notes, collections]);
 

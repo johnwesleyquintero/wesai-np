@@ -4,6 +4,29 @@ import { enhanceText, summarizeAndExtractActions } from '../services/geminiServi
 import { StarIcon, TrashIcon, SparklesIcon, HistoryIcon, ArrowDownTrayIcon, DocumentDuplicateIcon, Bars3Icon, ArrowUturnLeftIcon, ArrowUturnRightIcon, EyeIcon, PencilSquareIcon, CheckBadgeIcon, ClipboardDocumentIcon } from './Icons';
 import { useToast } from '../context/ToastContext';
 
+interface ToolbarProps {
+    note: Note;
+    onDelete: (note: Note) => void;
+    onToggleFavorite: (id: string) => void;
+    saveStatus: 'saved' | 'saving' | 'unsaved';
+    contentToEnhance: string;
+    onContentUpdate: (newContent: string) => void;
+    onToggleHistory: () => void;
+    isHistoryOpen: boolean;
+    templates: Template[];
+    onApplyTemplate: (template: Template) => void;
+    isMobileView: boolean;
+    onToggleSidebar: () => void;
+    onUndo: () => void;
+    onRedo: () => void;
+    canUndo: boolean;
+    canRedo: boolean;
+    viewMode: 'edit' | 'preview';
+    onToggleViewMode: () => void;
+    isCheckingSpelling: boolean;
+    isAiRateLimited: boolean;
+}
+
 interface StatusIndicatorProps {
     saveStatus: 'saved' | 'saving' | 'unsaved';
     isAiRateLimited: boolean;
@@ -225,30 +248,6 @@ const ExportMenu: React.FC<{ note: Note }> = ({ note }) => {
         </div>
     );
 };
-
-
-interface ToolbarProps {
-    note: Note;
-    onDelete: (note: Note) => void;
-    onToggleFavorite: (id: string) => void;
-    saveStatus: 'saved' | 'saving' | 'unsaved';
-    contentToEnhance: string;
-    onContentUpdate: (newContent: string) => void;
-    onToggleHistory: () => void;
-    isHistoryOpen: boolean;
-    templates: Template[];
-    onApplyTemplate: (template: Template) => void;
-    isMobileView: boolean;
-    onToggleSidebar: () => void;
-    onUndo: () => void;
-    onRedo: () => void;
-    canUndo: boolean;
-    canRedo: boolean;
-    viewMode: 'edit' | 'preview';
-    onToggleViewMode: () => void;
-    isCheckingSpelling: boolean;
-    isAiRateLimited: boolean;
-}
 
 const Toolbar: React.FC<ToolbarProps> = ({ 
     note, onDelete, onToggleFavorite, saveStatus, contentToEnhance, onContentUpdate, onToggleHistory, isHistoryOpen, 

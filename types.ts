@@ -17,12 +17,14 @@ export interface Note {
     tags: string[];
     history: NoteVersion[];
     parentId: string | null;
+    order: number;
 }
 
 export interface Collection {
     id: string;
     name: string;
     parentId: string | null;
+    order: number;
 }
 
 export interface SmartCollection {

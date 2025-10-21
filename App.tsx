@@ -201,12 +201,10 @@ function AppContent() {
     
     const handleDeleteCollectionConfirm = () => {
         if (collectionToDelete) {
-            // Check if the active note is inside the folder being deleted
-            const isNoteInDeletedHierarchy = notes.some(n => n.id === activeNoteId && n.parentId === collectionToDelete.id); // This is not recursive, but good enough for now
-            if (isNoteInDeletedHierarchy) {
+            const deletedNoteIds = deleteCollection(collectionToDelete.id);
+            if (activeNoteId && deletedNoteIds.includes(activeNoteId)) {
                 setActiveNoteId(null);
             }
-            deleteCollection(collectionToDelete.id);
             setCollectionToDelete(null);
         }
     };

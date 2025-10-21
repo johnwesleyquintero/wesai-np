@@ -39,11 +39,10 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
     const isActive = !isCollection && activeNoteId === node.id;
 
     const handleDropFile = (file: File, parentId: string | null) => {
-        // FIX: Read the file content as a string before passing it to onAddNoteFromFile.
         const reader = new FileReader();
         reader.onload = (loadEvent) => {
             const content = loadEvent.target?.result as string;
-            if (content) {
+            if (content !== null) {
                 onAddNoteFromFile(file.name, content, parentId);
             }
         };

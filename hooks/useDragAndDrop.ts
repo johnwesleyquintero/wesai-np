@@ -113,17 +113,13 @@ export const useDragAndDrop = (
 
         // --- Handle File Drop ---
         if (e.dataTransfer.files && e.dataTransfer.files.length > 0 && onDropFile) {
-            const validFiles = Array.from(e.dataTransfer.files).filter(f => f.type === 'text/plain' || f.name.endsWith('.md'));
+            // The hook should not read the file, just pass it to the handler.
+            const validFiles = Array.from(e.dataTransfer.files).filter(f => f.type === 'text/plain' || f.name.endsWith('.md') || f.type === 'text/markdown');
+            
             validFiles.forEach(file => {
-                const reader = new FileReader();
-                reader.onload = (loadEvent) => {
-                    const content = loadEvent.target?.result as string;
-                    if (content) {
-                       onDropFile(file, id); // id is the parentId for root/folder drops
-                    }
-                };
-                reader.readAsText(file);
+                onDropFile(file, id); // Pass the file and the target id (which is parentId for folders/root)
             });
+
             resetState();
             return;
         }

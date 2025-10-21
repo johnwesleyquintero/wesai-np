@@ -104,12 +104,11 @@ const Sidebar: React.FC<SidebarProps> = ({
         id: null,
         type: 'root',
         onMoveItem: onMoveItem,
-        // FIX: Read file content before passing to onAddNoteFromFile. The `file` object was being passed as the content string.
         onDropFile: (file, parentId) => {
             const reader = new FileReader();
             reader.onload = (loadEvent) => {
                 const content = loadEvent.target?.result as string;
-                if (content) {
+                if (content !== null) {
                     onAddNoteFromFile(file.name, content, parentId);
                 }
             };
@@ -124,7 +123,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         const reader = new FileReader();
         reader.onload = (loadEvent) => {
             const content = loadEvent.target?.result as string;
-            if (content) {
+            if (content !== null) {
                 onAddNoteFromFile(file.name, content, parentId);
             }
         };

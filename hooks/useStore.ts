@@ -212,7 +212,7 @@ export const useStore = () => {
         setCollections(prev => prev.map(c => c.id === id ? { ...c, ...updatedFields } : c));
     }, []);
 
-    const deleteCollection = useCallback((collectionId: string) => {
+    const deleteCollection = useCallback((collectionId: string): string[] => {
         const collectionsToDelete = new Set<string>([collectionId]);
         const notesToDelete = new Set<string>();
 
@@ -242,6 +242,8 @@ export const useStore = () => {
 
         setCollections(prev => prev.filter(c => !collectionsToDelete.has(c.id)));
         setNotes(prev => prev.filter(n => !notesToDelete.has(n.id)));
+
+        return Array.from(notesToDelete);
     }, [notes, collections]);
     
     const getCollectionById = useCallback((id: string) => {

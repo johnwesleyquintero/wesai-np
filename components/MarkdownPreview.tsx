@@ -13,6 +13,18 @@ const getVimeoVideoId = (url: string) => {
     return match ? match[1] : null;
 };
 
+const sanitizeUrl = (url: string): string => {
+    const trimmedUrl = url.trim();
+    if (/^javascript:/i.test(trimmedUrl)) {
+        return '#';
+    }
+    // Allow known safe protocols, relative paths, and data URIs for images
+    if (/^(https?|mailto|data:image):/i.test(trimmedUrl) || /^[./]/.test(trimmedUrl) || /^#/.test(trimmedUrl)) {
+        return trimmedUrl;
+    }
+    return '#';
+};
+
 const InlineParser: React.FC<{ text: string }> = ({ text }) => {
     const { getNoteById, onSelectNote } = useAppContext();
 
@@ -41,7 +53,7 @@ const InlineParser: React.FC<{ text: string }> = ({ text }) => {
         const key = `${match.index}-${lastIndex}`;
 
         if (imgSrc) {
-            elements.push(<img key={key} src={imgSrc} alt={imgAlt} className="max-w-full my-4 rounded-lg" />);
+            elements.push(<img key={key} src={sanitizeUrl(imgSrc)} alt={imgAlt} className="max-w-full my-4 rounded-lg" />);
         } else if (noteId) {
             const linkedNote = getNoteById(noteId);
             const displayText = noteText || linkedNote?.title || 'Untitled Note';
@@ -72,7 +84,7 @@ const InlineParser: React.FC<{ text: string }> = ({ text }) => {
                     </div>
                 );
             } else {
-                 elements.push(<a href={linkUrl} key={key} target="_blank" rel="noopener noreferrer" className="text-light-primary dark:text-dark-primary underline"><InlineParser text={linkText} /></a>);
+                 elements.push(<a href={sanitizeUrl(linkUrl)} key={key} target="_blank" rel="noopener noreferrer" className="text-light-primary dark:text-dark-primary underline"><InlineParser text={linkText} /></a>);
             }
         }
         

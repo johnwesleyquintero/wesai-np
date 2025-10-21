@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Template } from '../types';
+import { useModalAccessibility } from '../hooks/useModalAccessibility';
 
 interface TemplateEditorModalProps {
     isOpen: boolean;
@@ -11,6 +12,10 @@ interface TemplateEditorModalProps {
 const TemplateEditorModal: React.FC<TemplateEditorModalProps> = ({ isOpen, onClose, onSave, templateToEdit }) => {
     const [title, setTitle] = useState('');
     const [content, setContent] = useState('');
+    const titleInputRef = useRef<HTMLInputElement>(null);
+    const modalRef = useRef<HTMLDivElement>(null);
+
+    useModalAccessibility(isOpen, onClose, modalRef);
 
     useEffect(() => {
         if (isOpen) {
@@ -21,6 +26,7 @@ const TemplateEditorModal: React.FC<TemplateEditorModalProps> = ({ isOpen, onClo
                 setTitle('');
                 setContent('');
             }
+            setTimeout(() => titleInputRef.current?.focus(), 100);
         }
     }, [isOpen, templateToEdit]);
 
@@ -33,13 +39,21 @@ const TemplateEditorModal: React.FC<TemplateEditorModalProps> = ({ isOpen, onClo
 
     return (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60]" onClick={onClose}>
-            <div className="bg-light-background dark:bg-dark-background rounded-lg shadow-xl w-full max-w-2xl p-6" onClick={e => e.stopPropagation()}>
-                <h2 className="text-2xl font-bold mb-4">{templateToEdit ? 'Edit Template' : 'New Template'}</h2>
+            <div 
+                ref={modalRef}
+                role="dialog" 
+                aria-modal="true" 
+                aria-labelledby="template-editor-title"
+                className="bg-light-background dark:bg-dark-background rounded-lg shadow-xl w-full max-w-2xl p-6" 
+                onClick={e => e.stopPropagation()}
+            >
+                <h2 id="template-editor-title" className="text-2xl font-bold mb-4">{templateToEdit ? 'Edit Template' : 'New Template'}</h2>
                 
                 <div className="mb-4">
                     <label htmlFor="templateTitle" className="block text-sm font-medium mb-1">Template Title</label>
                     <input
                         id="templateTitle"
+                        ref={titleInputRef}
                         type="text"
                         value={title}
                         onChange={(e) => setTitle(e.target.value)}

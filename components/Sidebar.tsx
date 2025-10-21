@@ -108,6 +108,7 @@ const FooterButton: React.FC<{
                     ? 'bg-light-primary/20 dark:bg-dark-primary/20 !text-light-primary dark:!text-dark-primary'
                     : 'hover:bg-light-ui/60 dark:hover:bg-dark-ui-hover/60'
             }`}
+             aria-label={tooltip}
         >
             {children}
         </button>
@@ -156,7 +157,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         <div className="px-2 mt-4">
              <div className="flex justify-between items-center mb-1 px-2">
                 <h3 className="text-sm font-semibold text-light-text/60 dark:text-dark-text/60">Smart Folders</h3>
-                <button onClick={() => onOpenSmartFolderModal(null)} className="p-1 rounded text-light-text/60 dark:text-dark-text/60 hover:text-light-text dark:hover:text-dark-text hover:bg-light-ui dark:hover:bg-dark-ui">
+                <button onClick={() => onOpenSmartFolderModal(null)} className="p-1 rounded text-light-text/60 dark:text-dark-text/60 hover:text-light-text dark:hover:text-dark-text hover:bg-light-ui dark:hover:bg-dark-ui" aria-label="Add new smart folder">
                     <PlusIcon className="w-4 h-4" />
                 </button>
             </div>
@@ -178,33 +179,45 @@ const Sidebar: React.FC<SidebarProps> = ({
         </div>
     );
     
-    const renderFileTree = () => (
-        <div className="px-2 mt-2">
-             <div className="flex justify-between items-center mb-1 px-2">
-                <h3 className="text-sm font-semibold text-light-text/60 dark:text-dark-text/60">Folders</h3>
-                 <button onClick={() => onAddCollection('New Folder', null)} className="p-1 rounded text-light-text/60 dark:text-dark-text/60 hover:text-light-text dark:hover:text-dark-text hover:bg-light-ui dark:hover:bg-dark-ui">
-                    <FolderPlusIcon className="w-4 h-4" />
-                </button>
+    const renderFileTree = () => {
+        if (fileTree.length === 0 && smartCollections.length === 0) {
+            return (
+                <div className="text-center px-4 py-8 text-sm text-light-text/60 dark:text-dark-text/60">
+                    <p>Your workspace is empty.</p>
+                    <button onClick={() => onAddNote()} className="mt-2 text-light-primary dark:text-dark-primary font-semibold">Create your first note</button>
+                </div>
+            );
+        }
+
+        return (
+            <div className="px-2 mt-2">
+                 <div className="flex justify-between items-center mb-1 px-2">
+                    <h3 className="text-sm font-semibold text-light-text/60 dark:text-dark-text/60">Folders</h3>
+                     <button onClick={() => onAddCollection('New Folder', null)} className="p-1 rounded text-light-text/60 dark:text-dark-text/60 hover:text-light-text dark:hover:text-dark-text hover:bg-light-ui dark:hover:bg-dark-ui" aria-label="Add new folder">
+                        <FolderPlusIcon className="w-4 h-4" />
+                    </button>
+                </div>
+                {fileTree.map(node => (
+                    <SidebarNode 
+                        key={node.id} 
+                        node={node} 
+                        level={0} 
+                        activeNoteId={activeNoteId}
+                        collections={collections}
+                        onSelectNote={onSelectNote}
+                        onAddNote={onAddNote}
+                        onDeleteCollection={onDeleteCollection}
+                        onUpdateCollection={onUpdateCollection}
+                        onRenameNote={onRenameNote}
+                        onMoveItem={onMoveItem}
+                        onOpenContextMenu={onOpenContextMenu}
+                        renamingItemId={renamingItemId}
+                        setRenamingItemId={setRenamingItemId}
+                    />
+                ))}
             </div>
-            {fileTree.map(node => (
-                <SidebarNode 
-                    key={node.id} 
-                    node={node} 
-                    level={0} 
-                    activeNoteId={activeNoteId}
-                    collections={collections}
-                    onSelectNote={onSelectNote}
-                    onDeleteCollection={onDeleteCollection}
-                    onUpdateCollection={onUpdateCollection}
-                    onRenameNote={onRenameNote}
-                    onMoveItem={onMoveItem}
-                    onOpenContextMenu={onOpenContextMenu}
-                    renamingItemId={renamingItemId}
-                    setRenamingItemId={setRenamingItemId}
-                />
-            ))}
-        </div>
-    );
+        );
+    };
 
     const renderFlatList = () => (
         <div className="px-4">
@@ -231,7 +244,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                 <div className="flex justify-between items-center mb-4">
                     <h1 className="text-xl font-bold">WesAI Notepad</h1>
                     {isMobileView && (
-                        <button onClick={onClose} className="p-2 -mr-2 rounded-md hover:bg-light-ui-hover dark:hover:bg-dark-ui-hover">
+                        <button onClick={onClose} className="p-2 -mr-2 rounded-md hover:bg-light-ui-hover dark:hover:bg-dark-ui-hover" aria-label="Close sidebar">
                             <XMarkIcon />
                         </button>
                     )}

@@ -34,6 +34,13 @@ type SelectionState = { start: number; end: number; text: string; rect: DOMRect 
 type ActiveSpellingError = { error: SpellingError; rect: DOMRect };
 type NoteLinkerState = { query: string; position: { top: number; left: number } } | null;
 
+const StatusBar: React.FC<{ wordCount: number; charCount: number }> = ({ wordCount, charCount }) => (
+    <div className="flex-shrink-0 px-4 sm:px-8 py-1.5 border-t border-light-border dark:border-dark-border text-xs text-light-text/60 dark:text-dark-text/60 flex items-center justify-end space-x-4">
+        <span>Words: {wordCount}</span>
+        <span>Characters: {charCount}</span>
+    </div>
+);
+
 const NoteEditor: React.FC<NoteEditorProps> = ({ note, onUpdate, onDelete, onToggleFavorite, onRestoreVersion, templates, isMobileView, onToggleSidebar, isAiRateLimited }) => {
     const {
         state: editorState,
@@ -92,6 +99,17 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onUpdate, onDelete, onTog
     const displayedTags = previewVersion ? previewVersion.tags : editorState.tags;
     const isVersionPreviewing = !!previewVersion;
     const isEffectivelyReadOnly = isVersionPreviewing || viewMode === 'preview';
+    
+    const { wordCount, charCount } = useMemo(() => {
+        const content = editorState.content;
+        const words = content.trim().split(/\s+/).filter(Boolean).length;
+        // If content is just whitespace, word count should be 0
+        const finalWordCount = content.trim() === '' ? 0 : words;
+        return {
+            wordCount: finalWordCount,
+            charCount: content.length,
+        };
+    }, [editorState.content]);
 
     // Auto-resize textarea to fit content
     useEffect(() => {
@@ -495,6 +513,8 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onUpdate, onDelete, onTog
                     </div>
                 </div>
             </div>
+            
+            <StatusBar wordCount={wordCount} charCount={charCount} />
 
             {noteLinker && <NoteLinker notes={notes} query={noteLinker.query} onSelect={handleInsertLink} onClose={() => setNoteLinker(null)} position={noteLinker.position} />}
             <InlineAiMenu selection={selection} onAction={handleAiAction} isLoading={isAiActionLoading} onClose={() => setSelection(null)} />

@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { SmartCollection } from '../types';
 import { BrainIcon } from './Icons';
+import { useModalAccessibility } from '../hooks/useModalAccessibility';
 
 interface SmartFolderModalProps {
     isOpen: boolean;
@@ -12,6 +13,10 @@ interface SmartFolderModalProps {
 const SmartFolderModal: React.FC<SmartFolderModalProps> = ({ isOpen, onClose, onSave, folderToEdit }) => {
     const [name, setName] = useState('');
     const [query, setQuery] = useState('');
+    const nameInputRef = useRef<HTMLInputElement>(null);
+    const modalRef = useRef<HTMLDivElement>(null);
+
+    useModalAccessibility(isOpen, onClose, modalRef);
 
     useEffect(() => {
         if (isOpen) {
@@ -22,6 +27,7 @@ const SmartFolderModal: React.FC<SmartFolderModalProps> = ({ isOpen, onClose, on
                 setName('');
                 setQuery('');
             }
+            setTimeout(() => nameInputRef.current?.focus(), 100);
         }
     }, [isOpen, folderToEdit]);
 
@@ -36,8 +42,15 @@ const SmartFolderModal: React.FC<SmartFolderModalProps> = ({ isOpen, onClose, on
 
     return (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60]" onClick={onClose}>
-            <div className="bg-light-background dark:bg-dark-background rounded-lg shadow-xl w-full max-w-lg p-6" onClick={e => e.stopPropagation()}>
-                <h2 className="text-2xl font-bold mb-4 flex items-center">
+            <div 
+                ref={modalRef}
+                role="dialog" 
+                aria-modal="true" 
+                aria-labelledby="smart-folder-title"
+                className="bg-light-background dark:bg-dark-background rounded-lg shadow-xl w-full max-w-lg p-6" 
+                onClick={e => e.stopPropagation()}
+            >
+                <h2 id="smart-folder-title" className="text-2xl font-bold mb-4 flex items-center">
                     <BrainIcon className="mr-3" />
                     {folderToEdit ? 'Edit Smart Folder' : 'New Smart Folder'}
                 </h2>
@@ -50,6 +63,7 @@ const SmartFolderModal: React.FC<SmartFolderModalProps> = ({ isOpen, onClose, on
                     <label htmlFor="folderName" className="block text-sm font-medium mb-1">Folder Name</label>
                     <input
                         id="folderName"
+                        ref={nameInputRef}
                         type="text"
                         value={name}
                         onChange={(e) => setName(e.target.value)}

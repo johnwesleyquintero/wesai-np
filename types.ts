@@ -72,3 +72,9 @@ export interface Command {
     keywords?: string;
     section: 'Navigation' | 'Note' | 'AI' | 'Settings';
 }
+
+export interface ToastMessage {
+    id: number;
+    message: string;
+    type: 'success' | 'error' | 'info';
+}

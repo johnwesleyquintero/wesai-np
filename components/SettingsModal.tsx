@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { PlusIcon } from './Icons';
 import { useTemplates } from '../hooks/useTemplates';
 import TemplateEditorModal from './TemplateEditorModal';
@@ -6,6 +6,8 @@ import { Template } from '../types';
 import { useApiKey } from '../hooks/useApiKey';
 import { useStore } from '../hooks/useStore';
 import ConfirmationModal from './ConfirmationModal';
+import { useToast } from '../context/ToastContext';
+import { useModalAccessibility } from '../hooks/useModalAccessibility';
 
 interface SettingsModalProps {
     isOpen: boolean;
@@ -16,6 +18,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
     const { templates, addTemplate, updateTemplate, deleteTemplate, importTemplates } = useTemplates();
     const { apiKey, saveApiKey } = useApiKey();
     const { notes, collections, smartCollections, importData } = useStore();
+    const { showToast } = useToast();
     
     const [isTemplateEditorOpen, setIsTemplateEditorOpen] = useState(false);
     const [templateToEdit, setTemplateToEdit] = useState<Template | null>(null);
@@ -23,10 +26,16 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
     const [isImportConfirmOpen, setIsImportConfirmOpen] = useState(false);
     const [dataToImport, setDataToImport] = useState<any | null>(null);
 
+    const saveButtonRef = useRef<HTMLButtonElement>(null);
+    const modalRef = useRef<HTMLDivElement>(null);
+
+    useModalAccessibility(isOpen, onClose, modalRef);
 
     useEffect(() => {
         if (isOpen) {
             setLocalApiKey(apiKey || '');
+            // FIX: Corrected ref name from `saveButton` to `saveButtonRef`.
+            setTimeout(() => saveButtonRef.current?.focus(), 100);
         }
     }, [isOpen, apiKey]);
 
@@ -51,6 +60,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
 
     const handleSaveSettings = () => {
         saveApiKey(localApiKey);
+        showToast({ message: 'Settings saved!', type: 'success' });
         onClose();
     };
 
@@ -72,6 +82,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
+        showToast({ message: 'Data exported successfully!', type: 'success' });
         onClose();
     };
 
@@ -90,10 +101,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                             setDataToImport(data);
                             setIsImportConfirmOpen(true);
                         } else {
-                            alert('Invalid backup file format.');
+                            showToast({ message: 'Invalid backup file format.', type: 'error' });
                         }
                     } catch (err) {
-                        alert('Error reading backup file. Please ensure it is a valid JSON file.');
+                        showToast({ message: 'Error reading backup file.', type: 'error' });
                         console.error(err);
                     }
                 };
@@ -109,8 +120,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
             importTemplates(dataToImport.templates);
             setIsImportConfirmOpen(false);
             setDataToImport(null);
-            alert('Data imported successfully! The app will now reload to apply the changes.');
-            window.location.reload();
+            showToast({ message: 'Data imported! App will now reload.', type: 'success' });
+            setTimeout(() => window.location.reload(), 1500);
         }
     };
 
@@ -119,10 +130,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
     return (
         <>
             <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
-                <div className="bg-light-background dark:bg-dark-background rounded-lg shadow-xl w-full max-w-lg flex flex-col max-h-full" onClick={e => e.stopPropagation()}>
+                <div ref={modalRef} role="dialog" aria-modal="true" aria-labelledby="settings-modal-title" className="bg-light-background dark:bg-dark-background rounded-lg shadow-xl w-full max-w-lg flex flex-col max-h-full" onClick={e => e.stopPropagation()}>
                     {/* Modal Header */}
                     <div className="p-6 border-b border-light-border dark:border-dark-border flex-shrink-0">
-                         <h2 className="text-2xl font-bold">Settings</h2>
+                         <h2 id="settings-modal-title" className="text-2xl font-bold">Settings</h2>
                     </div>
                     
                     {/* Scrollable Content */}
@@ -179,7 +190,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                     {/* Modal Footer */}
                     <div className="flex justify-end items-center space-x-4 p-6 border-t border-light-border dark:border-dark-border flex-shrink-0">
                         <button onClick={onClose} className="px-4 py-2 rounded-md hover:bg-light-ui dark:hover:bg-dark-ui">Cancel</button>
-                        <button onClick={handleSaveSettings} className="px-4 py-2 bg-light-primary text-white rounded-md hover:bg-light-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover">Save Settings</button>
+                        <button ref={saveButtonRef} onClick={handleSaveSettings} className="px-4 py-2 bg-light-primary text-white rounded-md hover:bg-light-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover">Save Settings</button>
                     </div>
                 </div>
             </div>

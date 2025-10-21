@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Note, Template } from '../types';
 import { enhanceText, summarizeAndExtractActions } from '../services/geminiService';
-import { StarIcon, TrashIcon, SparklesIcon, HistoryIcon, ArrowDownTrayIcon, DocumentDuplicateIcon, Bars3Icon, ArrowUturnLeftIcon, ArrowUturnRightIcon, EyeIcon, PencilSquareIcon, CheckBadgeIcon } from './Icons';
+import { StarIcon, TrashIcon, SparklesIcon, HistoryIcon, ArrowDownTrayIcon, DocumentDuplicateIcon, Bars3Icon, ArrowUturnLeftIcon, ArrowUturnRightIcon, EyeIcon, PencilSquareIcon, CheckBadgeIcon, ClipboardDocumentIcon } from './Icons';
+import { useToast } from '../context/ToastContext';
 
 interface StatusIndicatorProps {
     saveStatus: 'saved' | 'saving' | 'unsaved';
@@ -53,61 +54,31 @@ const StatusIndicator: React.FC<StatusIndicatorProps> = ({
     );
 };
 
-interface ToolbarProps {
-    note: Note;
-    onDelete: (note: Note) => void;
-    onToggleFavorite: (id: string) => void;
-    saveStatus: 'saved' | 'saving' | 'unsaved';
-    contentToEnhance: string;
-    onContentUpdate: (newContent: string) => void;
-    onToggleHistory: () => void;
-    isHistoryOpen: boolean;
-    templates: Template[];
-    onApplyTemplate: (template: Template) => void;
-    isMobileView: boolean;
-    onToggleSidebar: () => void;
-    onUndo: () => void;
-    onRedo: () => void;
-    canUndo: boolean;
-    canRedo: boolean;
-    viewMode: 'edit' | 'preview';
-    onToggleViewMode: () => void;
-    isCheckingSpelling: boolean;
-    isAiRateLimited: boolean;
-}
-
 const ErrorIcon = () => (
     <svg className="fill-current h-6 w-6 text-red-500 mr-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
         <path d="M2.93 17.07A10 10 0 1 1 17.07 2.93 10 10 0 0 1 2.93 17.07zM11.414 10l2.829-2.828-1.414-1.414L10 8.586 7.172 5.757 5.757 7.172 8.586 10l-2.829 2.828 1.414 1.414L10 11.414l2.828 2.829 1.414-1.414L11.414 10z"/>
     </svg>
 );
 
-const Toolbar: React.FC<ToolbarProps> = ({ 
-    note, onDelete, onToggleFavorite, saveStatus, contentToEnhance, onContentUpdate, onToggleHistory, isHistoryOpen, 
-    templates, onApplyTemplate, isMobileView, onToggleSidebar, onUndo, onRedo, canUndo, canRedo,
-    viewMode, onToggleViewMode, isCheckingSpelling, isAiRateLimited
-}) => {
-    const [isAiMenuOpen, setIsAiMenuOpen] = useState(false);
-    const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
-    const [isTemplateMenuOpen, setIsTemplateMenuOpen] = useState(false);
-    const [aiActionInProgress, setAiActionInProgress] = useState<'enhancing' | 'summarizing' | null>(null);
+const AiMenu: React.FC<Pick<ToolbarProps, 'contentToEnhance' | 'onContentUpdate' | 'isAiRateLimited'> & {
+    aiActionInProgress: 'enhancing' | 'summarizing' | null;
+    setAiActionInProgress: (status: 'enhancing' | 'summarizing' | null) => void;
+    setAiActionError: (error: string | null) => void;
+}> = ({ contentToEnhance, onContentUpdate, isAiRateLimited, aiActionInProgress, setAiActionInProgress, setAiActionError }) => {
+    const [isOpen, setIsOpen] = useState(false);
     const [customTone, setCustomTone] = useState('');
     const [isCustomTone, setIsCustomTone] = useState(false);
-    const [aiActionError, setAiActionError] = useState<string | null>(null);
-    
+
     const handleEnhance = async (tone: string) => {
+        setIsOpen(false);
+        if (!tone.trim()) return;
         setAiActionInProgress('enhancing');
-        setIsAiMenuOpen(false);
         setAiActionError(null);
         try {
             const enhancedContent = await enhanceText(contentToEnhance, tone);
             onContentUpdate(enhancedContent);
         } catch (error) {
-            console.error("Enhancement failed", error);
-            if (error instanceof Error) {
-                setAiActionError(error.message);
-                setTimeout(() => setAiActionError(null), 5000);
-            }
+            if (error instanceof Error) setAiActionError(error.message);
         } finally {
             setAiActionInProgress(null);
             setCustomTone('');
@@ -116,50 +87,91 @@ const Toolbar: React.FC<ToolbarProps> = ({
     };
 
     const handleSummarize = async () => {
+        setIsOpen(false);
         setAiActionInProgress('summarizing');
-        setIsAiMenuOpen(false);
         setAiActionError(null);
         try {
             const { summary, actionItems } = await summarizeAndExtractActions(contentToEnhance);
-            
             let formattedSummary = '';
-            if (summary) {
-                formattedSummary += `### ✨ AI Summary\n\n${summary}\n\n`;
-            }
-            if (actionItems && actionItems.length > 0) {
-                formattedSummary += `### ✅ Action Items\n\n${actionItems.map(item => `- [ ] ${item}`).join('\n')}\n\n`;
-            }
-
+            if (summary) formattedSummary += `### ✨ AI Summary\n\n${summary}\n\n`;
+            if (actionItems && actionItems.length > 0) formattedSummary += `### ✅ Action Items\n\n${actionItems.map(item => `- [ ] ${item}`).join('\n')}\n\n`;
             if (formattedSummary) {
-                const newContent = `---\n\n${formattedSummary}---\n\n${contentToEnhance}`;
-                onContentUpdate(newContent);
+                onContentUpdate(`---\n\n${formattedSummary}---\n\n${contentToEnhance}`);
             } else {
-                 setAiActionError("The AI couldn't find anything to summarize or any action items in this note.");
-                 setTimeout(() => setAiActionError(null), 5000);
+                setAiActionError("The AI couldn't find anything to summarize or any action items.");
             }
-
         } catch (error) {
-            console.error("Summarization failed", error);
-            if (error instanceof Error) {
-                setAiActionError(error.message);
-                setTimeout(() => setAiActionError(null), 5000);
-            }
+            if (error instanceof Error) setAiActionError(error.message);
         } finally {
             setAiActionInProgress(null);
         }
     };
 
-    const sanitizeFilename = (name: string) => {
-        return name.replace(/[\/\\?%*:|"<>]/g, '-').trim() || 'Untitled';
-    }
-    
+    const tones = ["Professional", "Casual", "Poetic", "Concise", "Expanded"];
+
+    return (
+        <div className="relative">
+            <button onClick={() => setIsOpen(prev => !prev)} className="p-2 rounded-md hover:bg-light-ui dark:hover:bg-dark-ui transition-colors flex items-center disabled:opacity-50 disabled:cursor-not-allowed" disabled={!!aiActionInProgress || isAiRateLimited}>
+                <SparklesIcon className="mr-0 sm:mr-1 text-light-primary dark:text-dark-primary" />
+                <span className="hidden sm:inline">Enhance</span>
+            </button>
+            {isOpen && (
+                <div className="absolute right-0 mt-2 w-48 bg-light-background dark:bg-dark-background rounded-md shadow-lg border border-light-border dark:border-dark-border z-10">
+                    {isCustomTone ? (
+                        <div className="p-2">
+                            <input type="text" placeholder="Enter custom tone..." value={customTone} onChange={(e) => setCustomTone(e.target.value)} className="w-full text-sm p-2 bg-light-ui dark:bg-dark-ui rounded-md border border-light-border dark:border-dark-border focus:ring-1 focus:ring-light-primary" />
+                            <button onClick={() => handleEnhance(customTone)} className="w-full text-left p-2 text-sm mt-1 rounded-md bg-light-primary text-white text-center">Enhance</button>
+                            <button onClick={() => { setIsCustomTone(false); setCustomTone(''); }} className="w-full text-left p-2 text-sm mt-1 rounded-md hover:bg-light-ui dark:hover:bg-dark-ui text-center">Back</button>
+                        </div>
+                    ) : (
+                        <>
+                            {tones.map(tone => <button key={tone} onClick={() => handleEnhance(tone)} className="w-full text-left block px-4 py-2 text-sm hover:bg-light-ui dark:hover:bg-dark-ui">Rewrite as {tone}</button>)}
+                            <div className="border-t border-light-border dark:border-dark-border my-1"></div>
+                            <button onClick={() => setIsCustomTone(true)} className="w-full text-left block px-4 py-2 text-sm hover:bg-light-ui dark:hover:bg-dark-ui">Custom Rewrite...</button>
+                            <div className="border-t border-light-border dark:border-dark-border my-1"></div>
+                            <button onClick={handleSummarize} className="w-full text-left block px-4 py-2 text-sm hover:bg-light-ui dark:hover:bg-dark-ui">Summarize & Find Actions</button>
+                        </>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+};
+
+const TemplateMenu: React.FC<Pick<ToolbarProps, 'templates' | 'onApplyTemplate'>> = ({ templates, onApplyTemplate }) => {
+    const [isOpen, setIsOpen] = useState(false);
+
     const handleTemplateClick = (template: Template) => {
         onApplyTemplate(template);
-        setIsTemplateMenuOpen(false);
-    }
+        setIsOpen(false);
+    };
 
+    return (
+        <div className="relative hidden sm:block">
+            <button onClick={() => setIsOpen(prev => !prev)} className="p-2 rounded-md hover:bg-light-ui dark:hover:bg-dark-ui transition-colors flex items-center">
+                <DocumentDuplicateIcon className="mr-1" /> Template
+            </button>
+            {isOpen && (
+                <div className="absolute right-0 mt-2 w-56 bg-light-background dark:bg-dark-background rounded-md shadow-lg border border-light-border dark:border-dark-border z-10">
+                    {templates.length > 0 ? (
+                        templates.map(template => <button key={template.id} onClick={() => handleTemplateClick(template)} className="w-full text-left block px-4 py-2 text-sm hover:bg-light-ui dark:hover:bg-dark-ui">{template.title}</button>)
+                    ) : (
+                        <p className="px-4 py-2 text-sm text-light-text/60 dark:text-dark-text/60">No templates found.</p>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+};
+
+const ExportMenu: React.FC<{ note: Note }> = ({ note }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const { showToast } = useToast();
+
+    const sanitizeFilename = (name: string) => name.replace(/[\/\\?%*:|"<>]/g, '-').trim() || 'Untitled';
+    
     const handleExport = (format: 'md' | 'json') => {
-        setIsExportMenuOpen(false);
+        setIsOpen(false);
         const filename = `${sanitizeFilename(note.title)}.${format}`;
         let content = '';
         let mimeType = '';
@@ -183,8 +195,76 @@ const Toolbar: React.FC<ToolbarProps> = ({
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
     };
-    
-    const tones = ["Professional", "Casual", "Poetic", "Concise", "Expanded"];
+
+    const handleCopyMarkdown = () => {
+        setIsOpen(false);
+        const markdownContent = `# ${note.title}\n\n${note.content}`;
+        navigator.clipboard.writeText(markdownContent)
+            .then(() => {
+                showToast({ message: "Note copied as Markdown!", type: 'success' });
+            })
+            .catch(err => {
+                showToast({ message: "Failed to copy note.", type: 'error' });
+                console.error('Failed to copy text: ', err);
+            });
+    };
+
+    return (
+        <div className="relative">
+            <button onClick={() => setIsOpen(prev => !prev)} className="p-2 rounded-md hover:bg-light-ui dark:hover:bg-dark-ui transition-colors">
+                <ArrowDownTrayIcon />
+            </button>
+            {isOpen && (
+                <div className="absolute right-0 mt-2 w-56 bg-light-background dark:bg-dark-background rounded-md shadow-lg border border-light-border dark:border-dark-border z-10 py-1">
+                    <button onClick={handleCopyMarkdown} className="w-full text-left flex items-center gap-2 block px-4 py-2 text-sm hover:bg-light-ui dark:hover:bg-dark-ui"><ClipboardDocumentIcon /> Copy as Markdown</button>
+                    <div className="my-1 border-t border-light-border dark:border-dark-border"></div>
+                    <button onClick={() => handleExport('md')} className="w-full text-left block px-4 py-2 text-sm hover:bg-light-ui dark:hover:bg-dark-ui">Export as Markdown (.md)</button>
+                    <button onClick={() => handleExport('json')} className="w-full text-left block px-4 py-2 text-sm hover:bg-light-ui dark:hover:bg-dark-ui">Export as JSON (.json)</button>
+                </div>
+            )}
+        </div>
+    );
+};
+
+
+interface ToolbarProps {
+    note: Note;
+    onDelete: (note: Note) => void;
+    onToggleFavorite: (id: string) => void;
+    saveStatus: 'saved' | 'saving' | 'unsaved';
+    contentToEnhance: string;
+    onContentUpdate: (newContent: string) => void;
+    onToggleHistory: () => void;
+    isHistoryOpen: boolean;
+    templates: Template[];
+    onApplyTemplate: (template: Template) => void;
+    isMobileView: boolean;
+    onToggleSidebar: () => void;
+    onUndo: () => void;
+    onRedo: () => void;
+    canUndo: boolean;
+    canRedo: boolean;
+    viewMode: 'edit' | 'preview';
+    onToggleViewMode: () => void;
+    isCheckingSpelling: boolean;
+    isAiRateLimited: boolean;
+}
+
+const Toolbar: React.FC<ToolbarProps> = ({ 
+    note, onDelete, onToggleFavorite, saveStatus, contentToEnhance, onContentUpdate, onToggleHistory, isHistoryOpen, 
+    templates, onApplyTemplate, isMobileView, onToggleSidebar, onUndo, onRedo, canUndo, canRedo,
+    viewMode, onToggleViewMode, isCheckingSpelling, isAiRateLimited
+}) => {
+    const [aiActionInProgress, setAiActionInProgress] = useState<'enhancing' | 'summarizing' | null>(null);
+    const [aiActionError, setAiActionError] = useState<string | null>(null);
+
+    // Clear error after a delay
+    React.useEffect(() => {
+        if (aiActionError) {
+            const timer = setTimeout(() => setAiActionError(null), 5000);
+            return () => clearTimeout(timer);
+        }
+    }, [aiActionError]);
 
     return (
         <>
@@ -214,110 +294,38 @@ const Toolbar: React.FC<ToolbarProps> = ({
                     />
                 </div>
                 <div className="flex items-center space-x-0.5 sm:space-x-2">
-                    <button onClick={onUndo} disabled={!canUndo} className="p-2 rounded-md hover:bg-light-ui dark:hover:bg-dark-ui transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                    <button onClick={onUndo} disabled={!canUndo} className="p-2 rounded-md hover:bg-light-ui dark:hover:bg-dark-ui transition-colors disabled:opacity-50 disabled:cursor-not-allowed" aria-label="Undo">
                         <ArrowUturnLeftIcon />
                     </button>
-                    <button onClick={onRedo} disabled={!canRedo} className="p-2 rounded-md hover:bg-light-ui dark:hover:bg-dark-ui transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                    <button onClick={onRedo} disabled={!canRedo} className="p-2 rounded-md hover:bg-light-ui dark:hover:bg-dark-ui transition-colors disabled:opacity-50 disabled:cursor-not-allowed" aria-label="Redo">
                         <ArrowUturnRightIcon />
                     </button>
                      <div className="w-px h-6 bg-light-border dark:border-dark-border mx-1 hidden sm:block"></div>
-                    <div className="relative">
-                        <button
-                            onClick={() => setIsAiMenuOpen(!isAiMenuOpen)}
-                            className="p-2 rounded-md hover:bg-light-ui dark:hover:bg-dark-ui transition-colors flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
-                            disabled={!!aiActionInProgress || isAiRateLimited}
-                        >
-                            <SparklesIcon className="mr-0 sm:mr-1 text-light-primary dark:text-dark-primary" />
-                            <span className="hidden sm:inline">Enhance</span>
-                        </button>
-                        {isAiMenuOpen && (
-                            <div className="absolute right-0 mt-2 w-48 bg-light-background dark:bg-dark-background rounded-md shadow-lg border border-light-border dark:border-dark-border z-10">
-                                {isCustomTone ? (
-                                    <div className="p-2">
-                                        <input
-                                            type="text"
-                                            placeholder="Enter custom tone..."
-                                            value={customTone}
-                                            onChange={(e) => setCustomTone(e.target.value)}
-                                            className="w-full text-sm p-2 bg-light-ui dark:bg-dark-ui rounded-md border border-light-border dark:border-dark-border focus:ring-1 focus:ring-light-primary"
-                                        />
-                                        <button onClick={() => handleEnhance(customTone)} className="w-full text-left p-2 text-sm mt-1 rounded-md bg-light-primary text-white text-center">
-                                            Enhance
-                                        </button>
-                                        <button onClick={() => setIsCustomTone(false)} className="w-full text-left p-2 text-sm mt-1 rounded-md hover:bg-light-ui dark:hover:bg-dark-ui text-center">
-                                            Back
-                                        </button>
-                                    </div>
-                                ) : (
-                                    <>
-                                        {tones.map(tone => (
-                                            <button key={tone} onClick={() => handleEnhance(tone)} className="w-full text-left block px-4 py-2 text-sm hover:bg-light-ui dark:hover:bg-dark-ui">
-                                                Rewrite as {tone}
-                                            </button>
-                                        ))}
-                                        <div className="border-t border-light-border dark:border-dark-border my-1"></div>
-                                        <button onClick={() => setIsCustomTone(true)} className="w-full text-left block px-4 py-2 text-sm hover:bg-light-ui dark:hover:bg-dark-ui">
-                                            Custom Rewrite...
-                                        </button>
-                                        <div className="border-t border-light-border dark:border-dark-border my-1"></div>
-                                        <button onClick={handleSummarize} className="w-full text-left block px-4 py-2 text-sm hover:bg-light-ui dark:hover:bg-dark-ui">
-                                            Summarize & Find Actions
-                                        </button>
-                                    </>
-                                )}
-                            </div>
-                        )}
-                    </div>
-                    <div className="relative hidden sm:block">
-                        <button
-                            onClick={() => setIsTemplateMenuOpen(!isTemplateMenuOpen)}
-                            className="p-2 rounded-md hover:bg-light-ui dark:hover:bg-dark-ui transition-colors flex items-center"
-                        >
-                            <DocumentDuplicateIcon className="mr-1" />
-                            Template
-                        </button>
-                        {isTemplateMenuOpen && (
-                            <div className="absolute right-0 mt-2 w-56 bg-light-background dark:bg-dark-background rounded-md shadow-lg border border-light-border dark:border-dark-border z-10">
-                                {templates.length > 0 ? (
-                                    templates.map(template => (
-                                        <button key={template.id} onClick={() => handleTemplateClick(template)} className="w-full text-left block px-4 py-2 text-sm hover:bg-light-ui dark:hover:bg-dark-ui">
-                                            {template.title}
-                                        </button>
-                                    ))
-                                ) : (
-                                    <p className="px-4 py-2 text-sm text-light-text/60 dark:text-dark-text/60">No templates found.</p>
-                                )}
-                            </div>
-                        )}
-                    </div>
-                     <button onClick={onToggleHistory} className={`p-2 rounded-md transition-colors ${isHistoryOpen ? 'bg-light-ui dark:bg-dark-ui' : 'hover:bg-light-ui dark:hover:bg-dark-ui'}`}>
+                    
+                    <AiMenu 
+                        contentToEnhance={contentToEnhance} 
+                        onContentUpdate={onContentUpdate}
+                        isAiRateLimited={isAiRateLimited}
+                        aiActionInProgress={aiActionInProgress}
+                        setAiActionInProgress={setAiActionInProgress}
+                        setAiActionError={setAiActionError}
+                    />
+                    
+                    <TemplateMenu templates={templates} onApplyTemplate={onApplyTemplate} />
+                    
+                     <button onClick={onToggleHistory} className={`p-2 rounded-md transition-colors ${isHistoryOpen ? 'bg-light-ui dark:bg-dark-ui' : 'hover:bg-light-ui dark:hover:bg-dark-ui'}`} aria-label="Toggle Version History">
                         <HistoryIcon />
                     </button>
-                     <button onClick={onToggleViewMode} className={`p-2 rounded-md transition-colors ${viewMode === 'preview' ? 'bg-light-ui dark:bg-dark-ui' : 'hover:bg-light-ui dark:hover:bg-dark-ui'}`}>
+                     <button onClick={onToggleViewMode} className={`p-2 rounded-md transition-colors ${viewMode === 'preview' ? 'bg-light-ui dark:bg-dark-ui' : 'hover:bg-light-ui dark:hover:bg-dark-ui'}`} aria-label={viewMode === 'preview' ? 'Switch to Edit Mode' : 'Switch to Preview Mode'}>
                         {viewMode === 'preview' ? <PencilSquareIcon /> : <EyeIcon />}
                     </button>
-                    <div className="relative">
-                        <button
-                            onClick={() => setIsExportMenuOpen(!isExportMenuOpen)}
-                            className="p-2 rounded-md hover:bg-light-ui dark:hover:bg-dark-ui transition-colors"
-                        >
-                            <ArrowDownTrayIcon />
-                        </button>
-                        {isExportMenuOpen && (
-                             <div className="absolute right-0 mt-2 w-56 bg-light-background dark:bg-dark-background rounded-md shadow-lg border border-light-border dark:border-dark-border z-10">
-                                <button onClick={() => handleExport('md')} className="w-full text-left block px-4 py-2 text-sm hover:bg-light-ui dark:hover:bg-dark-ui">
-                                    Export as Markdown (.md)
-                                </button>
-                                <button onClick={() => handleExport('json')} className="w-full text-left block px-4 py-2 text-sm hover:bg-light-ui dark:hover:bg-dark-ui">
-                                    Export as JSON (.json)
-                                </button>
-                             </div>
-                        )}
-                    </div>
-                    <button onClick={() => onToggleFavorite(note.id)} className="p-2 rounded-md hover:bg-light-ui dark:hover:bg-dark-ui transition-colors">
+                    
+                    <ExportMenu note={note} />
+
+                    <button onClick={() => onToggleFavorite(note.id)} className="p-2 rounded-md hover:bg-light-ui dark:hover:bg-dark-ui transition-colors" aria-label={note.isFavorite ? 'Remove from favorites' : 'Add to favorites'}>
                         <StarIcon className={`w-5 h-5 ${note.isFavorite ? 'text-yellow-500' : ''}`} filled={note.isFavorite} />
                     </button>
-                    <button onClick={() => onDelete(note)} className="p-2 rounded-md hover:bg-light-ui dark:hover:bg-dark-ui transition-colors text-red-500">
+                    <button onClick={() => onDelete(note)} className="p-2 rounded-md hover:bg-light-ui dark:hover:bg-dark-ui transition-colors text-red-500" aria-label="Delete note">
                         <TrashIcon />
                     </button>
                 </div>

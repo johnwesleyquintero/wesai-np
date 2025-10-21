@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useCommands } from '../hooks/useCommands';
 import { Command } from '../types';
 import { MagnifyingGlassIcon } from './Icons';
+import { useModalAccessibility } from '../hooks/useModalAccessibility';
 
 interface CommandPaletteProps {
     isOpen: boolean;
@@ -14,12 +15,15 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose }) => {
     const allCommands = useCommands(onClose);
     const inputRef = useRef<HTMLInputElement>(null);
     const resultsRef = useRef<HTMLDivElement>(null);
+    const modalRef = useRef<HTMLDivElement>(null);
+
+    useModalAccessibility(isOpen, onClose, modalRef);
 
     useEffect(() => {
         if (isOpen) {
             setSearchTerm('');
             setSelectedIndex(0);
-            inputRef.current?.focus();
+            setTimeout(() => inputRef.current?.focus(), 100);
         }
     }, [isOpen]);
 
@@ -39,11 +43,13 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose }) => {
     }, [searchTerm]);
     
     useEffect(() => {
+        if (!isOpen) return;
         const activeItem = resultsRef.current?.querySelector('[data-selected="true"]');
         activeItem?.scrollIntoView({ block: 'nearest' });
-    }, [selectedIndex]);
+    }, [selectedIndex, isOpen]);
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
+        // This handler is for navigating the list items, not for trapping focus.
         if (e.key === 'ArrowDown') {
             e.preventDefault();
             setSelectedIndex(prev => (prev + 1) % filteredCommands.length);
@@ -55,9 +61,8 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose }) => {
             if (filteredCommands[selectedIndex]) {
                 filteredCommands[selectedIndex].action();
             }
-        } else if (e.key === 'Escape') {
-            onClose();
         }
+        // Escape is handled by the useModalAccessibility hook
     };
 
     if (!isOpen) return null;
@@ -72,6 +77,10 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose }) => {
     return (
         <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 pt-20" onClick={onClose}>
             <div
+                ref={modalRef}
+                role="dialog"
+                aria-modal="true"
+                aria-label="Command Palette"
                 className="bg-light-background dark:bg-dark-background rounded-lg shadow-xl w-full max-w-xl flex flex-col overflow-hidden animate-fade-in-down"
                 onClick={e => e.stopPropagation()}
                 onKeyDown={handleKeyDown}
@@ -93,7 +102,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose }) => {
                             groupedCommands[section] && (
                                 <div key={section} className="mb-2">
                                     <h3 className="text-xs font-semibold text-light-text/60 dark:text-dark-text/60 px-2 pt-2 pb-1">{section}</h3>
-                                    {groupedCommands[section].map((command, index) => {
+                                    {groupedCommands[section].map((command) => {
                                         const globalIndex = filteredCommands.findIndex(c => c.id === command.id);
                                         const isSelected = globalIndex === selectedIndex;
                                         return (

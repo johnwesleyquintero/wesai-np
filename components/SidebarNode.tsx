@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Note, Collection } from '../types';
-import { ChevronDownIcon, ChevronRightIcon, DocumentTextIcon, FolderIcon, TrashIcon, PencilSquareIcon, DocumentDuplicateIcon } from './Icons';
+import { ChevronDownIcon, ChevronRightIcon, DocumentTextIcon, FolderIcon, TrashIcon, PencilSquareIcon, DocumentDuplicateIcon, ClipboardDocumentIcon, GripVerticalIcon } from './Icons';
 import { ContextMenuItem } from './ContextMenu';
 import { useAppContext } from '../context/AppContext';
+import { useToast } from '../context/ToastContext';
 
 export type TreeNode = (Note | (Collection & { type: 'collection' })) & {
     children: TreeNode[];
@@ -14,6 +15,7 @@ interface SidebarNodeProps {
     activeNoteId: string | null;
     collections: Collection[];
     onSelectNote: (id: string) => void;
+    onAddNote: (parentId: string | null) => void;
     onDeleteCollection: (collection: Collection) => void;
     onUpdateCollection: (id: string, updatedFields: Partial<Omit<Collection, 'id'>>) => void;
     onRenameNote: (id: string, newTitle: string) => void;
@@ -24,7 +26,7 @@ interface SidebarNodeProps {
 }
 
 const SidebarNode: React.FC<SidebarNodeProps> = ({ 
-    node, level, activeNoteId, collections, onSelectNote, onDeleteCollection, 
+    node, level, activeNoteId, collections, onSelectNote, onAddNote, onDeleteCollection, 
     onUpdateCollection, onRenameNote, onMoveItem, onOpenContextMenu, renamingItemId, setRenamingItemId 
 }) => {
     const isCollection = 'name' in node;
@@ -33,6 +35,7 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
     const [isDragOver, setIsDragOver] = useState(false);
     
     const { onCopyNote, onDeleteNote } = useAppContext();
+    const { showToast } = useToast();
     const inputRef = useRef<HTMLInputElement>(null);
 
     const isRenaming = renamingItemId === node.id;
@@ -67,15 +70,26 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
         let menuItems: ContextMenuItem[] = [];
         if (isCollection) {
             menuItems = [
+                { label: 'New Note in Folder', action: () => onAddNote(node.id), icon: <PencilSquareIcon /> },
                 { label: 'Rename Folder', action: () => setRenamingItemId(node.id), icon: <PencilSquareIcon /> },
-                // Future actions: New Note in Folder, New Subfolder
                 { label: 'Delete Folder', action: () => onDeleteCollection(node), icon: <TrashIcon />, isDestructive: true },
             ];
         } else {
+            const noteAsNote = node as Note;
             menuItems = [
                 { label: 'Rename Note', action: () => setRenamingItemId(node.id), icon: <PencilSquareIcon /> },
+                // FIX: Changed `note.id` to `node.id` to correctly reference the note object.
                 { label: 'Copy Note', action: () => onCopyNote(node.id), icon: <DocumentDuplicateIcon /> },
-                { label: 'Delete Note', action: () => onDeleteNote(node), icon: <TrashIcon />, isDestructive: true },
+                { 
+                    label: 'Copy as Markdown', 
+                    action: () => {
+                        navigator.clipboard.writeText(`# ${noteAsNote.title}\n\n${noteAsNote.content}`)
+                          .then(() => showToast({ message: 'Copied as Markdown', type: 'success' }))
+                          .catch(() => showToast({ message: 'Failed to copy', type: 'error' }));
+                    }, 
+                    icon: <ClipboardDocumentIcon /> 
+                },
+                { label: 'Delete Note', action: () => onDeleteNote(noteAsNote), icon: <TrashIcon />, isDestructive: true },
             ];
         }
         onOpenContextMenu(e, menuItems);
@@ -115,23 +129,27 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
         e.preventDefault();
         e.stopPropagation();
         
-        const data = JSON.parse(e.dataTransfer.getData('application/json'));
-        if (data.id === node.id) return; // Can't drop on self
+        try {
+            const data = JSON.parse(e.dataTransfer.getData('application/json'));
+            if (data.id === node.id) return; // Can't drop on self
 
-        // Prevent dropping a folder into its own descendant
-        if (data.type === 'collection') {
-            let currentParentId = isCollection ? node.id : node.parentId;
-            while(currentParentId) {
-                if(currentParentId === data.id) {
-                    setIsDragOver(false);
-                    return;
+            // Prevent dropping a folder into its own descendant
+            if (data.type === 'collection') {
+                let currentParentId = isCollection ? node.id : node.parentId;
+                while(currentParentId) {
+                    if(currentParentId === data.id) {
+                        setIsDragOver(false);
+                        return;
+                    }
+                    const parent = collections.find(c => c.id === currentParentId);
+                    currentParentId = parent ? parent.parentId : null;
                 }
-                const parent = collections.find(c => c.id === currentParentId);
-                currentParentId = parent ? parent.parentId : null;
             }
-        }
 
-        setIsDragOver(true);
+            setIsDragOver(true);
+        } catch (error) {
+            // Ignore if data is not available (e.g., dragging from outside)
+        }
     };
 
     const handleDragLeave = (e: React.DragEvent) => {
@@ -155,8 +173,6 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
 
     return (
         <div 
-             draggable={!isRenaming}
-             onDragStart={handleDragStart}
              onDragOver={handleDragOver}
              onDragLeave={handleDragLeave}
              onDrop={handleDrop}
@@ -165,14 +181,22 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
             <div
                 onClick={handleNodeClick}
                 onDoubleClick={handleDoubleClick}
-                className={`group flex items-center justify-between w-full text-left rounded-md px-2 py-1.5 my-0.5 text-sm cursor-pointer transition-all duration-150 ${
+                className={`group flex items-center justify-between w-full text-left rounded-md pr-2 my-0.5 text-sm cursor-pointer transition-all duration-150 ${
                     isActive
                         ? 'bg-light-primary/30 dark:bg-dark-primary/30 text-light-primary dark:text-dark-primary font-semibold'
                         : 'hover:bg-light-background dark:hover:bg-dark-background'
                 } ${isDragOver ? 'outline-2 outline-dashed outline-light-primary dark:outline-dark-primary bg-light-primary/10 dark:bg-dark-primary/10' : ''}`}
                 style={{ paddingLeft: `${level * 16 + 8}px` }}
             >
-                <div className="flex items-center truncate">
+                <div className="flex items-center truncate py-1.5">
+                    <div 
+                        draggable={!isRenaming}
+                        onDragStart={handleDragStart}
+                        className="opacity-0 group-hover:opacity-60 transition-opacity cursor-grab -ml-2 mr-1 p-0.5 rounded"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                       <GripVerticalIcon className="w-4 h-4" />
+                    </div>
                     {isCollection ? (
                         <>
                             {isExpanded ? <ChevronDownIcon className="w-4 h-4 mr-1 flex-shrink-0" /> : <ChevronRightIcon className="w-4 h-4 mr-1 flex-shrink-0" />}
@@ -217,6 +241,7 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
                             activeNoteId={activeNoteId}
                             collections={collections}
                             onSelectNote={onSelectNote}
+                            onAddNote={onAddNote}
                             onDeleteCollection={onDeleteCollection}
                             onUpdateCollection={onUpdateCollection}
                             onRenameNote={onRenameNote}

@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import Sidebar from './components/Sidebar';
 import NoteEditor from './components/NoteEditor';
 import { useStore } from './hooks/useStore';
@@ -15,6 +15,7 @@ import { AppContext } from './context/AppContext';
 import CommandPalette from './components/CommandPalette';
 import ContextMenu, { ContextMenuItem } from './components/ContextMenu';
 import SmartFolderModal from './components/SmartFolderModal';
+import { ToastProvider, useToast } from './context/ToastContext';
 
 const WelcomeScreen: React.FC<{ onToggleSidebar?: () => void; isMobileView?: boolean }> = ({ onToggleSidebar, isMobileView }) => (
     <div className="flex flex-col h-full">
@@ -35,8 +36,7 @@ const WelcomeScreen: React.FC<{ onToggleSidebar?: () => void; isMobileView?: boo
     </div>
 );
 
-
-export default function App() {
+function AppContent() {
     const { 
         notes, addNote, updateNote, deleteNote, getNoteById, toggleFavorite, restoreNoteVersion, renameNoteTitle, copyNote,
         collections, addCollection, updateCollection, deleteCollection, moveItem,
@@ -44,6 +44,7 @@ export default function App() {
     } = useStore();
 
     const { templates } = useTemplates();
+    const { showToast } = useToast();
     const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
     const [filter, setFilter] = useState<FilterType>('RECENT');
     const [searchTerm, setSearchTerm] = useState('');
@@ -128,6 +129,14 @@ export default function App() {
             setIsSidebarOpen(false);
         }
     };
+
+    const handleCopyNote = useCallback((noteId: string) => {
+        const newId = copyNote(noteId);
+        if (newId) {
+            const copiedNote = getNoteById(newId);
+            showToast({ message: `Copied "${copiedNote?.title}"`, type: 'success' });
+        }
+    }, [copyNote, getNoteById, showToast]);
 
     const handleAddCollection = (name: string, parentId: string | null = null) => {
         const newCollectionId = addCollection(name, parentId);
@@ -379,7 +388,7 @@ export default function App() {
         isSidebarOpen,
         isAiRateLimited,
         onAddNote: () => handleAddNote(),
-        onCopyNote: copyNote,
+        onCopyNote: handleCopyNote,
         onSelectNote: handleSelectNote,
         onDeleteNote: handleDeleteNoteRequest,
         onToggleFavorite: toggleFavorite,
@@ -480,5 +489,14 @@ export default function App() {
                 />
             </div>
         </AppContext.Provider>
+    );
+}
+
+
+export default function App() {
+    return (
+        <ToastProvider>
+            <AppContent />
+        </ToastProvider>
     );
 }

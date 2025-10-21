@@ -270,7 +270,7 @@ export const useStore = (user: User | undefined) => {
         const { id: currentUserId } = user;
     
         try {
-            // Delete all existing data for the user. Assuming ON DELETE CASCADE is set up for foreign keys.
+            // Delete all existing data for the user.
             await supabase.from('note_versions').delete().eq('user_id', currentUserId);
             await supabase.from('notes').delete().eq('user_id', currentUserId);
             await supabase.from('collections').delete().eq('user_id', currentUserId);
@@ -285,9 +285,27 @@ export const useStore = (user: User | undefined) => {
             }
     
             if (data.notes?.length > 0) {
-                const notesToInsert = data.notes.map(n => toSupabase({ ...n, userId: currentUserId, history: n.history || [] }));
-                const { error } = await supabase.from('notes').insert(notesToInsert);
-                if (error) throw new Error(`Failed to import notes: ${error.message}`);
+                // Separate notes from their histories to avoid inserting a 'history' column
+                const notesToInsert = data.notes.map(({ history, ...note }) => 
+                    toSupabase({ ...note, userId: currentUserId })
+                );
+
+                const allVersionsToInsert = data.notes.flatMap(note => 
+                    (note.history || []).map(version => 
+                        // Ensure version has all necessary fields, like noteId
+                        toSupabase({ ...version, noteId: note.id, userId: currentUserId })
+                    )
+                );
+
+                // Insert the notes first
+                const { error: notesError } = await supabase.from('notes').insert(notesToInsert);
+                if (notesError) throw new Error(`Failed to import notes: ${notesError.message}`);
+
+                // Then insert the note versions
+                if (allVersionsToInsert.length > 0) {
+                    const { error: versionsError } = await supabase.from('note_versions').insert(allVersionsToInsert);
+                    if (versionsError) throw new Error(`Failed to import note versions: ${versionsError.message}`);
+                }
             }
     
             if (data.smartCollections?.length > 0) {

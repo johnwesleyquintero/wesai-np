@@ -217,36 +217,29 @@ export const useStore = () => {
 
     const deleteCollection = useCallback((collectionId: string): string[] => {
         const collectionsToDelete = new Set<string>([collectionId]);
-        const notesToDelete = new Set<string>();
+        const queue: string[] = [collectionId];
+        let head = 0;
 
-        const findDescendants = (parentId: string) => {
-            collections.forEach(collection => {
-                if (collection.parentId === parentId) {
+        // Build the set of all collections to delete using BFS
+        while (head < queue.length) {
+            const currentParentId = queue[head++];
+            for (const collection of collections) {
+                if (collection.parentId === currentParentId) {
                     collectionsToDelete.add(collection.id);
-                    findDescendants(collection.id);
+                    queue.push(collection.id);
                 }
-            });
-            notes.forEach(note => {
-                if (note.parentId === parentId) {
-                    notesToDelete.add(note.id);
-                }
-            });
-        };
-
-        findDescendants(collectionId);
-        
-        // Find all notes directly in the top-level folder
-        notes.forEach(note => {
-            if (note.parentId === collectionId) {
-                notesToDelete.add(note.id);
             }
-        });
+        }
 
+        // Find all notes that belong to any of the deleted collections
+        const notesToDeleteIds = notes
+            .filter(note => note.parentId && collectionsToDelete.has(note.parentId))
+            .map(note => note.id);
 
         setCollections(prev => prev.filter(c => !collectionsToDelete.has(c.id)));
-        setNotes(prev => prev.filter(n => !notesToDelete.has(n.id)));
+        setNotes(prev => prev.filter(n => !(n.parentId && collectionsToDelete.has(n.parentId))));
 
-        return Array.from(notesToDelete);
+        return notesToDeleteIds;
     }, [notes, collections]);
     
     const getCollectionById = useCallback((id: string) => {

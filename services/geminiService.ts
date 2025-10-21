@@ -1,5 +1,5 @@
-import { GoogleGenAI, Type, GenerateContentResponse, Content } from "@google/genai";
-import { Note, SpellingError } from "../types";
+import { GoogleGenAI, Type, GenerateContentResponse, Content, Chat } from "@google/genai";
+import { Note, SpellingError, ChatMessage } from "../types";
 
 export type InlineAction = 'fix' | 'shorten' | 'expand' | 'simplify' | 'makeProfessional' | 'makeCasual';
 
@@ -33,6 +33,7 @@ const getApiKey = (): string | undefined => {
 
 let ai: GoogleGenAI | null = null;
 let lastUsedApiKey: string | undefined | null = null;
+let generalChatSession: Chat | null = null;
 
 const getAi = () => {
     const key = getApiKey();
@@ -41,6 +42,7 @@ const getAi = () => {
     if (lastUsedApiKey !== key) {
         ai = null;
         lastUsedApiKey = key;
+        generalChatSession = null; // Reset chat session on key change
     }
 
     if (!ai) {
@@ -365,6 +367,47 @@ ${JSON.stringify(simplifiedNotes)}`
     }
 };
 
+export const generateCustomerResponse = async (
+    customerQuery: string,
+    contextNotes: Note[]
+): Promise<string> => {
+    try {
+        const ai = getAi();
+        const simplifiedNotes = contextNotes.map(({ title, content, tags }) => ({
+            title,
+            content: content.substring(0, 2000),
+            tags
+        }));
+
+        const systemInstruction = `You are an expert customer service professional. Your goal is to provide helpful, empathetic, and professional responses to customer inquiries. Your response MUST be based *exclusively* on the information provided in the knowledge base notes. If the notes do not contain the answer, politely state that you cannot provide the information and will escalate the issue.
+
+**Platform Compliance Rule:** If you infer the context is a third-party marketplace (like Amazon, eBay), DO NOT include any direct website links, URLs, or off-platform contact information. Instead, guide the user by name (e.g., 'Please visit our official website for more information'). Adhering to this is critical to protect account health.
+
+Format your response in clear, professional Markdown.`;
+
+        const prompt = `Here is the relevant knowledge base information:
+${JSON.stringify(simplifiedNotes)}
+
+Here is the customer's message:
+"${customerQuery}"
+
+Please draft a response.`;
+        
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: [{ role: 'user', parts: [{ text: prompt }] }],
+            config: {
+                systemInstruction,
+            },
+        });
+
+        return response.text.trim();
+
+    } catch (error) {
+        throw handleGeminiError(error, "customer response generation");
+    }
+};
+
 
 export const findMisspelledWords = async (text: string): Promise<SpellingError[]> => {
     if (!text || text.trim().length < 2) {
@@ -453,5 +496,34 @@ export const getSpellingSuggestions = async (word: string): Promise<string[]> =>
         return result.suggestions || [];
     } catch (error) {
         throw handleGeminiError(error, "spelling suggestions");
+    }
+};
+
+export const resetGeneralChat = () => {
+    generalChatSession = null;
+};
+
+export const getGeneralChatResponseStream = async (
+    query: string
+): Promise<AsyncGenerator<GenerateContentResponse>> => {
+    try {
+        const ai = getAi();
+        // The chat session is stateful and maintains history.
+        if (!generalChatSession) {
+             generalChatSession = ai.chats.create({
+                model: 'gemini-2.5-flash',
+                config: {
+                    systemInstruction: "You are WesAI, a helpful and general-purpose AI assistant. Provide creative, insightful, and pragmatic answers to the user's questions. Your capabilities are not limited to a specific knowledge base."
+                }
+            });
+        }
+        const result = await generalChatSession.sendMessageStream({ message: query });
+        return result;
+    } catch (error) {
+        const errorString = (error instanceof Error) ? error.message : JSON.stringify(error);
+        if (errorString.includes("API key")) {
+            resetGeneralChat();
+        }
+        throw handleGeminiError(error, "general AI chat");
     }
 };

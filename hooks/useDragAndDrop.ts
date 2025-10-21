@@ -1,5 +1,5 @@
-import { useState, useCallback } from 'react';
-import { Collection, Note } from '../types';
+import React, { useState, useCallback } from 'react';
+import { Collection } from '../types';
 
 interface DragData {
     id: string;
@@ -43,54 +43,53 @@ export const useDragAndDrop = (
 
         if (isDisabled) return;
 
-        // --- Handle File Drag ---
-        if (e.dataTransfer.types.includes('Files')) {
+        // Prioritize internal item drag over file drag
+        if (e.dataTransfer.types.includes('application/json')) {
+            setIsFileOver(false); // Ensure file state is off
+            try {
+                const data: DragData = JSON.parse(e.dataTransfer.getData('application/json'));
+                if (!data.id || data.id === id) return; // Can't drop on self
+
+                // Circular dependency check
+                if (data.type === 'collection' && type === 'collection') {
+                    let currentParentId = id;
+                    while (currentParentId) {
+                        if (currentParentId === data.id) return;
+                        currentParentId = collections.find(c => c.id === currentParentId)?.parentId || null;
+                    }
+                }
+
+                const targetRect = ref.current?.getBoundingClientRect();
+                if (!targetRect) return;
+
+                if (type === 'collection') {
+                    const dropZoneThreshold = targetRect.height * 0.25;
+                    if (e.clientY < targetRect.top + dropZoneThreshold) {
+                        setDropPosition('top');
+                        setIsDragOver(false);
+                    } else if (e.clientY > targetRect.bottom - dropZoneThreshold) {
+                        setDropPosition('bottom');
+                        setIsDragOver(false);
+                    } else {
+                        setDropPosition(null);
+                        setIsDragOver(true);
+                    }
+                } else if (type === 'note') {
+                    const verticalMidpoint = targetRect.top + targetRect.height / 2;
+                    setDropPosition(e.clientY < verticalMidpoint ? 'top' : 'bottom');
+                    setIsDragOver(false);
+                } else { // root
+                    setIsDragOver(true);
+                    setDropPosition(null);
+                }
+            } catch (error) {
+                // Ignore if data is not the expected JSON format.
+            }
+        } else if (e.dataTransfer.types.includes('Files')) {
+            // --- Handle File Drag ---
             if (onDropFile && (type === 'collection' || type === 'root')) {
                 setIsFileOver(true);
             }
-            return;
-        }
-
-        // --- Handle Item Drag ---
-        try {
-            const data: DragData = JSON.parse(e.dataTransfer.getData('application/json'));
-            if (data.id === id) return; // Can't drop on self
-
-            // Circular dependency check: cannot drop a folder into its own descendant
-            if (data.type === 'collection' && type === 'collection') {
-                let currentParentId = id;
-                while (currentParentId) {
-                    if (currentParentId === data.id) return;
-                    currentParentId = collections.find(c => c.id === currentParentId)?.parentId || null;
-                }
-            }
-
-            const targetRect = ref.current?.getBoundingClientRect();
-            if (!targetRect) return;
-
-            if (type === 'collection') {
-                const dropZoneThreshold = targetRect.height * 0.25;
-                if (e.clientY < targetRect.top + dropZoneThreshold) {
-                    setDropPosition('top');
-                    setIsDragOver(false);
-                } else if (e.clientY > targetRect.bottom - dropZoneThreshold) {
-                    setDropPosition('bottom');
-                    setIsDragOver(false);
-                } else {
-                    setDropPosition(null);
-                    setIsDragOver(true);
-                }
-            } else if (type === 'note') {
-                const verticalMidpoint = targetRect.top + targetRect.height / 2;
-                setDropPosition(e.clientY < verticalMidpoint ? 'top' : 'bottom');
-                setIsDragOver(false);
-            } else { // root
-                setIsDragOver(true);
-                setDropPosition(null);
-            }
-
-        } catch (error) {
-            // Ignore if data is not the expected JSON format
         }
     }, [id, type, isDisabled, collections, onDropFile, ref]);
 
@@ -109,38 +108,42 @@ export const useDragAndDrop = (
         e.preventDefault();
         e.stopPropagation();
         
-        if (isDisabled) return;
-
-        // --- Handle File Drop ---
-        if (e.dataTransfer.files && e.dataTransfer.files.length > 0 && onDropFile) {
-            // The hook should not read the file, just pass it to the handler.
-            const validFiles = Array.from(e.dataTransfer.files).filter(f => f.type === 'text/plain' || f.name.endsWith('.md') || f.type === 'text/markdown');
-            
-            validFiles.forEach(file => {
-                onDropFile(file, id); // Pass the file and the target id (which is parentId for folders/root)
-            });
-
+        if (isDisabled) {
             resetState();
             return;
         }
 
-        // --- Handle Item Drop ---
-        try {
-            const data: DragData = JSON.parse(e.dataTransfer.getData('application/json'));
-            if (data.id) {
-                const targetId = type === 'root' ? null : id;
-                if (isDragOver) {
-                    onMoveItem(data.id, targetId, 'inside');
-                } else if (dropPosition) {
-                    onMoveItem(data.id, targetId, dropPosition);
+        // --- Handle Item Drop FIRST ---
+        // To prevent issues in browsers that add "Files" to internal drags,
+        // we explicitly check for our custom data format first.
+        const jsonData = e.dataTransfer.getData('application/json');
+        if (jsonData) {
+            try {
+                const data: DragData = JSON.parse(jsonData);
+                if (data && data.id) {
+                    const targetId = type === 'root' ? null : id;
+                    if (isDragOver) {
+                        onMoveItem(data.id, targetId, 'inside');
+                    } else if (dropPosition) {
+                        onMoveItem(data.id, targetId, dropPosition);
+                    }
                 }
+            } catch (err) {
+                 console.error("Failed to parse internal drag data:", err);
             }
-        } catch (err) {
-            console.error("Drop failed", err);
-        } finally {
-            resetState();
+        } 
+        // --- Handle File Drop as a fallback ---
+        else if (onDropFile && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            // FIX: Cast the FileList to an array of Files to ensure correct typing.
+            const validFiles = (Array.from(e.dataTransfer.files) as File[]).filter((f) => f.type === 'text/plain' || f.name.endsWith('.md') || f.type === 'text/markdown');
+            if (validFiles.length > 0) {
+                validFiles.forEach(file => onDropFile(file, id));
+            }
         }
+    
+        resetState();
     }, [id, type, isDisabled, isDragOver, dropPosition, onMoveItem, onDropFile, resetState]);
+
 
     const dragAndDropProps = {
         draggable: !isDisabled,

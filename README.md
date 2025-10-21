@@ -32,7 +32,11 @@ WesAI Notepad is a powerful, privacy-focused note-taking application that runs e
 - **Summarization and Action Items:** Generate a concise summary and extract a checklist of action items from your note content with a single command.
 
 ### Productivity and Workflow
+- **Enhanced Performance:** The app is faster than ever with lazy-loading for major components and an optimized architecture that reduces re-renders, ensuring a snappy experience even with many notes.
+- **Improved Onboarding:** A new welcome guide and a persistent indicator for the API key make setup for new users seamless and intuitive.
+- **Detailed Note Info:** Access word count, character count, creation date, and estimated reading time directly from the editor's toolbar.
 - **Command Palette:** Press `Ctrl/Cmd + K` to open a command palette and access nearly every application feature, from creating notes to executing AI actions.
+- **Expanded Keyboard Shortcuts:** Boost your workflow with new hotkeys for focusing search (`Ctrl/Cmd + F`), toggling favorites (`Ctrl/Cmd + Shift + F`), and switching to AI Chat (`Ctrl/Cmd + Shift + C`).
 - **Slash Commands:** Type `/` in the editor to quickly insert headings, lists, to-do items, and dividers, or to trigger AI actions.
 - **Full Data Portability:** Export your entire notepad—including all notes, folders, and templates—to a single JSON file for backup. Import a backup file to restore your data on any device.
 - **Note Templates:** Create and save reusable templates for frequently created documents, such as meeting minutes or project plans.
@@ -40,6 +44,7 @@ WesAI Notepad is a powerful, privacy-focused note-taking application that runs e
 - **Drag and Drop:**
     - Reorganize notes and folders in the sidebar.
     - Drag text files or images directly into the editor to import their content.
+- **Polished User Experience:** Enjoy smoother animations, more responsive feedback, and smarter in-app guidance for a more premium feel.
 - **Light and Dark Themes:** Choose between a light or dark interface for optimal viewing comfort.
 - **Responsive Design:** A seamless experience across desktop, tablet, and mobile devices.
 
@@ -50,9 +55,9 @@ WesAI Notepad is a powerful, privacy-focused note-taking application that runs e
     - Go to [Google AI Studio](https://ai.google.dev/).
     - Click "Get API key" and follow the on-screen instructions.
 3.  **Configure the Application:**
-    - In the WesAI Notepad, click the Settings icon in the bottom-left corner of the sidebar.
-    - Paste your API key into the "Gemini API Key" field.
-    - Click "Save Settings".
+    - You will be greeted by a welcome screen that guides you. Follow the prompt to open Settings.
+    - Alternatively, click the Settings icon in the bottom-left corner of the sidebar.
+    - Paste your API key into the "Gemini API Key" field and click "Save Settings".
 4.  **Begin Writing:** Your API key is saved securely in your browser's local storage, and all AI features are now available for use.
 
 ## Technology Stack

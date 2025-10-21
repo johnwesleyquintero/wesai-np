@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useMemo, useEffect, useRef,
 import { Note, Template, Collection, SmartCollection, EditorActions, ContextMenuItem, FilterType, SearchMode, ChatMessage, NoteVersion } from '../types';
 import { useStore as useStoreHook } from '../hooks/useStore';
 import { useDebounce } from '../hooks/useDebounce';
-import { getStreamingChatResponse, semanticSearchNotes } from '../services/geminiService';
+import { getStreamingChatResponse, semanticSearchNotes, generateCustomerResponse, getGeneralChatResponseStream, resetGeneralChat } from '../services/geminiService';
 import { useMobileView } from '../hooks/useMobileView';
 import { useToast } from './ToastContext';
 import { useApiKey } from '../hooks/useApiKey';
@@ -36,6 +36,9 @@ interface StoreContextType extends ReturnType<typeof useStoreHook> {
     chatMessages: ChatMessage[];
     chatStatus: 'idle' | 'searching' | 'replying';
     onSendMessage: (query: string) => Promise<void>;
+    onGenerateServiceResponse: (customerQuery: string) => Promise<void>;
+    onSendGeneralMessage: (query: string) => Promise<void>;
+    clearChat: () => void;
     onAddNote: (parentId?: string | null) => string;
     onAddNoteFromFile: (title: string, content: string, parentId: string | null) => string;
 }
@@ -348,6 +351,67 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         }
     };
 
+    const onGenerateServiceResponse = async (customerQuery: string) => {
+        setChatError(null);
+        const newUserMessage: ChatMessage = { role: 'user', content: customerQuery };
+        setChatMessages(prev => [...prev, newUserMessage]);
+        setChatStatus('searching');
+
+        try {
+            const sourceNoteIds = await semanticSearchNotes(customerQuery, notes);
+            const sourceNotes = sourceNoteIds.map(id => getNoteById(id)).filter((n): n is Note => !!n);
+            
+            setChatStatus('replying');
+            
+            const responseText = await generateCustomerResponse(customerQuery, sourceNotes);
+            const newAiMessage: ChatMessage = { role: 'ai', content: responseText, sources: sourceNotes };
+            setChatMessages(prev => [...prev, newAiMessage]);
+
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+            setChatError(errorMessage);
+            const errorAiMessage: ChatMessage = { role: 'ai', content: `Sorry, I ran into an error: ${errorMessage}` };
+            setChatMessages(prev => [...prev, errorAiMessage]);
+        } finally {
+            setChatStatus('idle');
+        }
+    };
+    
+    const onSendGeneralMessage = async (query: string) => {
+        setChatError(null);
+        const newUserMessage: ChatMessage = { role: 'user', content: query };
+        setChatMessages(prev => [...prev, newUserMessage]);
+        setChatStatus('replying');
+
+        try {
+            const stream = await getGeneralChatResponseStream(query);
+            const newAiMessage: ChatMessage = { role: 'ai', content: '' };
+            setChatMessages(prev => [...prev, newAiMessage]);
+
+            let fullResponse = '';
+            for await (const chunk of stream) {
+                fullResponse += chunk.text;
+                setChatMessages(prev => prev.map((msg, index) => 
+                    index === prev.length - 1 ? { ...msg, content: fullResponse } : msg
+                ));
+            }
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+            setChatError(errorMessage);
+            const errorAiMessage: ChatMessage = { role: 'ai', content: `Sorry, I ran into an error: ${errorMessage}` };
+            setChatMessages(prev => [...prev, errorAiMessage]);
+        } finally {
+            setChatStatus('idle');
+        }
+    };
+
+    const clearChat = useCallback(() => {
+        setChatMessages([]);
+        setChatError(null);
+        setChatStatus('idle');
+        resetGeneralChat();
+    }, []);
+
 
     // UI Context Functions
     const toggleTheme = () => setTheme(prevTheme => (prevTheme === 'light' ? 'dark' : 'light'));
@@ -380,7 +444,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             noteToDelete, setNoteToDelete, collectionToDelete, setCollectionToDelete,
             smartCollectionToDelete, setSmartCollectionToDelete, handleDeleteNoteConfirm,
             handleDeleteCollectionConfirm, handleDeleteSmartCollectionConfirm,
-            chatMessages, chatStatus, onSendMessage
+            chatMessages, chatStatus, onSendMessage, onGenerateServiceResponse, onSendGeneralMessage, clearChat
         }}>
             <UIContext.Provider value={{
                 theme, toggleTheme, view, setView, isMobileView, isSidebarOpen, setIsSidebarOpen,

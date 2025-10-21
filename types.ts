@@ -49,6 +49,8 @@ export type FilterType = 'RECENT' | 'FAVORITES' | 'ALL';
 
 export type SearchMode = 'KEYWORD' | 'AI';
 
+export type ChatMode = 'ASSISTANT' | 'RESPONDER' | 'GENERAL';
+
 export interface SpellingError {
     word: string;
     index: number;

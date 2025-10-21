@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 
 /**
  * A hook to improve modal accessibility. It handles:
@@ -30,7 +30,8 @@ export const useModalAccessibility = (
                 modalElement.querySelectorAll<HTMLElement>(
                     'a[href]:not([disabled]), button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled])'
                 )
-            ).filter(el => el.offsetParent !== null); // Ensure they are visible
+            // FIX: Cast `el` to HTMLElement to ensure `offsetParent` property is available.
+            ).filter(el => (el as HTMLElement).offsetParent !== null); // Ensure they are visible
 
             const firstElement = focusableElements[0];
             const lastElement = focusableElements[focusableElements.length - 1];

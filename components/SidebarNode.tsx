@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Note } from '../types';
+import { Collection, Note } from '../types';
 import { ChevronDownIcon, ChevronRightIcon, DocumentTextIcon, FolderIcon, TrashIcon, PencilSquareIcon, DocumentDuplicateIcon, ClipboardDocumentIcon, GripVerticalIcon } from './Icons';
 import { ContextMenuItem } from '../types';
 import { useStoreContext, useUIContext } from '../context/AppContext';
@@ -23,8 +23,8 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
     node, level, activeNoteId, searchTerm, onSelectNote
 }) => {
     const { 
-        collections, onAddNote, onAddNoteFromFile, deleteCollection, updateCollection, renameNoteTitle, moveItem,
-        copyNote, deleteNote, setNoteToDelete
+        collections, onAddNote, onAddNoteFromFile, updateCollection, renameNoteTitle, moveItem,
+        copyNote, setNoteToDelete, setCollectionToDelete
     } = useStoreContext();
     const { onOpenContextMenu, renamingItemId, setRenamingItemId } = useUIContext();
 
@@ -51,7 +51,8 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
         reader.readAsText(file);
     };
 
-    const { isDragOver, dropPosition, dragAndDropProps } = useDragAndDrop(nodeRef, {
+    // FIX: Destructure isFileOver from useDragAndDrop hook.
+    const { isDragOver, isFileOver, dropPosition, dragAndDropProps } = useDragAndDrop(nodeRef, {
         id: node.id,
         parentId: node.parentId,
         type: isCollection ? 'collection' : 'note',
@@ -88,10 +89,11 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
     const handleContextMenu = (e: React.MouseEvent) => {
         let menuItems: ContextMenuItem[] = [];
         if (isCollection) {
+            const collectionAsCollection = node as Collection;
             menuItems = [
                 { label: 'New Note in Folder', action: () => onAddNote(node.id), icon: <PencilSquareIcon /> },
                 { label: 'Rename Folder', action: () => setRenamingItemId(node.id), icon: <PencilSquareIcon /> },
-                { label: 'Delete Folder', action: () => deleteCollection(node.id), icon: <TrashIcon />, isDestructive: true },
+                { label: 'Delete Folder', action: () => setCollectionToDelete(collectionAsCollection), icon: <TrashIcon />, isDestructive: true },
             ];
         } else {
             const noteAsNote = node as Note;
@@ -149,7 +151,7 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
                     isActive
                         ? 'bg-light-primary/30 dark:bg-dark-primary/30 text-light-primary dark:text-dark-primary font-semibold'
                         : 'hover:bg-light-background dark:hover:bg-dark-background'
-                } ${isDragOver ? 'outline-2 outline-dashed outline-light-primary dark:outline-dark-primary bg-light-primary/10 dark:bg-dark-primary/10' : ''}`}
+                } ${isDragOver || isFileOver ? 'outline-2 outline-dashed outline-light-primary dark:outline-dark-primary bg-light-primary/10 dark:bg-dark-primary/10' : ''}`}
                 style={{ paddingLeft: `${level * 16 + 8}px` }}
             >
                 <div className="flex items-center truncate py-1.5">

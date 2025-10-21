@@ -381,11 +381,16 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         setChatError(null);
         const newUserMessage: ChatMessage = { role: 'user', content: query, image };
         setChatMessages(prev => [...prev, newUserMessage]);
-        setChatStatus('replying');
+        setChatStatus('searching');
 
         try {
-            const stream = await getGeneralChatResponseStream(query, image);
-            const newAiMessage: ChatMessage = { role: 'ai', content: '' };
+            const sourceNoteIds = await semanticSearchNotes(query, notes);
+            const sourceNotes = sourceNoteIds.map(id => getNoteById(id)).filter((n): n is Note => !!n);
+
+            setChatStatus('replying');
+
+            const stream = await getGeneralChatResponseStream(query, image, sourceNotes);
+            const newAiMessage: ChatMessage = { role: 'ai', content: '', sources: sourceNotes };
             setChatMessages(prev => [...prev, newAiMessage]);
 
             let fullResponse = '';

@@ -525,7 +525,8 @@ export const resetGeneralChat = () => {
 
 export const getGeneralChatResponseStream = async (
     query: string,
-    image?: string | null
+    image?: string | null,
+    contextNotes?: Note[]
 ): Promise<AsyncGenerator<GenerateContentResponse>> => {
     try {
         const ai = getAi();
@@ -534,12 +535,26 @@ export const getGeneralChatResponseStream = async (
              generalChatSession = ai.chats.create({
                 model: 'gemini-2.5-flash',
                 config: {
-                    systemInstruction: "You are WesAI, a helpful and general-purpose AI assistant. Provide creative, insightful, and pragmatic answers to the user's questions. Your capabilities are not limited to a specific knowledge base."
+                    systemInstruction: "You are WesAI, a helpful and general-purpose AI assistant. Provide creative, insightful, and pragmatic answers. When provided with context from the user's notes, prioritize that information to give a more personalized response, but you are free to use your general knowledge."
                 }
             });
         }
 
-        const userParts: (string | { inlineData: { mimeType: string; data: string } })[] = [query];
+        let finalQuery = query;
+        if (contextNotes && contextNotes.length > 0) {
+            const simplifiedNotes = contextNotes.map(({ title, content, tags }) => ({
+                title,
+                content: content.substring(0, 2000), // Truncate content
+                tags,
+            }));
+            finalQuery = `Based on the following context from my notes, please answer my question. You can also use your general knowledge.
+CONTEXT:
+${JSON.stringify(simplifiedNotes)}
+
+MY QUESTION: "${query}"`;
+        }
+
+        const userParts: (string | { inlineData: { mimeType: string; data: string } })[] = [finalQuery];
         if (image) {
             const { mimeType, data } = parseDataUrl(image);
             userParts.unshift({ inlineData: { mimeType, data } });

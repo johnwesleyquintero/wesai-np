@@ -137,7 +137,7 @@ const ChatView: React.FC = () => {
     const subtitles = {
         ASSISTANT: "Get answers from your knowledge base.",
         RESPONDER: "Draft professional replies using your notes.",
-        GENERAL: "Your general-purpose assistant for any task."
+        GENERAL: "Your creative partner, with access to your notes."
     };
     
     const welcomeMessages = {
@@ -153,8 +153,8 @@ const ChatView: React.FC = () => {
         },
         GENERAL: {
             title: "General Assistant",
-            body: "How can I help you today? Brainstorm ideas, draft content, or get help with any task.",
-            example: 'e.g., "Write a marketing email for our new product launch."'
+            body: "Ask me anything. I can brainstorm ideas, draft content, or answer questions by referencing your notes.",
+            example: 'e.g., "Based on my project plan note, write a kick-off email to the team."'
         }
     };
 

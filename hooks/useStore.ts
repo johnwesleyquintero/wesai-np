@@ -104,30 +104,34 @@ export const useStore = (user: User | undefined) => {
     }, [user]);
 
     const addNote = useCallback(async (parentId: string | null = null) => {
+        if (!user) throw new Error("User must be logged in to create a note.");
         const newNoteForDb = { 
             title: "Untitled Note", 
             content: "", 
             is_favorite: false, 
             tags: [], 
-            parent_id: parentId, 
+            parent_id: parentId,
+            user_id: user.id,
         };
         const { data, error } = await supabase.from('notes').insert(newNoteForDb).select().single();
         if (error) throw error;
         return data.id;
-    }, []);
+    }, [user]);
 
     const addNoteFromFile = useCallback(async (title: string, content: string, parentId: string | null) => {
+        if (!user) throw new Error("User must be logged in to create a note.");
         const newNoteForDb = { 
             title: title.replace(/\.(md|txt)$/i, ''), 
             content, 
             is_favorite: false, 
             tags: [], 
-            parent_id: parentId, 
+            parent_id: parentId,
+            user_id: user.id,
         };
         const { data, error } = await supabase.from('notes').insert(newNoteForDb).select().single();
         if (error) throw error;
         return data.id;
-    }, []);
+    }, [user]);
 
     const updateNote = useCallback(async (id: string, updatedFields: Partial<Omit<Note, 'id' | 'createdAt'>>) => {
         const noteToUpdate = notes.find(note => note.id === id);
@@ -169,11 +173,12 @@ export const useStore = (user: User | undefined) => {
     }, [notes]);
 
     const addCollection = useCallback(async (name: string, parentId: string | null = null) => {
-        const newCollection = { name, parentId };
+        if (!user) throw new Error("User must be logged in to create a collection.");
+        const newCollection = { name, parentId, userId: user.id };
         const { data, error } = await supabase.from('collections').insert(toSupabase(newCollection)).select().single();
         if (error) throw error;
         return data.id;
-    }, []);
+    }, [user]);
 
     const updateCollection = useCallback(async (id: string, updatedFields: Partial<Omit<Collection, 'id'>>) => {
         const { error } = await supabase.from('collections').update(toSupabase(updatedFields)).eq('id', id);
@@ -214,10 +219,11 @@ export const useStore = (user: User | undefined) => {
     }, [notes, collections]);
 
     const addSmartCollection = useCallback(async (name: string, query: string) => {
-        const newSmartCollection = { name, query };
+        if (!user) throw new Error("User must be logged in to create a smart collection.");
+        const newSmartCollection = { name, query, userId: user.id };
         const { error } = await supabase.from('smart_collections').insert(toSupabase(newSmartCollection));
         if (error) throw error;
-    }, []);
+    }, [user]);
 
     const updateSmartCollection = useCallback(async (id: string, updatedFields: Partial<Omit<SmartCollection, 'id'>>) => {
         const { error } = await supabase.from('smart_collections').update(toSupabase(updatedFields)).eq('id', id);
@@ -230,9 +236,10 @@ export const useStore = (user: User | undefined) => {
     }, []);
     
     const addTemplate = useCallback(async (title: string, content: string) => {
-        const { error } = await supabase.from('templates').insert(toSupabase({ title, content }));
+        if (!user) throw new Error("User must be logged in to create a template.");
+        const { error } = await supabase.from('templates').insert(toSupabase({ title, content, userId: user.id }));
         if (error) throw error;
-    }, []);
+    }, [user]);
 
     const updateTemplate = useCallback(async (id: string, updatedFields: Partial<Omit<Template, 'id'>>) => {
         const { error } = await supabase.from('templates').update(toSupabase(updatedFields)).eq('id', id);
@@ -246,7 +253,7 @@ export const useStore = (user: User | undefined) => {
 
     const importTemplates = useCallback(async (importedTemplates: Template[]) => {
         if (!user || !importedTemplates || importedTemplates.length === 0) return;
-        const dataToInsert = importedTemplates.map(t => toSupabase({ title: t.title, content: t.content, user_id: user.id }));
+        const dataToInsert = importedTemplates.map(t => toSupabase({ title: t.title, content: t.content, userId: user.id }));
         const { error } = await supabase.from('templates').insert(dataToInsert);
         if (error) throw error;
     }, [user]);

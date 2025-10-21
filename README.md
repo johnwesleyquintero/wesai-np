@@ -2,7 +2,7 @@
 
 **A local-first, AI-enhanced notepad for the modern web.**
 
-<img width="1056" height="1352" alt="image" src="https://github.com/user-attachments/assets/849ca5ae-4d60-41ac-8be1-1ffe447f2359" />
+<img width="845" height="1121" alt="image" src="https://github.com/user-attachments/assets/5bf49a27-447f-436e-ba79-5d314e607be5" />
 
 
 [**Live Demo**](https://wesai-np.vercel.app/)

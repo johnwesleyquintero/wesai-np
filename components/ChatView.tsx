@@ -2,11 +2,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ChatMessage, Note, ChatMode } from '../types';
 import { Bars3Icon, SparklesIcon, DocumentTextIcon, PaperAirplaneIcon, MagnifyingGlassIcon, ClipboardDocumentIcon, PaperClipIcon, XMarkIcon, Cog6ToothIcon, CheckBadgeIcon, PencilSquareIcon, ArrowTopRightOnSquareIcon, XCircleIcon } from './Icons';
 import MarkdownPreview from './MarkdownPreview';
-import { useUIContext, useStoreContext } from '../context/AppContext';
+import { useUIContext, useStoreContext, useChatContext } from '../context/AppContext';
 import { useToast } from '../context/ToastContext';
 import { suggestTitle } from '../services/geminiService';
 
 const ChatView: React.FC = () => {
+    const { onAddNote, setActiveNoteId } = useStoreContext();
     const { 
         chatMessages: messages, 
         onSendMessage, 
@@ -14,12 +15,10 @@ const ChatView: React.FC = () => {
         onSendGeneralMessage, 
         chatStatus, 
         clearChat, 
-        onAddNote,
         chatMode,
         setChatMode,
-    } = useStoreContext();
+    } = useChatContext();
     const { isMobileView, onToggleSidebar, setView, isAiRateLimited } = useUIContext();
-    const { setActiveNoteId } = useStoreContext();
     const { showToast } = useToast();
 
     const [input, setInput] = useState('');

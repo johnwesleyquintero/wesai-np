@@ -95,11 +95,11 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
             menuItems = [
                 { label: 'Rename Note', action: () => setRenamingItemId(node.id), icon: <PencilSquareIcon /> },
                 { 
-                    label: 'Copy Note', 
+                    label: 'Duplicate Note', 
                     action: () => {
                         copyNote(node.id)
-                            .then(() => showToast({ message: 'Note copied successfully!', type: 'success'}))
-                            .catch((err) => showToast({ message: `Failed to copy note: ${err.message}`, type: 'error'}));
+                            .then(() => showToast({ message: 'Note duplicated successfully!', type: 'success'}))
+                            .catch((err) => showToast({ message: `Failed to duplicate note: ${err.message}`, type: 'error'}));
                     }, 
                     icon: <DocumentDuplicateIcon /> 
                 },

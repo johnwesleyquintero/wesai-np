@@ -92,152 +92,114 @@ const Auth: React.FC = () => {
             setLoading(false);
         }
     };
-    
-    if (view === 'resend_confirmation') {
-        return (
-            <div className="flex items-center justify-center h-screen w-screen bg-light-background dark:bg-dark-background">
-                <div className="w-full max-w-md p-8 space-y-8 bg-light-ui dark:bg-dark-ui rounded-xl shadow-lg">
-                    <div>
-                        <h2 className="text-3xl font-bold text-center text-light-text dark:text-dark-text">
-                           Resend Confirmation
-                        </h2>
-                        <p className="mt-2 text-center text-sm text-light-text/70 dark:text-dark-text/70">
-                            Enter your email to receive a new confirmation link.
-                        </p>
-                    </div>
-                    <form className="mt-8 space-y-6" onSubmit={handleResendConfirmation}>
-                        <div>
-                            <input
-                                id="email-address"
-                                name="email"
-                                type="email"
-                                autoComplete="email"
-                                required
-                                className="appearance-none rounded-md relative block w-full px-3 py-2 border border-light-border dark:border-dark-border placeholder-light-text/50 dark:placeholder-dark-text/50 text-light-text dark:text-dark-text focus:outline-none focus:ring-light-primary dark:focus:ring-dark-primary focus:border-light-primary dark:focus:border-dark-primary focus:z-10 sm:text-sm bg-light-background dark:bg-dark-background"
-                                placeholder="Email address"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                            />
-                        </div>
-
-                        {error && <p className="text-sm text-red-500 text-center pt-4">{error}</p>}
-                        {notification && <p className="text-sm text-green-600 dark:text-green-400 text-center pt-4">{notification}</p>}
-
-                        <div className="pt-2">
-                            <button
-                                type="submit"
-                                disabled={loading}
-                                className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-light-primary hover:bg-light-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-light-primary-hover dark:focus:ring-dark-primary-hover disabled:opacity-50"
-                            >
-                                {loading ? 'Sending...' : 'Resend Confirmation Email'}
-                            </button>
-                        </div>
-                    </form>
-                    <div className="text-sm text-center">
-                        <button
-                            onClick={() => {
-                                setView('login');
-                                setError(null);
-                                setNotification(null);
-                            }}
-                            className="font-medium text-light-primary hover:text-light-primary-hover dark:text-dark-primary dark:hover:text-dark-primary-hover"
-                        >
-                            Back to Sign In
-                        </button>
-                    </div>
-                </div>
-            </div>
-        );
-    }
 
     return (
         <div className="flex items-center justify-center h-screen w-screen bg-light-background dark:bg-dark-background">
-            <div className="w-full max-w-md p-8 space-y-6 bg-light-ui dark:bg-dark-ui rounded-xl shadow-lg">
-                <div>
-                    <h2 className="text-3xl font-bold text-center text-light-text dark:text-dark-text">
-                        WesAI Notepad
-                    </h2>
-                    <p className="mt-2 text-center text-sm text-light-text/70 dark:text-dark-text/70">
-                        {view === 'login' ? 'Sign in to your account' : 'Create a new account'}
+            <div className="w-full max-w-sm p-8 space-y-6 bg-light-ui dark:bg-dark-ui rounded-xl shadow-lg">
+                <div className="text-center">
+                    <h1 className="text-3xl font-bold text-light-text dark:text-dark-text">WesAI Notepad</h1>
+                    <p className="mt-2 text-sm text-light-text/60 dark:text-dark-text/60">
+                        {view === 'login' && 'Sign in to your account'}
+                        {view === 'signup' && 'Create a new account'}
+                        {view === 'resend_confirmation' && 'Resend Confirmation'}
                     </p>
                 </div>
-                
-                <div className="space-y-4">
-                    <button
-                        onClick={handleGoogleSignIn}
-                        disabled={loading}
-                        className="group relative w-full flex justify-center items-center py-2 px-4 border border-light-border dark:border-dark-border text-sm font-medium rounded-md text-light-text dark:text-dark-text bg-white dark:bg-dark-background hover:bg-light-ui dark:hover:bg-dark-ui-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-light-primary dark:focus:ring-dark-primary disabled:opacity-50"
-                    >
-                        <GoogleIcon className="w-4 h-4 mr-2" />
-                        Sign {view === 'login' ? 'in' : 'up'} with Google
-                    </button>
-                </div>
 
-                <div className="relative">
-                    <div className="absolute inset-0 flex items-center">
-                        <div className="w-full border-t border-light-border dark:border-dark-border"></div>
-                    </div>
-                    <div className="relative flex justify-center text-sm">
-                        <span className="px-2 bg-light-ui dark:bg-dark-ui text-light-text/70 dark:text-dark-text/70">
-                            Or continue with
-                        </span>
-                    </div>
-                </div>
+                {error && <div className="p-3 text-center text-sm text-red-700 bg-red-100 rounded-md dark:bg-red-900/30 dark:text-red-200">{error}</div>}
+                {notification && <div className="p-3 text-center text-sm text-green-700 bg-green-100 rounded-md dark:bg-green-900/30 dark:text-green-200">{notification}</div>}
 
-                <form className="space-y-6" onSubmit={handleAuth}>
-                    <div className="rounded-md shadow-sm -space-y-px">
+                <form className="space-y-4" onSubmit={view === 'resend_confirmation' ? handleResendConfirmation : handleAuth}>
+                    <div>
+                        <label htmlFor="email" className="sr-only">Email address</label>
+                        <input
+                            id="email"
+                            name="email"
+                            type="email"
+                            autoComplete="email"
+                            required
+                            className="w-full px-4 py-2 text-sm bg-light-background dark:bg-dark-background rounded-md border border-light-border dark:border-dark-border focus:ring-1 focus:ring-light-primary focus:outline-none"
+                            placeholder="Email address"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                        />
+                    </div>
+                    {view !== 'resend_confirmation' && (
                         <div>
-                            <input
-                                id="email-address"
-                                name="email"
-                                type="email"
-                                autoComplete="email"
-                                required
-                                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-light-border dark:border-dark-border placeholder-light-text/50 dark:placeholder-dark-text/50 text-light-text dark:text-dark-text rounded-t-md focus:outline-none focus:ring-light-primary dark:focus:ring-dark-primary focus:border-light-primary dark:focus:border-dark-primary focus:z-10 sm:text-sm bg-light-background dark:bg-dark-background"
-                                placeholder="Email address"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                            />
-                        </div>
-                        <div>
+                            <label htmlFor="password" className="sr-only">Password</label>
                             <input
                                 id="password"
                                 name="password"
                                 type="password"
                                 autoComplete="current-password"
                                 required
-                                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-light-border dark:border-dark-border placeholder-light-text/50 dark:placeholder-dark-text/50 text-light-text dark:text-dark-text rounded-b-md focus:outline-none focus:ring-light-primary dark:focus:ring-dark-primary focus:border-light-primary dark:focus:border-dark-primary focus:z-10 sm:text-sm bg-light-background dark:bg-dark-background"
+                                className="w-full px-4 py-2 text-sm bg-light-background dark:bg-dark-background rounded-md border border-light-border dark:border-dark-border focus:ring-1 focus:ring-light-primary focus:outline-none"
                                 placeholder="Password"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                             />
                         </div>
-                    </div>
+                    )}
                     
-                    {error && <p className="text-sm text-red-500 text-center pt-2">{error}</p>}
-                    {notification && <p className="text-sm text-green-600 dark:text-green-400 text-center pt-2">{notification}</p>}
-
-                    <div>
-                        <button
-                            type="submit"
-                            disabled={loading}
-                            className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-light-primary hover:bg-light-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-light-primary-hover dark:focus:ring-dark-primary-hover disabled:opacity-50"
-                        >
-                            {loading ? 'Processing...' : (view === 'login' ? 'Sign In' : 'Sign Up')}
-                        </button>
-                    </div>
-                </form>
-                <div className="text-sm text-center">
                     <button
-                        onClick={() => {
-                          setView(view === 'login' ? 'signup' : 'login');
-                          setError(null);
-                          setNotification(null);
-                        }}
-                        className="font-medium text-light-primary hover:text-light-primary-hover dark:text-dark-primary dark:hover:text-dark-primary-hover"
+                        type="submit"
+                        disabled={loading}
+                        className="w-full flex items-center justify-center bg-light-primary text-white dark:bg-dark-primary dark:text-zinc-900 rounded-md py-2 text-sm font-semibold hover:bg-light-primary-hover dark:hover:bg-dark-primary-hover disabled:opacity-50"
                     >
-                        {view === 'login' ? 'Don\'t have an account? Sign Up' : 'Already have an account? Sign In'}
+                        {loading ? 'Processing...' : (
+                            view === 'login' ? 'Sign In' :
+                            view === 'signup' ? 'Sign Up' :
+                            'Resend Confirmation Link'
+                        )}
                     </button>
+                </form>
+
+                {view !== 'resend_confirmation' && (
+                    <>
+                        <div className="relative">
+                            <div className="absolute inset-0 flex items-center">
+                                <div className="w-full border-t border-light-border dark:border-dark-border"></div>
+                            </div>
+                            <div className="relative flex justify-center text-sm">
+                                <span className="px-2 bg-light-ui dark:bg-dark-ui text-light-text/60 dark:text-dark-text/60">Or continue with</span>
+                            </div>
+                        </div>
+                        
+                        <button
+                            onClick={handleGoogleSignIn}
+                            disabled={loading}
+                            className="w-full flex items-center justify-center bg-white dark:bg-dark-background rounded-md py-2 text-sm font-semibold border border-light-border dark:border-dark-border hover:bg-light-background dark:hover:bg-dark-ui-hover disabled:opacity-50"
+                        >
+                            <GoogleIcon className="w-5 h-5 mr-3" />
+                            Sign in with Google
+                        </button>
+                    </>
+                )}
+
+                <div className="text-sm text-center">
+                    {view === 'login' && (
+                        <p className="text-light-text/60 dark:text-dark-text/60">
+                            No account?{' '}
+                            <button onClick={() => { setView('signup'); setError(null); }} className="font-medium text-light-primary dark:text-dark-primary hover:underline">
+                                Sign up
+                            </button>
+                        </p>
+                    )}
+                    {view === 'signup' && (
+                        <p className="text-light-text/60 dark:text-dark-text/60">
+                            Already have an account?{' '}
+                            <button onClick={() => { setView('login'); setError(null); }} className="font-medium text-light-primary dark:text-dark-primary hover:underline">
+                                Sign in
+                            </button>
+                        </p>
+                    )}
+                     {view === 'resend_confirmation' && (
+                        <p className="text-light-text/60 dark:text-dark-text/60">
+                            Remembered your password?{' '}
+                            <button onClick={() => { setView('login'); setError(null); }} className="font-medium text-light-primary dark:text-dark-primary hover:underline">
+                                Sign in
+                            </button>
+                        </p>
+                    )}
                 </div>
             </div>
         </div>

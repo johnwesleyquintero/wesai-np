@@ -184,7 +184,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                                     onClick={() => handleOpenTemplateEditor(null)}
                                     className="flex items-center justify-center w-full mt-3 px-4 py-2 border-2 border-dashed border-light-border dark:border-dark-border rounded-md hover:border-light-primary hover:text-light-primary dark:hover:border-dark-primary dark:hover:text-dark-primary transition-colors"
                                 >
-                                    <PlusIcon className="mr-2" /> Add New Template
+                                    <PlusIcon className="w-4 h-4 mr-2" /> Add New Template
                                 </button>
                             </div>
                             

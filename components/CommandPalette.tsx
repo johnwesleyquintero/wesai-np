@@ -86,7 +86,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose }) => {
                 onKeyDown={handleKeyDown}
             >
                 <div className="flex items-center p-4 border-b border-light-border dark:border-dark-border">
-                    <MagnifyingGlassIcon className="mr-3 text-light-text/60 dark:text-dark-text/60" />
+                    <MagnifyingGlassIcon className="w-4 h-4 mr-3 text-light-text/60 dark:text-dark-text/60" />
                     <input
                         ref={inputRef}
                         type="text"

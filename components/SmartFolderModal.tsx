@@ -51,7 +51,7 @@ const SmartFolderModal: React.FC<SmartFolderModalProps> = ({ isOpen, onClose, fo
                 onClick={e => e.stopPropagation()}
             >
                 <h2 id="smart-folder-title" className="text-2xl font-bold mb-4 flex items-center">
-                    <BrainIcon className="mr-3" />
+                    <BrainIcon className="w-5 h-5 mr-3" />
                     {folderToEdit ? 'Edit Smart Folder' : 'New Smart Folder'}
                 </h2>
                 

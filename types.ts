@@ -47,10 +47,11 @@ export interface Template {
 }
 
 export interface ChatMessage {
-    role: 'user' | 'ai';
-    content: string;
+    role: 'user' | 'ai' | 'tool';
+    content: string | { name: string; args: any; result?: any; status: 'pending' | 'complete' | 'error' };
     sources?: Note[];
     image?: string;
+    status?: 'pending' | 'processing' | 'complete';
 }
 
 export type FilterType = 'RECENT' | 'FAVORITES' | 'ALL';

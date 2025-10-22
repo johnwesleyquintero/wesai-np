@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useMemo, useEffect, useRef,
 import { Note, Template, Collection, SmartCollection, EditorActions, ContextMenuItem, FilterType, SearchMode, ChatMessage, NoteVersion, AuthSession } from '../types';
 import { useStore as useSupabaseStore } from '../hooks/useStore';
 import { useDebounce } from '../hooks/useDebounce';
-import { getStreamingChatResponse, semanticSearchNotes, generateCustomerResponse, getGeneralChatResponseStream, resetGeneralChat } from '../services/geminiService';
+import { getStreamingChatResponse, semanticSearchNotes, generateCustomerResponse, getGeneralChatSession, resetGeneralChat } from '../services/geminiService';
 import { useMobileView } from '../hooks/useMobileView';
 import { useToast } from './ToastContext';
 import { useApiKey } from '../hooks/useApiKey';
@@ -35,12 +35,12 @@ interface StoreContextType extends ReturnType<typeof useSupabaseStore> {
     handleDeleteCollectionConfirm: () => Promise<void>;
     handleDeleteSmartCollectionConfirm: () => Promise<void>;
     chatMessages: ChatMessage[];
-    chatStatus: 'idle' | 'searching' | 'replying';
+    chatStatus: 'idle' | 'searching' | 'replying' | 'using_tool';
     onSendMessage: (query: string, image?: string) => Promise<void>;
     onGenerateServiceResponse: (customerQuery: string, image?: string) => Promise<void>;
     onSendGeneralMessage: (query: string, image?: string) => Promise<void>;
     clearChat: () => void;
-    onAddNote: (parentId?: string | null) => Promise<string>;
+    onAddNote: (parentId?: string | null, title?: string, content?: string) => Promise<string>;
     onAddNoteFromFile: (title: string, content: string, parentId: string | null) => Promise<string>;
 }
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
@@ -122,7 +122,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     
     // Store Hook
     const store = useSupabaseStore(session?.user);
-    const { notes, getNoteById, deleteCollection, deleteNote, deleteSmartCollection, addNote: createNote, addNoteFromFile, loading: isStoreLoading } = store;
+    const { notes, getNoteById, deleteCollection, deleteNote, deleteSmartCollection, addNote: createNote, addNoteFromFile, loading: isStoreLoading, updateNote: updateNoteInStore } = store;
     
     const { showToast } = useToast();
     const { apiKey } = useApiKey();
@@ -143,7 +143,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
     // Chat State
     const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
-    const [chatStatus, setChatStatus] = useState<'idle' | 'searching' | 'replying'>('idle');
+    const [chatStatus, setChatStatus] = useState<'idle' | 'searching' | 'replying' | 'using_tool'>('idle');
     const [chatError, setChatError] = useState<string | null>(null);
 
     // Editor State
@@ -190,8 +190,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         };
     }, []);
     
-    const onAddNote = useCallback(async (parentId: string | null = null) => {
-        const newNoteId = await createNote(parentId);
+    // Fix: Update onAddNote to accept title and content, matching its usage.
+    const onAddNote = useCallback(async (parentId: string | null = null, title?: string, content?: string) => {
+        const newNoteId = await createNote(parentId, title, content);
         setActiveNoteId(newNoteId);
         setView('NOTES');
         if (isMobileView) setIsSidebarOpen(false);
@@ -342,29 +343,103 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     
     const onSendGeneralMessage = async (query: string, image?: string) => {
         setChatError(null);
-        const newUserMessage: ChatMessage = { role: 'user', content: query, image };
+        const userMessageId = Date.now();
+        const newUserMessage: ChatMessage = { role: 'user', content: query, image, status: 'processing' };
         setChatMessages(prev => [...prev, newUserMessage]);
-        setChatStatus('searching');
+
         try {
-            const sourceNoteIds = await semanticSearchNotes(query, notes);
-            const sourceNotes = sourceNoteIds.map(id => getNoteById(id)).filter((n): n is Note => !!n);
-            setChatStatus('replying');
-            const stream = await getGeneralChatResponseStream(query, image, sourceNotes);
-            const newAiMessage: ChatMessage = { role: 'ai', content: '', sources: sourceNotes };
-            setChatMessages(prev => [...prev, newAiMessage]);
-            let fullResponse = '';
-            for await (const chunk of stream) {
-                fullResponse += chunk.text;
-                setChatMessages(prev => prev.map((msg, index) => index === prev.length - 1 ? { ...msg, content: fullResponse } : msg));
+            const chat = getGeneralChatSession();
+            let response = await chat.sendMessage({ message: query });
+            
+            while (response.functionCalls && response.functionCalls.length > 0) {
+                setChatStatus('using_tool');
+                const functionResponses = [];
+
+                for (const fc of response.functionCalls) {
+                    setChatMessages(prev => [...prev, { role: 'tool', content: { name: fc.name, args: fc.args, status: 'pending' }}]);
+                    let result: any;
+                    try {
+                        switch (fc.name) {
+                            case 'createNote':
+                                // Fix: Ensure arguments from Gemini are treated as strings for type safety.
+                                const title = String(fc.args.title || 'Untitled Note');
+                                const content = String(fc.args.content || '');
+                                const newNoteId = await onAddNote(null, title, content);
+                                result = { success: true, noteId: newNoteId };
+                                showToast({ message: `Note "${title}" created!`, type: 'success' });
+                                break;
+                            case 'findNotes':
+                                // Fix: Ensure query argument is a string before using string methods.
+                                const queryToSearch = String(fc.args.query || '');
+                                const foundNotes = notes
+                                    .filter(n => n.title.toLowerCase().includes(queryToSearch.toLowerCase()))
+                                    .map(n => ({ id: n.id, title: n.title }));
+                                result = { notes: foundNotes };
+                                break;
+                            case 'updateNoteContent':
+                                // Fix: Ensure arguments are strings before using them.
+                                const noteIdToUpdate = String(fc.args.noteId || '');
+                                const contentToAppend = String(fc.args.contentToAppend || '');
+                                const noteToUpdate = getNoteById(noteIdToUpdate);
+                                if (noteToUpdate) {
+                                    const newContent = `${noteToUpdate.content}\n\n${contentToAppend}`;
+                                    await updateNoteInStore(noteIdToUpdate, { content: newContent });
+                                    result = { success: true, noteId: noteIdToUpdate };
+                                    showToast({ message: `Note "${noteToUpdate.title}" updated!`, type: 'success' });
+                                } else {
+                                    result = { success: false, error: "Note not found." };
+                                }
+                                break;
+                            default:
+                                result = { success: false, error: `Unknown function: ${fc.name}` };
+                        }
+                         setChatMessages(prev => [...prev, { role: 'tool', content: { name: fc.name, args: fc.args, status: 'complete', result }}]);
+                    } catch (toolError) {
+                        result = { success: false, error: (toolError as Error).message };
+                        setChatMessages(prev => [...prev, { role: 'tool', content: { name: fc.name, args: fc.args, status: 'error', result }}]);
+                    }
+                    functionResponses.push({ id: fc.id, name: fc.name, response: { result }});
+                }
+                
+                // Fix: `toolResponses` is not a valid parameter. Send function responses as parts of a new message.
+                const functionResponseParts = functionResponses.map(({ name, response }) => ({
+                    functionResponse: { name, response },
+                }));
+                response = await chat.sendMessage({ message: functionResponseParts });
             }
+
+            // Fix: Explicitly type the updated message object to resolve TypeScript inference issue.
+            setChatMessages(prev => prev.map(msg => {
+                if (msg === newUserMessage) {
+                    const updatedMsg: ChatMessage = { ...msg, status: 'complete' };
+                    return updatedMsg;
+                }
+                return msg;
+            }));
+
+            if (response.text) {
+                setChatMessages(prev => [...prev, { role: 'ai', content: response.text }]);
+            }
+
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
             setChatError(errorMessage);
-            setChatMessages(prev => [...prev, { role: 'ai', content: `Sorry, I ran into an error: ${errorMessage}` }]);
+            setChatMessages(prev => {
+                // Fix: Explicitly type the updated message object to resolve TypeScript inference issue.
+                 const updated = prev.map(msg => {
+                    if (msg === newUserMessage) {
+                        const updatedMsg: ChatMessage = { ...msg, status: 'complete' };
+                        return updatedMsg;
+                    }
+                    return msg;
+                 });
+                 return [...updated, { role: 'ai', content: `Sorry, I ran into an error: ${errorMessage}` }];
+            });
         } finally {
             setChatStatus('idle');
         }
     };
+
 
     const clearChat = useCallback(() => { setChatMessages([]); setChatError(null); setChatStatus('idle'); resetGeneralChat(); }, []);
     const toggleTheme = () => setTheme(prevTheme => (prevTheme === 'light' ? 'dark' : 'light'));

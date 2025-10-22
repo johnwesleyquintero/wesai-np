@@ -1,4 +1,4 @@
-import { GoogleGenAI, Type, GenerateContentResponse, Content, Chat } from "@google/genai";
+import { GoogleGenAI, Type, GenerateContentResponse, Content, Chat, FunctionDeclaration } from "@google/genai";
 import { Note, SpellingError, ChatMessage } from "../types";
 
 export type InlineAction = 'fix' | 'shorten' | 'expand' | 'simplify' | 'makeProfessional' | 'makeCasual';
@@ -87,6 +87,67 @@ const handleGeminiError = (error: unknown, context: string): Error => {
 
     return new Error(`An unknown error occurred during ${context}.`);
 };
+
+// --- Function Calling Tool Definitions ---
+
+const createNoteTool: FunctionDeclaration = {
+  name: 'createNote',
+  parameters: {
+    type: Type.OBJECT,
+    description: 'Creates a new note with a title and content.',
+    properties: {
+      title: {
+        type: Type.STRING,
+        description: 'The title of the new note.',
+      },
+      content: {
+        type: Type.STRING,
+        description: 'The markdown content of the new note.',
+      },
+    },
+    required: ['title', 'content'],
+  },
+};
+
+const findNotesTool: FunctionDeclaration = {
+  name: 'findNotes',
+  parameters: {
+    type: Type.OBJECT,
+    description: 'Finds notes based on a search query.',
+    properties: {
+      query: {
+        type: Type.STRING,
+        description: 'The search query to find relevant notes.',
+      },
+    },
+    required: ['query'],
+  },
+};
+
+const updateNoteContentTool: FunctionDeclaration = {
+  name: 'updateNoteContent',
+  parameters: {
+    type: Type.OBJECT,
+    description: 'Appends new content to an existing note.',
+    properties: {
+      noteId: {
+        type: Type.STRING,
+        description: 'The ID of the note to update.',
+      },
+      contentToAppend: {
+        type: Type.STRING,
+        description: 'The new markdown content to append to the note.',
+      },
+    },
+    required: ['noteId', 'contentToAppend'],
+  },
+};
+
+const aiTools: FunctionDeclaration[] = [
+    createNoteTool,
+    findNotesTool,
+    updateNoteContentTool
+];
 
 
 export const performInlineEdit = async (text: string, action: InlineAction): Promise<string> => {
@@ -523,50 +584,23 @@ export const resetGeneralChat = () => {
     generalChatSession = null;
 };
 
-export const getGeneralChatResponseStream = async (
-    query: string,
-    image?: string | null,
-    contextNotes?: Note[]
-): Promise<AsyncGenerator<GenerateContentResponse>> => {
+export const getGeneralChatSession = (): Chat => {
     try {
         const ai = getAi();
-        // The chat session is stateful and maintains history.
         if (!generalChatSession) {
              generalChatSession = ai.chats.create({
                 model: 'gemini-2.5-flash',
                 config: {
-                    systemInstruction: "You are WesAI, a helpful and general-purpose AI assistant. Provide creative, insightful, and pragmatic answers. When provided with context from the user's notes, prioritize that information to give a more personalized response, but you are free to use your general knowledge."
+                    systemInstruction: "You are WesAI, a helpful and general-purpose AI assistant. You can create, find, and update notes for the user. When a user asks you to perform an action, use the provided tools. When you need to find a note to update, use the findNotes tool first, then confirm with the user if multiple notes are found before using the updateNoteContent tool. Always inform the user of the actions you have taken.",
+                    tools: [{ functionDeclarations: aiTools }],
                 }
             });
         }
-
-        let finalQuery = query;
-        if (contextNotes && contextNotes.length > 0) {
-            const simplifiedNotes = contextNotes.map(({ title, content, tags }) => ({
-                title,
-                content: content.substring(0, 2000), // Truncate content
-                tags,
-            }));
-            finalQuery = `Based on the following context from my notes, please answer my question. You can also use your general knowledge.
-CONTEXT:
-${JSON.stringify(simplifiedNotes)}
-
-MY QUESTION: "${query}"`;
-        }
-
-        const userParts: (string | { inlineData: { mimeType: string; data: string } })[] = [finalQuery];
-        if (image) {
-            const { mimeType, data } = parseDataUrl(image);
-            userParts.unshift({ inlineData: { mimeType, data } });
-        }
-
-        const result = await generalChatSession.sendMessageStream({ message: userParts });
-        return result;
+        return generalChatSession;
     } catch (error) {
-        const errorString = (error instanceof Error) ? error.message : JSON.stringify(error);
-        if (errorString.includes("API key")) {
+        if (error instanceof Error && error.message.includes("API key")) {
             resetGeneralChat();
         }
-        throw handleGeminiError(error, "general AI chat");
+        throw handleGeminiError(error, "general AI chat session");
     }
 };

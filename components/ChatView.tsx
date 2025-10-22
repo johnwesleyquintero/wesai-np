@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ChatMessage, Note, ChatMode } from '../types';
-import { Bars3Icon, SparklesIcon, DocumentTextIcon, PaperAirplaneIcon, MagnifyingGlassIcon, ClipboardDocumentIcon, PaperClipIcon, XMarkIcon } from './Icons';
+import { Bars3Icon, SparklesIcon, DocumentTextIcon, PaperAirplaneIcon, MagnifyingGlassIcon, ClipboardDocumentIcon, PaperClipIcon, XMarkIcon, Cog6ToothIcon, CheckBadgeIcon } from './Icons';
 import MarkdownPreview from './MarkdownPreview';
 import { useUIContext, useStoreContext } from '../context/AppContext';
 import { useToast } from '../context/ToastContext';
@@ -92,24 +92,46 @@ const ChatView: React.FC = () => {
             e.dataTransfer.clearData();
         }
     };
-
-
-    const LoadingIndicator = () => {
-        if (chatStatus === 'searching') {
+    
+    const ToolMessage: React.FC<{ msg: ChatMessage }> = ({ msg }) => {
+        if (typeof msg.content !== 'object' || msg.content === null) return null;
+        const { name, args, status, result } = msg.content;
+    
+        if (status === 'pending') {
             return (
-                 <div className="flex items-start gap-4">
-                    <div className="w-8 h-8 rounded-full bg-light-primary/80 dark:bg-dark-primary/80 flex items-center justify-center flex-shrink-0 mt-1"><MagnifyingGlassIcon className="w-5 h-5 text-white" /></div>
-                    <div className="max-w-xl p-4 rounded-2xl bg-light-ui dark:bg-dark-ui">
-                        <div className="flex items-center gap-2 text-light-text/80 dark:text-dark-text/80">
-                            <div className="w-2 h-2 bg-light-primary dark:bg-dark-primary rounded-full animate-pulse"></div>
-                            <div className="w-2 h-2 bg-light-primary dark:bg-dark-primary rounded-full animate-pulse [animation-delay:0.2s]"></div>
-                            <div className="w-2 h-2 bg-light-primary dark:bg-dark-primary rounded-full animate-pulse [animation-delay:0.4s]"></div>
-                            <span className="text-sm">Finding relevant notes...</span>
-                        </div>
+                <div className="text-center my-4">
+                    <div className="inline-flex items-center gap-2 text-sm text-light-text/70 dark:text-dark-text/70 px-3 py-1.5 bg-light-ui dark:bg-dark-ui rounded-full">
+                        <Cog6ToothIcon className="w-4 h-4 animate-spin" />
+                        Using tool: <span className="font-semibold">{name}</span>...
                     </div>
                 </div>
             );
         }
+    
+        if (status === 'complete') {
+            return (
+                <div className="text-center my-4">
+                     <div className="inline-flex items-center gap-2 text-sm text-light-text/70 dark:text-dark-text/70 px-3 py-1.5 bg-green-100 dark:bg-green-900/40 rounded-full border border-green-200 dark:border-green-800">
+                        <CheckBadgeIcon className="w-4 h-4 text-green-600 dark:text-green-400" />
+                        Tool <span className="font-semibold">{name}</span> succeeded.
+                    </div>
+                </div>
+            );
+        }
+        
+        return null; // Don't render error states inline for now
+    };
+
+
+    const LoadingIndicator = () => {
+        const messagesContent = {
+            searching: 'Finding relevant notes...',
+            replying: 'AI is thinking...',
+            using_tool: 'Using tool...',
+        };
+
+        if (chatStatus === 'idle') return null;
+
         if (chatStatus === 'replying' && messages[messages.length-1]?.role !== 'ai') {
              return (
                 <div className="flex items-start gap-4">
@@ -119,7 +141,7 @@ const ChatView: React.FC = () => {
                             <div className="w-2 h-2 bg-light-primary dark:bg-dark-primary rounded-full animate-pulse"></div>
                             <div className="w-2 h-2 bg-light-primary dark:bg-dark-primary rounded-full animate-pulse [animation-delay:0.2s]"></div>
                             <div className="w-2 h-2 bg-light-primary dark:bg-dark-primary rounded-full animate-pulse [animation-delay:0.4s]"></div>
-                            <span className="text-sm">AI is thinking...</span>
+                            <span className="text-sm">{messagesContent[chatStatus]}</span>
                         </div>
                     </div>
                 </div>
@@ -131,13 +153,13 @@ const ChatView: React.FC = () => {
     const placeholders = {
         ASSISTANT: "Ask a question about your notes...",
         RESPONDER: "Paste customer message here...",
-        GENERAL: "Ask me anything..."
+        GENERAL: "Create a new note titled..."
     };
     
     const subtitles = {
         ASSISTANT: "Get answers from your knowledge base.",
         RESPONDER: "Draft professional replies using your notes.",
-        GENERAL: "Your creative partner, with access to your notes."
+        GENERAL: "Your creative partner for managing notes."
     };
     
     const welcomeMessages = {
@@ -153,8 +175,8 @@ const ChatView: React.FC = () => {
         },
         GENERAL: {
             title: "General Assistant",
-            body: "Ask me anything. I can brainstorm ideas, draft content, or answer questions by referencing your notes.",
-            example: 'e.g., "Based on my project plan note, write a kick-off email to the team."'
+            body: "Use natural language to manage your notes. The AI can create, find, and update notes for you.",
+            example: 'e.g., "Create a new note titled \'Q3 Marketing Plan\' and add a section about our target audience."'
         }
     };
 
@@ -209,41 +231,50 @@ const ChatView: React.FC = () => {
                              <p className="text-sm mt-4 p-2 bg-light-ui dark:bg-dark-ui rounded-md">{welcomeMessages[mode].example}</p>
                         </div>
                     )}
-                    {messages.map((msg, index) => (
-                        <div key={index} className={`flex items-start gap-4 ${msg.role === 'user' ? 'justify-end' : ''}`}>
-                            {msg.role === 'ai' && <div className="w-8 h-8 rounded-full bg-light-primary dark:bg-dark-primary flex items-center justify-center flex-shrink-0 mt-1"><SparklesIcon className="w-5 h-5 text-white" /></div>}
-                            <div className={`relative group max-w-xl p-4 rounded-2xl ${msg.role === 'user' ? 'bg-light-primary text-white dark:bg-dark-primary dark:text-zinc-900' : 'bg-light-ui dark:bg-dark-ui'}`}>
-                                {msg.image && (
-                                    <img src={msg.image} alt="User upload" className="mb-2 rounded-lg max-w-xs max-h-64" />
-                                )}
-                                {msg.role === 'ai' ? (
-                                    <>
-                                        <div className="prose prose-sm sm:prose-base max-w-none text-light-text dark:text-dark-text">
-                                            <MarkdownPreview title="" content={msg.content || '...'} onToggleTask={() => {}} />
+                    {messages.map((msg, index) => {
+                         if (msg.role === 'tool') {
+                            return <ToolMessage key={index} msg={msg} />;
+                        }
+
+                        return (
+                            <div key={index} className={`flex items-start gap-4 ${msg.role === 'user' ? 'justify-end' : ''}`}>
+                                {msg.role === 'ai' && <div className="w-8 h-8 rounded-full bg-light-primary dark:bg-dark-primary flex items-center justify-center flex-shrink-0 mt-1"><SparklesIcon className="w-5 h-5 text-white" /></div>}
+                                <div className={`relative group max-w-xl p-4 rounded-2xl ${msg.role === 'user' ? 'bg-light-primary text-white dark:bg-dark-primary dark:text-zinc-900' : 'bg-light-ui dark:bg-dark-ui'}`}>
+                                    {msg.image && (
+                                        <img src={msg.image} alt="User upload" className="mb-2 rounded-lg max-w-xs max-h-64" />
+                                    )}
+                                    {msg.role === 'ai' ? (
+                                        <>
+                                            <div className="prose prose-sm sm:prose-base max-w-none text-light-text dark:text-dark-text">
+                                                <MarkdownPreview title="" content={msg.content as string || '...'} onToggleTask={() => {}} />
+                                            </div>
+                                            <button onClick={() => handleCopy(msg.content as string)} className="absolute -top-3 -right-3 p-1.5 bg-light-background dark:bg-dark-background rounded-full shadow-md border border-light-border dark:border-dark-border opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <ClipboardDocumentIcon className="w-4 h-4" />
+                                            </button>
+                                        </>
+                                    ) : (
+                                        msg.content && <p>{msg.content as string}</p>
+                                    )}
+                                    {msg.sources && msg.sources.length > 0 && (
+                                        <div className="mt-4 pt-3 border-t border-light-border dark:border-dark-border/50">
+                                            <h4 className="text-xs font-semibold mb-2">Sources:</h4>
+                                            <div className="flex flex-wrap gap-2">
+                                                {msg.sources.map(note => (
+                                                    <button key={note.id} onClick={() => onSelectNote(note.id)} className="flex items-center text-xs bg-light-background dark:bg-dark-background hover:bg-light-background/80 dark:hover:bg-dark-background/80 p-2 rounded-md border border-light-border dark:border-dark-border">
+                                                        <DocumentTextIcon className="w-4 h-4 mr-1.5 flex-shrink-0"/>
+                                                        <span className="truncate">{note.title}</span>
+                                                    </button>
+                                                ))}
+                                            </div>
                                         </div>
-                                        <button onClick={() => handleCopy(msg.content)} className="absolute -top-3 -right-3 p-1.5 bg-light-background dark:bg-dark-background rounded-full shadow-md border border-light-border dark:border-dark-border opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <ClipboardDocumentIcon className="w-4 h-4" />
-                                        </button>
-                                    </>
-                                ) : (
-                                    msg.content && <p>{msg.content}</p>
-                                )}
-                                {msg.sources && msg.sources.length > 0 && (
-                                    <div className="mt-4 pt-3 border-t border-light-border dark:border-dark-border/50">
-                                        <h4 className="text-xs font-semibold mb-2">Sources:</h4>
-                                        <div className="flex flex-wrap gap-2">
-                                            {msg.sources.map(note => (
-                                                <button key={note.id} onClick={() => onSelectNote(note.id)} className="flex items-center text-xs bg-light-background dark:bg-dark-background hover:bg-light-background/80 dark:hover:bg-dark-background/80 p-2 rounded-md border border-light-border dark:border-dark-border">
-                                                    <DocumentTextIcon className="w-4 h-4 mr-1.5 flex-shrink-0"/>
-                                                    <span className="truncate">{note.title}</span>
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
+                                    )}
+                                </div>
+                                 {msg.role === 'user' && msg.status === 'processing' && (
+                                    <div className="w-5 h-5 border-2 border-light-ui dark:border-dark-ui border-t-light-primary dark:border-t-dark-primary rounded-full animate-spin self-center"></div>
                                 )}
                             </div>
-                        </div>
-                    ))}
+                        );
+                    })}
 
                     <LoadingIndicator />
 

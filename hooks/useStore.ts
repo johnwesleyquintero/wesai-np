@@ -116,11 +116,12 @@ export const useStore = (user: User | undefined) => {
         };
     }, [user]);
 
-    const addNote = useCallback(async (parentId: string | null = null) => {
+    // Fix: Allow addNote to accept title and content to match usage in AppContext.
+    const addNote = useCallback(async (parentId: string | null = null, title = "Untitled Note", content = "") => {
         if (!user) throw new Error("User must be logged in to create a note.");
         const newNoteForDb = { 
-            title: "Untitled Note", 
-            content: "", 
+            title, 
+            content, 
             is_favorite: false, 
             tags: [], 
             parent_id: parentId,

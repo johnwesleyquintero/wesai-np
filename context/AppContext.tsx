@@ -361,7 +361,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                     try {
                         switch (fc.name) {
                             case 'createNote':
-                                // Fix: Ensure arguments from Gemini are treated as strings for type safety.
                                 const title = String(fc.args.title || 'Untitled Note');
                                 const content = String(fc.args.content || '');
                                 const newNoteId = await onAddNote(null, title, content);
@@ -369,23 +368,51 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                                 showToast({ message: `Note "${title}" created!`, type: 'success' });
                                 break;
                             case 'findNotes':
-                                // Fix: Ensure query argument is a string before using string methods.
                                 const queryToSearch = String(fc.args.query || '');
                                 const foundNotes = notes
                                     .filter(n => n.title.toLowerCase().includes(queryToSearch.toLowerCase()))
                                     .map(n => ({ id: n.id, title: n.title }));
                                 result = { notes: foundNotes };
                                 break;
-                            case 'updateNoteContent':
-                                // Fix: Ensure arguments are strings before using them.
+                             case 'getNoteContent':
+                                const noteIdToRead = String(fc.args.noteId || '');
+                                const noteToRead = getNoteById(noteIdToRead);
+                                if (noteToRead) {
+                                    result = { title: noteToRead.title, content: noteToRead.content };
+                                } else {
+                                    result = { error: "Note not found." };
+                                }
+                                break;
+                            case 'updateNote':
                                 const noteIdToUpdate = String(fc.args.noteId || '');
-                                const contentToAppend = String(fc.args.contentToAppend || '');
                                 const noteToUpdate = getNoteById(noteIdToUpdate);
                                 if (noteToUpdate) {
-                                    const newContent = `${noteToUpdate.content}\n\n${contentToAppend}`;
-                                    await updateNoteInStore(noteIdToUpdate, { content: newContent });
-                                    result = { success: true, noteId: noteIdToUpdate };
-                                    showToast({ message: `Note "${noteToUpdate.title}" updated!`, type: 'success' });
+                                    const updatedFields: { title?: string, content?: string } = {};
+                                    if (fc.args.title) {
+                                        updatedFields.title = String(fc.args.title);
+                                    }
+                                    if (fc.args.content) {
+                                        updatedFields.content = String(fc.args.content);
+                                    }
+                                    if (Object.keys(updatedFields).length > 0) {
+                                        await updateNoteInStore(noteIdToUpdate, updatedFields);
+                                        result = { success: true, noteId: noteIdToUpdate };
+                                        showToast({ message: `Note "${updatedFields.title || noteToUpdate.title}" updated!`, type: 'success' });
+                                    } else {
+                                        result = { success: false, error: "No fields to update were provided." };
+                                    }
+                                } else {
+                                    result = { success: false, error: "Note not found." };
+                                }
+                                break;
+                            case 'deleteNote':
+                                const noteIdToDelete = String(fc.args.noteId || '');
+                                const noteToDeleteInstance = getNoteById(noteIdToDelete);
+                                if (noteToDeleteInstance) {
+                                    await deleteNote(noteIdToDelete);
+                                    if (activeNoteId === noteIdToDelete) setActiveNoteId(null);
+                                    result = { success: true, noteId: noteIdToDelete };
+                                    showToast({ message: `Note "${noteToDeleteInstance.title}" deleted!`, type: 'success' });
                                 } else {
                                     result = { success: false, error: "Note not found." };
                                 }
@@ -401,14 +428,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                     functionResponses.push({ id: fc.id, name: fc.name, response: { result }});
                 }
                 
-                // Fix: `toolResponses` is not a valid parameter. Send function responses as parts of a new message.
                 const functionResponseParts = functionResponses.map(({ name, response }) => ({
                     functionResponse: { name, response },
                 }));
                 response = await chat.sendMessage({ message: functionResponseParts });
             }
 
-            // Fix: Explicitly type the updated message object to resolve TypeScript inference issue.
             setChatMessages(prev => prev.map(msg => {
                 if (msg === newUserMessage) {
                     const updatedMsg: ChatMessage = { ...msg, status: 'complete' };
@@ -425,7 +450,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
             setChatError(errorMessage);
             setChatMessages(prev => {
-                // Fix: Explicitly type the updated message object to resolve TypeScript inference issue.
                  const updated = prev.map(msg => {
                     if (msg === newUserMessage) {
                         const updatedMsg: ChatMessage = { ...msg, status: 'complete' };

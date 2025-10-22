@@ -124,29 +124,65 @@ const findNotesTool: FunctionDeclaration = {
   },
 };
 
-const updateNoteContentTool: FunctionDeclaration = {
-  name: 'updateNoteContent',
+const getNoteContentTool: FunctionDeclaration = {
+  name: 'getNoteContent',
   parameters: {
     type: Type.OBJECT,
-    description: 'Appends new content to an existing note.',
+    description: 'Retrieves the full title and markdown content of a specific note.',
+    properties: {
+      noteId: {
+        type: Type.STRING,
+        description: 'The ID of the note to read.',
+      },
+    },
+    required: ['noteId'],
+  },
+};
+
+const updateNoteTool: FunctionDeclaration = {
+  name: 'updateNote',
+  parameters: {
+    type: Type.OBJECT,
+    description: 'Updates an existing note by replacing its title and/or content. Provide only the fields that need to be changed.',
     properties: {
       noteId: {
         type: Type.STRING,
         description: 'The ID of the note to update.',
       },
-      contentToAppend: {
+      title: {
         type: Type.STRING,
-        description: 'The new markdown content to append to the note.',
+        description: 'The new title for the note.',
+      },
+      content: {
+        type: Type.STRING,
+        description: 'The new, full markdown content that will replace the entire existing content of the note.',
       },
     },
-    required: ['noteId', 'contentToAppend'],
+    required: ['noteId'],
+  },
+};
+
+const deleteNoteTool: FunctionDeclaration = {
+  name: 'deleteNote',
+  parameters: {
+    type: Type.OBJECT,
+    description: 'Permanently deletes a note.',
+    properties: {
+      noteId: {
+        type: Type.STRING,
+        description: 'The ID of the note to delete.',
+      },
+    },
+    required: ['noteId'],
   },
 };
 
 const aiTools: FunctionDeclaration[] = [
     createNoteTool,
     findNotesTool,
-    updateNoteContentTool
+    getNoteContentTool,
+    updateNoteTool,
+    deleteNoteTool,
 ];
 
 
@@ -591,7 +627,7 @@ export const getGeneralChatSession = (): Chat => {
              generalChatSession = ai.chats.create({
                 model: 'gemini-2.5-flash',
                 config: {
-                    systemInstruction: "You are WesAI, a helpful and general-purpose AI assistant. You can create, find, and update notes for the user. When a user asks you to perform an action, use the provided tools. When you need to find a note to update, use the findNotes tool first, then confirm with the user if multiple notes are found before using the updateNoteContent tool. Always inform the user of the actions you have taken.",
+                    systemInstruction: "You are WesAI, a helpful and general-purpose AI assistant. Your primary role is to help the user manage their notes. You can create, find, read, update, and delete notes using the provided tools. \n\n**Your workflow for editing or refining a note should be:**\n1. Use `findNotes` to locate the relevant note(s) based on the user's request. If multiple notes match, ask the user for clarification.\n2. Once the target note ID is confirmed, use `getNoteContent` to retrieve its current content.\n3. Perform the requested refinement (e.g., proofreading, summarizing, reformatting) on the content you retrieved.\n4. Use `updateNote` with the `noteId` and the new, complete `content` to save the changes.\n\nAlways inform the user of the actions you have taken, such as which note you have updated or deleted.",
                     tools: [{ functionDeclarations: aiTools }],
                 }
             });

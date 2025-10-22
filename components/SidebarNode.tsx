@@ -230,4 +230,4 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
     );
 };
 
-export default SidebarNode;
+export default React.memo(SidebarNode);

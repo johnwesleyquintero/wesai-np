@@ -123,9 +123,9 @@ const Sidebar: React.FC<SidebarProps> = ({
     const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({});
     const [focusedNodeId, setFocusedNodeId] = useState<string | null>(null);
 
-    const toggleFolder = (folderId: string) => {
+    const toggleFolder = useCallback((folderId: string) => {
         setExpandedFolders(prev => ({ ...prev, [folderId]: !(prev[folderId] ?? true) }));
-    };
+    }, []);
 
     const getVisibleNodes = useCallback((nodes: TreeNode[]): string[] => {
         let ids: string[] = [];

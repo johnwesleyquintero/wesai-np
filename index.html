@@ -36,36 +36,21 @@
       }
     </script>
   <style>
-    .markdown-highlighter .token.punctuation { color: #a1a1aa; /* zinc-400 */ }
-    .dark .markdown-highlighter .token.punctuation { color: #71717a; /* zinc-500 */ }
-    .markdown-highlighter .token.header-punctuation,
-    .markdown-highlighter .token.header { color: #3b82f6; font-weight: bold; }
-    .dark .markdown-highlighter .token.header-punctuation,
-    .dark .markdown-highlighter .token.header { color: #60a5fa; }
-    .markdown-highlighter .token.bold-punctuation,
-    .markdown-highlighter .token.bold { font-weight: bold; color: #059669; }
-    .dark .markdown-highlighter .token.bold-punctuation,
-    .dark .markdown-highlighter .token.bold { color: #34d399; }
-    .markdown-highlighter .token.italic-punctuation,
-    .markdown-highlighter .token.italic { font-style: italic; color: #059669; }
-    .dark .markdown-highlighter .token.italic-punctuation,
-    .dark .markdown-highlighter .token.italic { color: #34d399; }
-    .markdown-highlighter .token.strikethrough-punctuation,
-    .markdown-highlighter .token.strikethrough { text-decoration: line-through; }
-    .markdown-highlighter .token.code { background-color: #e2e8f0; color: #c2410c; font-family: monospace; padding: 0.1em 0.3em; border-radius: 4px; }
-    .dark .markdown-highlighter .token.code { background-color: #3f3f46; color: #fb923c; }
-    .markdown-highlighter .token.link,
-    .markdown-highlighter .token.link-url { color: #6d28d9; }
-    .dark .markdown-highlighter .token.link,
-    .dark .markdown-highlighter .token.link-url { color: #a78bfa; }
-    .markdown-highlighter .token.blockquote { color: #78716c; }
-    .dark .markdown-highlighter .token.blockquote { color: #a1a1aa; }
-    .markdown-highlighter .token.list-punctuation { color: #ea580c; font-weight: bold; }
-    .dark .markdown-highlighter .token.list-punctuation { color: #f97316; }
-    .markdown-highlighter .token.hr { color: #d4d4d8; }
-    .dark .markdown-highlighter .token.hr { color: #3f3f46; }
     .chat-markdown p:first-child { margin-top: 0; }
     .chat-markdown p:last-child { margin-bottom: 0; }
+    .markdown-preview pre {
+        background-color: #f5f5f4; /* stone-100 */
+        color: #18181b; /* zinc-900 */
+        padding: 1rem;
+        border-radius: 8px;
+        overflow-x: auto;
+        border: 1px solid #d4d4d8; /* zinc-300 */
+    }
+    .dark .markdown-preview pre {
+        background-color: #27272a; /* zinc-800 */
+        color: #f5f5f4; /* stone-100 */
+        border-color: #3f3f46; /* zinc-700 */
+    }
   </style>
   <script type="importmap">
 {
@@ -74,7 +59,13 @@
     "react/": "https://aistudiocdn.com/react@^19.2.0/",
     "react": "https://aistudiocdn.com/react@^19.2.0",
     "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
-    "@supabase/supabase-js": "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm"
+    "@supabase/supabase-js": "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm",
+    "react-markdown": "https://esm.sh/react-markdown@9?deps=react@19",
+    "remark-gfm": "https://esm.sh/remark-gfm@4?deps=react@19",
+    "rehype-raw": "https://esm.sh/rehype-raw@7?deps=react@19",
+    "react-syntax-highlighter": "https://esm.sh/react-syntax-highlighter@15.5.0?deps=react@19",
+    "react-syntax-highlighter/dist/esm/styles/prism/okaidia": "https://esm.sh/react-syntax-highlighter@15.5.0/dist/esm/styles/prism/okaidia",
+    "react-syntax-highlighter/": "https://aistudiocdn.com/react-syntax-highlighter@^16.0.0/"
   }
 }
 </script>

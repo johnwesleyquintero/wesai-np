@@ -146,13 +146,13 @@ function AppContent() {
         localStorage.setItem(WELCOME_SCREEN_SIDEBAR_WIDTH_KEY, String(sidebarWidth));
     }, [sidebarWidth]);
 
-    const handleSelectNote = (id: string) => {
+    const handleSelectNote = useCallback((id: string) => {
         setActiveNoteId(id);
         setView('NOTES');
         if (isMobileView) {
             setIsSidebarOpen(false);
         }
-    };
+    }, [isMobileView, setActiveNoteId, setIsSidebarOpen, setView]);
     
     const activeNote = useMemo(() => {
         if (!activeNoteId) return null;

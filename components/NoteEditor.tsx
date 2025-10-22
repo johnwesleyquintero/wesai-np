@@ -12,7 +12,6 @@ import TitleSuggestion from './TitleSuggestion';
 import InlineAiMenu from './InlineAiMenu';
 import SpellcheckMenu from './SpellcheckMenu';
 import { useEditorContext, useStoreContext, useUIContext } from '../context/AppContext';
-import MarkdownHighlighter from './MarkdownHighlighter';
 import NoteLinker from './NoteLinker';
 import BacklinksDisplay from './BacklinksDisplay';
 import { useBacklinks } from '../hooks/useBacklinks';
@@ -89,7 +88,6 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onRestoreVersion, templat
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const titleInputRef = useRef<HTMLInputElement>(null);
     const editorPaneRef = useRef<HTMLDivElement>(null);
-    const highlighterRef = useRef<HTMLDivElement>(null);
     
     const lastAnalyzedContentForTagsRef = useRef<string | null>(null);
     const lastAnalyzedContentForTitleRef = useRef<string | null>(null);
@@ -128,9 +126,6 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onRestoreVersion, templat
                 textarea.style.height = 'auto'; // Reset height to calculate scrollHeight correctly
                 const scrollHeight = textarea.scrollHeight;
                 textarea.style.height = `${scrollHeight}px`;
-                if (highlighterRef.current) {
-                    highlighterRef.current.style.height = `${scrollHeight}px`;
-                }
             };
             resize(); // Initial resize
             window.addEventListener('resize', resize);
@@ -398,10 +393,6 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onRestoreVersion, templat
     }, [activeSpellingError]);
     
     const handleScroll = (e: React.UIEvent<HTMLTextAreaElement>) => {
-        if (highlighterRef.current) {
-            highlighterRef.current.scrollTop = e.currentTarget.scrollTop;
-            highlighterRef.current.scrollLeft = e.currentTarget.scrollLeft;
-        }
          setSelection(null);
          setActiveSpellingError(null);
          setNoteLinker(null);
@@ -728,7 +719,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onRestoreVersion, templat
 
     return (
         <div className="flex-1 flex flex-col h-full relative bg-light-background dark:bg-dark-background" onDragOver={(e) => { e.preventDefault(); if (!isEffectivelyReadOnly) setIsDragOver(true); }} onDragLeave={() => setIsDragOver(false)} onDrop={handleDrop}>
-             <Toolbar note={note} onDelete={() => deleteNote(note.id)} onToggleFavorite={() => toggleFavorite(note.id)} saveStatus={saveStatus} contentToEnhance={editorState.content} onContentUpdate={(content) => setEditorState({...editorState, content})} onToggleHistory={() => setIsHistoryOpen(!isHistoryOpen)} isHistoryOpen={isHistoryOpen} templates={templates} onApplyTemplate={handleApplyTemplate} isMobileView={isMobileView} onToggleSidebar={onToggleSidebar} onUndo={undo} onRedo={redo} canUndo={canUndo} canRedo={canRedo} viewMode={viewMode} onToggleViewMode={() => setViewMode(prev => prev === 'edit' ? 'preview' : 'edit')} isCheckingSpelling={isCheckingSpelling} isAiRateLimited={isAiRateLimited} wordCount={wordCount} charCount={charCount} />
+             <Toolbar note={note} onDelete={() => deleteNote(note.id)} onToggleFavorite={() => toggleFavorite(note.id)} saveStatus={saveStatus} editorTitle={editorState.title} contentToEnhance={editorState.content} onContentUpdate={(content) => setEditorState({...editorState, content})} onToggleHistory={() => setIsHistoryOpen(!isHistoryOpen)} isHistoryOpen={isHistoryOpen} templates={templates} onApplyTemplate={handleApplyTemplate} isMobileView={isMobileView} onToggleSidebar={onToggleSidebar} onUndo={undo} onRedo={redo} canUndo={canUndo} canRedo={canRedo} viewMode={viewMode} onToggleViewMode={() => setViewMode(prev => prev === 'edit' ? 'preview' : 'edit')} isCheckingSpelling={isCheckingSpelling} isAiRateLimited={isAiRateLimited} wordCount={wordCount} charCount={charCount} />
              {isAiRateLimited && <div className="bg-yellow-100 dark:bg-yellow-900/30 border-b border-yellow-300 dark:border-yellow-700/50 py-2 px-4 text-center text-sm text-yellow-800 dark:text-yellow-200 flex-shrink-0">AI features are temporarily paused due to high usage. They will be available again shortly.</div>}
             
             <div ref={editorPaneRef} className="flex-1 overflow-y-auto relative">
@@ -754,9 +745,6 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onRestoreVersion, templat
                             />
                             {!isEffectivelyReadOnly && <TitleSuggestion suggestion={suggestedTitle} onApply={handleApplyTitleSuggestion} isLoading={isSuggestingTitle} error={titleSuggestionError} />}
                             <div className="relative mt-4">
-                                <div ref={highlighterRef} className={`${sharedEditorClasses} markdown-highlighter absolute top-0 left-0 text-transparent pointer-events-none z-0 overflow-y-hidden`}>
-                                   <MarkdownHighlighter content={editorState.content} spellingErrors={spellingErrors} />
-                                </div>
                                 <textarea
                                     ref={textareaRef}
                                     onSelect={handleSelect}
@@ -765,7 +753,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onRestoreVersion, templat
                                     value={displayedContent}
                                     onChange={handleChange}
                                     placeholder="Start writing, drop a file, or type / for commands..."
-                                    className={`${sharedEditorClasses} relative z-10 caret-light-text dark:caret-dark-text bg-transparent block overflow-y-hidden`}
+                                    className={`${sharedEditorClasses} relative z-10 caret-light-text dark:caret-dark-text bg-transparent block`}
                                     readOnly={isVersionPreviewing}
                                     spellCheck={false}
                                 />

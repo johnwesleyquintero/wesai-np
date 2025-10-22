@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Note, Template } from '../types';
 import { enhanceText, summarizeAndExtractActions } from '../services/geminiService';
-import { StarIcon, TrashIcon, SparklesIcon, HistoryIcon, ArrowDownTrayIcon, DocumentDuplicateIcon, Bars3Icon, ArrowUturnLeftIcon, ArrowUturnRightIcon, EyeIcon, PencilSquareIcon, CheckBadgeIcon, ClipboardDocumentIcon, InformationCircleIcon, EllipsisVerticalIcon } from './Icons';
+import { StarIcon, TrashIcon, SparklesIcon, HistoryIcon, ArrowDownTrayIcon, DocumentDuplicateIcon, Bars3Icon, ArrowUturnLeftIcon, ArrowUturnRightIcon, EyeIcon, PencilSquareIcon, CheckBadgeIcon, ClipboardDocumentIcon, InformationCircleIcon, EllipsisVerticalIcon, DocumentPlusIcon } from './Icons';
 import { useToast } from '../context/ToastContext';
 import NoteInfoPopover from './NoteInfoPopover';
 import { useStoreContext } from '../context/AppContext';
@@ -11,6 +11,7 @@ interface ToolbarProps {
     onDelete: (noteId: string) => void;
     onToggleFavorite: (id: string) => void;
     saveStatus: 'saved' | 'saving' | 'unsaved';
+    editorTitle: string;
     contentToEnhance: string;
     onContentUpdate: (newContent: string) => void;
     onToggleHistory: () => void;
@@ -254,11 +255,11 @@ const ExportMenu: React.FC<{ note: Note }> = ({ note }) => {
 };
 
 const Toolbar: React.FC<ToolbarProps> = ({ 
-    note, onDelete, onToggleFavorite, saveStatus, contentToEnhance, onContentUpdate, onToggleHistory, isHistoryOpen, 
+    note, onDelete, onToggleFavorite, saveStatus, editorTitle, contentToEnhance, onContentUpdate, onToggleHistory, isHistoryOpen, 
     templates, onApplyTemplate, isMobileView, onToggleSidebar, onUndo, onRedo, canUndo, canRedo,
     viewMode, onToggleViewMode, isCheckingSpelling, isAiRateLimited, wordCount, charCount
 }) => {
-    const { setNoteToDelete } = useStoreContext();
+    const { setNoteToDelete, addTemplate } = useStoreContext();
     const [aiActionInProgress, setAiActionInProgress] = useState<'enhancing' | 'summarizing' | null>(null);
     const [aiActionError, setAiActionError] = useState<string | null>(null);
     const [isInfoOpen, setIsInfoOpen] = useState(false);
@@ -272,6 +273,21 @@ const Toolbar: React.FC<ToolbarProps> = ({
             return () => clearTimeout(timer);
         }
     }, [aiActionError]);
+
+    const handleSaveAsTemplate = () => {
+        addTemplate(editorTitle, contentToEnhance)
+            .then(() => {
+                showToast({ message: `Template "${editorTitle}" saved!`, type: 'success' });
+            })
+            .catch((err) => {
+                showToast({ message: `Failed to save template: ${err.message}`, type: 'error' });
+            });
+        
+        // Close mobile menu if it was used to trigger this
+        if (isMoreMenuOpen) {
+            setIsMoreMenuOpen(false);
+        }
+    };
     
     // --- Logic for Mobile 'More' Menu ---
     const sanitizeFilename = (name: string) => name.replace(/[\/\\?%*:|"<>]/g, '-').trim() || 'Untitled';
@@ -387,6 +403,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
                                     ) : (
                                         <p className="px-3 py-2 text-sm text-light-text/60 dark:text-dark-text/60">No templates found.</p>
                                     )}
+                                     <button onClick={handleSaveAsTemplate} className="w-full text-left flex items-center gap-2 block px-3 py-2 text-sm hover:bg-light-ui dark:hover:bg-dark-ui"><DocumentPlusIcon /> Save as Template</button>
                                     <div className="my-1 border-t border-light-border dark:border-dark-border"></div>
                                     <h3 className="px-3 pt-2 pb-1 text-xs font-semibold text-light-text/60 dark:text-dark-text/60">Export</h3>
                                     <button onClick={handleMobileCopyMarkdown} className="w-full text-left flex items-center gap-2 block px-3 py-2 text-sm hover:bg-light-ui dark:hover:bg-dark-ui"><ClipboardDocumentIcon /> Copy as Markdown</button>
@@ -398,6 +415,9 @@ const Toolbar: React.FC<ToolbarProps> = ({
                     ) : (
                         <>
                             <TemplateMenu templates={templates} onApplyTemplate={onApplyTemplate} />
+                            <button onClick={handleSaveAsTemplate} className="p-2 rounded-md hover:bg-light-ui dark:hover:bg-dark-ui transition-colors" aria-label="Save current note as Template">
+                                <DocumentPlusIcon />
+                            </button>
                             <ExportMenu note={note} />
                         </>
                     )}

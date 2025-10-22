@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ChatMessage, Note, ChatMode } from '../types';
-import { Bars3Icon, SparklesIcon, DocumentTextIcon, PaperAirplaneIcon, MagnifyingGlassIcon, ClipboardDocumentIcon, PaperClipIcon, XMarkIcon, Cog6ToothIcon, CheckBadgeIcon } from './Icons';
+import { Bars3Icon, SparklesIcon, DocumentTextIcon, PaperAirplaneIcon, MagnifyingGlassIcon, ClipboardDocumentIcon, PaperClipIcon, XMarkIcon, Cog6ToothIcon, CheckBadgeIcon, PencilSquareIcon, ArrowTopRightOnSquareIcon } from './Icons';
 import MarkdownPreview from './MarkdownPreview';
 import { useUIContext, useStoreContext } from '../context/AppContext';
 import { useToast } from '../context/ToastContext';
+import { suggestTitle } from '../services/geminiService';
 
 const ChatView: React.FC = () => {
-    const { chatMessages: messages, onSendMessage, onGenerateServiceResponse, onSendGeneralMessage, chatStatus, clearChat } = useStoreContext();
+    const { chatMessages: messages, onSendMessage, onGenerateServiceResponse, onSendGeneralMessage, chatStatus, clearChat, onAddNote } = useStoreContext();
     const { isMobileView, onToggleSidebar, setView, isAiRateLimited } = useUIContext();
     const { setActiveNoteId } = useStoreContext();
     const { showToast } = useToast();
@@ -55,6 +56,19 @@ const ChatView: React.FC = () => {
         navigator.clipboard.writeText(content)
             .then(() => showToast({ message: 'Response copied to clipboard!', type: 'success' }))
             .catch(() => showToast({ message: 'Failed to copy text.', type: 'error' }));
+    };
+    
+    const handleCreateNote = async (content: string) => {
+        if (!content.trim()) return;
+        try {
+            const title = await suggestTitle(content.substring(0, 1000));
+            const newNoteId = await onAddNote(null, title || 'AI Chat Response', content);
+            showToast({ message: `Note "${title || 'AI Chat Response'}" created!`, type: 'success' });
+            setActiveNoteId(newNoteId);
+            setView('NOTES');
+        } catch (error) {
+            showToast({ message: `Failed to create note. ${error instanceof Error ? error.message : ''}`, type: 'error' });
+        }
     };
     
     const handleModeChange = (newMode: ChatMode) => {
@@ -245,8 +259,21 @@ const ChatView: React.FC = () => {
                                     )}
                                     {msg.role === 'ai' ? (
                                         <>
-                                            <div className="prose prose-sm sm:prose-base max-w-none text-light-text dark:text-dark-text">
+                                            <div className="prose prose-sm sm:prose-base max-w-none text-light-text dark:text-dark-text chat-markdown">
                                                 <MarkdownPreview title="" content={msg.content as string || '...'} onToggleTask={() => {}} />
+                                            </div>
+                                            <div className="mt-4 pt-3 border-t border-light-ui-hover dark:border-dark-ui-hover flex items-center gap-2">
+                                                <button onClick={() => handleCopy(msg.content as string)} className="flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-md bg-light-background dark:bg-dark-background hover:bg-light-ui dark:hover:bg-dark-ui-hover border border-light-border dark:border-dark-border">
+                                                    <ClipboardDocumentIcon className="w-4 h-4"/> Copy
+                                                </button>
+                                                <button onClick={() => handleCreateNote(msg.content as string)} className="flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-md bg-light-background dark:bg-dark-background hover:bg-light-ui dark:hover:bg-dark-ui-hover border border-light-border dark:border-dark-border">
+                                                    <PencilSquareIcon className="w-4 h-4"/> Create Note
+                                                </button>
+                                                {msg.noteId && (
+                                                    <button onClick={() => { setActiveNoteId(msg.noteId!); setView('NOTES'); }} className="flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-md bg-light-background dark:bg-dark-background hover:bg-light-ui dark:hover:bg-dark-ui-hover border border-light-border dark:border-dark-border">
+                                                        <ArrowTopRightOnSquareIcon className="w-4 h-4"/> Jump to Note
+                                                    </button>
+                                                )}
                                             </div>
                                             <button onClick={() => handleCopy(msg.content as string)} className="absolute -top-3 -right-3 p-1.5 bg-light-background dark:bg-dark-background rounded-full shadow-md border border-light-border dark:border-dark-border opacity-0 group-hover:opacity-100 transition-opacity">
                                                 <ClipboardDocumentIcon className="w-4 h-4" />

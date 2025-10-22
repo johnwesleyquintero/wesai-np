@@ -52,6 +52,7 @@ export interface ChatMessage {
     sources?: Note[];
     image?: string;
     status?: 'pending' | 'processing' | 'complete';
+    noteId?: string;
 }
 
 export type FilterType = 'RECENT' | 'FAVORITES' | 'ALL';

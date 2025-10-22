@@ -143,11 +143,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
     // Chat State
     const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
-    const [chatStatus, setChatStatus] = useState<'idle' | 'searching' | 'replying' | 'using_tool'>('idle');
     const [chatError, setChatError] = useState<string | null>(null);
+    const [chatStatus, setChatStatus] = useState<'idle' | 'searching' | 'replying' | 'using_tool'>('idle');
 
     // Editor State
     const [editorActions, setEditorActions] = useState<EditorActions | null>(null);
+    const onboardingDoneRef = useRef(false);
 
     // Auth Effect
     useEffect(() => {
@@ -190,7 +191,28 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         };
     }, []);
     
-    // Fix: Update onAddNote to accept title and content, matching its usage.
+    useEffect(() => {
+        // Only run for authenticated users, after initial load, if they have no notes, and only once per session.
+        if (!isStoreLoading && session?.user && notes.length === 0 && collections.length === 0 && !onboardingDoneRef.current) {
+            onboardingDoneRef.current = true;
+    
+            const createOnboardingNotes = async () => {
+                try {
+                    const secondNoteContent = `# This is a Linked Note\n\nYou've successfully navigated here from the welcome note!\n\nThis demonstrates how you can create a personal wiki or a "second brain" by connecting your thoughts and ideas.\n\nGo back to the welcome note by checking the "Linked Mentions" section at the bottom of this note.`;
+                    const secondNoteId = await createNote(null, 'A Linked Note Example', secondNoteContent);
+                    
+                    const firstNoteContent = `# Welcome to WesAI Notepad, Brother!\n\nThis is your new digital command center. Here's a quick rundown of what you can do.\n\n## Write in Markdown\n\nYou can use Markdown to format your notes.\n\n- Use asterisks for **bold** and *italic* text.\n- Create lists like this one.\n- Use hashtags for headers.\n\n## Create To-Do Lists\n\n- [x] Learn about WesAI Notepad\n- [ ] Build my second brain\n- [ ] Conquer the world\n\n## Link Your Ideas\n\nCreate a network of knowledge by linking notes together. Just type \`[[\` to get started.\n\nHere's a link to another note I created for you: [[${secondNoteId}|A Linked Note Example]]\n\n## Use the AI Assistant\n\nSelect any text to get AI suggestions, or open the AI Chat to ask questions about your notes.\n\nTry this: highlight the text below, and in the popup menu, select **AI Assistant -> Make Shorter**.\n\n> WesAI Notepad is a sophisticated, high-performance software application designed to facilitate the seamless creation, organization, and retrieval of digital notes, leveraging advanced artificial intelligence capabilities to enhance user productivity and streamline complex information management workflows.`;
+                    const firstNoteId = await createNote(null, 'Welcome to WesAI Notepad!', firstNoteContent);
+                    setActiveNoteId(firstNoteId); // Open the welcome note
+                } catch (error) {
+                    console.error("Failed to create onboarding notes:", error);
+                }
+            };
+    
+            createOnboardingNotes();
+        }
+    }, [isStoreLoading, session, notes, collections, createNote]);
+
     const onAddNote = useCallback(async (parentId: string | null = null, title?: string, content?: string) => {
         const newNoteId = await createNote(parentId, title, content);
         setActiveNoteId(newNoteId);
@@ -346,6 +368,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         const userMessageId = Date.now();
         const newUserMessage: ChatMessage = { role: 'user', content: query, image, status: 'processing' };
         setChatMessages(prev => [...prev, newUserMessage]);
+        let lastTouchedNoteId: string | null = null;
 
         try {
             const chat = getGeneralChatSession();
@@ -365,6 +388,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                                 const content = String(fc.args.content || '');
                                 const newNoteId = await onAddNote(null, title, content);
                                 result = { success: true, noteId: newNoteId };
+                                lastTouchedNoteId = newNoteId;
                                 showToast({ message: `Note "${title}" created!`, type: 'success' });
                                 break;
                             case 'findNotes':
@@ -397,6 +421,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                                     if (Object.keys(updatedFields).length > 0) {
                                         await updateNoteInStore(noteIdToUpdate, updatedFields);
                                         result = { success: true, noteId: noteIdToUpdate };
+                                        lastTouchedNoteId = noteIdToUpdate;
                                         showToast({ message: `Note "${updatedFields.title || noteToUpdate.title}" updated!`, type: 'success' });
                                     } else {
                                         result = { success: false, error: "No fields to update were provided." };
@@ -472,7 +497,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             }));
 
             if (response.text) {
-                setChatMessages(prev => [...prev, { role: 'ai', content: response.text }]);
+                setChatMessages(prev => [...prev, { role: 'ai', content: response.text, noteId: lastTouchedNoteId }]);
             }
 
         } catch (error) {

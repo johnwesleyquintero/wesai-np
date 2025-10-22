@@ -670,6 +670,52 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onRestoreVersion, templat
         }
     };
     
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+        const pairs: { [key: string]: string } = { '(': ')', '[': ']', '{': '}', '"': '"', '*': '*', '_': '_' };
+        const textarea = e.currentTarget;
+        const { selectionStart, selectionEnd, value } = textarea;
+
+        // Auto-pairing on key press
+        if (pairs[e.key]) {
+            e.preventDefault();
+            const char = e.key;
+            const closingChar = pairs[char];
+            
+            // Wrap selection
+            if (selectionStart !== selectionEnd) {
+                const selectedText = value.substring(selectionStart, selectionEnd);
+                const newContent = `${value.substring(0, selectionStart)}${char}${selectedText}${closingChar}${value.substring(selectionEnd)}`;
+                setEditorState({ ...editorState, content: newContent });
+                
+                setTimeout(() => {
+                    textarea.selectionStart = selectionStart + 1;
+                    textarea.selectionEnd = selectionEnd + 1;
+                }, 0);
+            } else { // Insert pair and move cursor
+                const newContent = `${value.substring(0, selectionStart)}${char}${closingChar}${value.substring(selectionStart)}`;
+                setEditorState({ ...editorState, content: newContent });
+
+                setTimeout(() => {
+                    textarea.selectionStart = textarea.selectionEnd = selectionStart + 1;
+                }, 0);
+            }
+        }
+
+        // Smart backspace to delete pairs
+        if (e.key === 'Backspace' && selectionStart === selectionEnd) {
+            const charBefore = value[selectionStart - 1];
+            const charAfter = value[selectionStart];
+            if (charBefore && pairs[charBefore] === charAfter) {
+                e.preventDefault();
+                const newContent = value.substring(0, selectionStart - 1) + value.substring(selectionStart + 1);
+                setEditorState({ ...editorState, content: newContent });
+                setTimeout(() => {
+                    textarea.selectionStart = textarea.selectionEnd = selectionStart - 1;
+                }, 0);
+            }
+        }
+    };
+    
     const handleRestore = (version: NoteVersion) => { onRestoreVersion(note.id, version); setPreviewVersion(null); setIsHistoryOpen(false); };
     const handleCloseHistory = () => { setPreviewVersion(null); setIsHistoryOpen(false); };
     const handleApplyTemplate = (template: Template) => { if (editorState.content.trim() !== '' && !window.confirm('Applying a template will replace the current note content. Are you sure?')) { return; } setEditorState({ title: template.title, content: template.content, tags: []}); setViewMode('edit'); };
@@ -715,6 +761,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onRestoreVersion, templat
                                     ref={textareaRef}
                                     onSelect={handleSelect}
                                     onScroll={handleScroll}
+                                    onKeyDown={handleKeyDown}
                                     value={displayedContent}
                                     onChange={handleChange}
                                     placeholder="Start writing, drop a file, or type / for commands..."

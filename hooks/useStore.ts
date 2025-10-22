@@ -27,7 +27,9 @@ const processNote = (noteData: any): Note => {
     const note = fromSupabase(noteData) as Note;
     note.content = note.content || '';
     note.tags = note.tags || [];
-    note.history = (note as any).history || []; // The notes table doesn't have history, it's populated on demand.
+    // The notes table doesn't have a history column by default, but we safeguard it here
+    // in case it's added by joins or other logic in the future.
+    note.history = (note as any).history || [];
     return note;
 };
 

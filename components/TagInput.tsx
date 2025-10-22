@@ -36,7 +36,7 @@ const TagInput: React.FC<TagInputProps> = ({ tags, setTags, readOnly = false }) 
                 <div key={tag} className="flex items-center bg-light-ui dark:bg-dark-ui rounded-full px-3 py-1 text-sm">
                     <span>{tag}</span>
                     {!readOnly && (
-                        <button onClick={() => removeTag(tag)} className="ml-2">
+                        <button onClick={() => removeTag(tag)} className="ml-2 p-0.5 rounded-full transition-colors hover:bg-light-ui-hover dark:hover:bg-dark-ui-hover">
                             <XMarkIcon className="w-4 h-4" />
                         </button>
                     )}

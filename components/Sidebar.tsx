@@ -93,7 +93,7 @@ const FooterButton: React.FC<{
             className={`p-2 rounded-md transition-colors text-light-text/70 dark:text-dark-text/70 hover:text-light-text dark:hover:text-dark-text ${className} ${
                 isActive
                     ? 'bg-light-primary/20 dark:bg-dark-primary/20 !text-light-primary dark:!text-dark-primary'
-                    : 'hover:bg-light-ui/60 dark:hover:bg-dark-ui-hover/60'
+                    : 'hover:bg-light-background dark:hover:bg-dark-background'
             }`}
              aria-label={tooltip}
         >
@@ -266,7 +266,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             title="Smart Folders"
             count={smartCollections.length}
             actions={(
-                <button onClick={() => openSmartFolderModal(null)} className="p-1 rounded text-light-text/60 dark:text-dark-text/60 hover:text-light-text dark:hover:text-dark-text hover:bg-light-ui dark:hover:bg-dark-ui" aria-label="Add new smart folder">
+                <button onClick={() => openSmartFolderModal(null)} className="p-1 rounded text-light-text/60 dark:text-dark-text/60 hover:text-light-text dark:hover:text-dark-text hover:bg-light-background dark:hover:bg-dark-background" aria-label="Add new smart folder">
                     <PlusIcon className="w-4 h-4" />
                 </button>
             )}
@@ -312,7 +312,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                 title="Folders"
                 count={notes.length}
                 actions={(
-                    <button onClick={() => addCollection('New Folder', null)} className="p-1 rounded text-light-text/60 dark:text-dark-text/60 hover:text-light-text dark:hover:text-dark-text hover:bg-light-ui dark:hover:bg-dark-ui" aria-label="Add new folder">
+                    <button onClick={() => addCollection('New Folder', null)} className="p-1 rounded text-light-text/60 dark:text-dark-text/60 hover:text-light-text dark:hover:text-dark-text hover:bg-light-background dark:hover:bg-dark-background" aria-label="Add new folder">
                         <FolderPlusIcon className="w-4 h-4" />
                     </button>
                 )}

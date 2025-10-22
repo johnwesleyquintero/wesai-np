@@ -249,19 +249,19 @@ const ChatView: React.FC = () => {
                     <div className="flex space-x-1 bg-light-ui dark:bg-dark-ui p-1 rounded-lg">
                         <button
                             onClick={() => handleModeChange('ASSISTANT')}
-                            className={`px-3 py-1.5 text-sm font-semibold rounded-md ${mode === 'ASSISTANT' ? 'bg-white dark:bg-dark-ui-hover shadow-sm' : 'text-light-text/70 dark:text-dark-text/70'}`}
+                            className={`px-3 py-1.5 text-sm font-semibold rounded-md transition-colors ${mode === 'ASSISTANT' ? 'bg-white dark:bg-dark-ui-hover shadow-sm' : 'text-light-text/70 dark:text-dark-text/70 hover:bg-light-background dark:hover:bg-dark-ui-hover'}`}
                         >
                            Knowledge Assistant
                         </button>
                         <button
                             onClick={() => handleModeChange('RESPONDER')}
-                            className={`px-3 py-1.5 text-sm font-semibold rounded-md ${mode === 'RESPONDER' ? 'bg-white dark:bg-dark-ui-hover shadow-sm' : 'text-light-text/70 dark:text-dark-text/70'}`}
+                            className={`px-3 py-1.5 text-sm font-semibold rounded-md transition-colors ${mode === 'RESPONDER' ? 'bg-white dark:bg-dark-ui-hover shadow-sm' : 'text-light-text/70 dark:text-dark-text/70 hover:bg-light-background dark:hover:bg-dark-ui-hover'}`}
                         >
                            Service Responder
                         </button>
                         <button
                             onClick={() => handleModeChange('GENERAL')}
-                            className={`px-3 py-1.5 text-sm font-semibold rounded-md ${mode === 'GENERAL' ? 'bg-white dark:bg-dark-ui-hover shadow-sm' : 'text-light-text/70 dark:text-dark-text/70'}`}
+                            className={`px-3 py-1.5 text-sm font-semibold rounded-md transition-colors ${mode === 'GENERAL' ? 'bg-white dark:bg-dark-ui-hover shadow-sm' : 'text-light-text/70 dark:text-dark-text/70 hover:bg-light-background dark:hover:bg-dark-ui-hover'}`}
                         >
                            General Assistant
                         </button>

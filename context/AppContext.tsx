@@ -237,13 +237,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         }
     }, [isStoreLoading, session, notes, collections, createNote]);
 
-    const onAddNote = useCallback(async (parentId: string | null = null, title?: string, content?: string) => {
+    const onAddNote = useCallback(async (parentId: string | null = null, title: string = "Untitled Note", content: string = "") => {
         const newNoteId = await createNote(parentId, title, content);
         setActiveNoteId(newNoteId);
         setView('NOTES');
         if (isMobileView) setIsSidebarOpen(false);
+        showToast({ message: `Note "${title}" created!`, type: 'success' });
         return newNoteId;
-    }, [createNote, isMobileView]);
+    }, [createNote, isMobileView, showToast]);
 
     const onAddNoteFromFile = useCallback(async (title: string, content: string, parentId: string | null) => {
         const newNoteId = await addNoteFromFile(title, content, parentId);
@@ -445,7 +446,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                                 const newNoteId = await onAddNote(null, title, content);
                                 result = { success: true, noteId: newNoteId };
                                 lastTouchedNoteId = newNoteId;
-                                showToast({ message: `Note "${title}" created!`, type: 'success' });
                                 break;
                             case 'findNotes':
                                 const queryToSearch = String(fc.args.query || '');

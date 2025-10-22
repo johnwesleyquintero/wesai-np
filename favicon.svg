@@ -4,8 +4,8 @@
   
   <!-- Book outline -->
   <path d="M20 18C20 15.7909 21.7909 14 24 14H44C46.2091 14 48 15.7909 48 18V46C48 48.2091 46.2091 50 44 50H24C21.7909 50 20 48.2091 20 46V18Z" 
-        stroke="#f5f5f4" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+        stroke="#60a5fa" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
   
   <!-- Book spine -->
-  <path d="M24 14V50" stroke="#f5f5f4" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M24 14V50" stroke="#60a5fa" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>

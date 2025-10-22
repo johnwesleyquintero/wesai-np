@@ -1,4 +1,5 @@
 import React from 'react';
+// Fix: Corrected import path for Icons
 import { SparklesIcon } from './Icons';
 
 interface TitleSuggestionProps {

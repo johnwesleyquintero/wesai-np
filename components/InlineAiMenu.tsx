@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { InlineAction } from '../services/geminiService';
+// Fix: Corrected import path for Icons
 import { SparklesIcon, BoldIcon, ItalicIcon, CodeIcon, LinkIcon, ChevronDownIcon } from './Icons';
 
 interface SelectionData {

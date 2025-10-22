@@ -1,547 +1,191 @@
-import React, { useMemo, useState, useRef, useCallback, useEffect } from 'react';
-import { Note, SearchMode, SmartCollection, Collection } from '../types';
-import NoteCard from './NoteCard';
-import {
-    PencilSquareIcon, Cog6ToothIcon, SunIcon, MoonIcon, XMarkIcon, MagnifyingGlassIcon, SparklesIcon,
-    PlusIcon, FolderPlusIcon, BrainIcon, StarIcon, ChevronDownIcon, ChevronRightIcon,
-    ChevronDoubleLeftIcon, FolderIcon,
-    // FIX: Imported TrashIcon to resolve reference errors.
-    TrashIcon,
-    PinIcon
-} from './Icons';
-import SidebarNode, { TreeNode } from './SidebarNode';
-import Highlight from './Highlight';
+import React, { useState, useMemo } from 'react';
 import { useStoreContext, useUIContext } from '../context/AppContext';
+import { Note, Collection, SmartCollection } from '../types';
+import NoteCard from './NoteCard';
+import SidebarNode from './SidebarNode';
+import { PlusIcon, SparklesIcon, Cog6ToothIcon, MagnifyingGlassIcon, ChevronDownIcon, FolderPlusIcon, BrainIcon } from './Icons';
+import BulkActionToolbar from './BulkActionToolbar';
 import { useDragAndDrop } from '../hooks/useDragAndDrop';
 
-interface SidebarProps {
-    notes: Note[];
-    favoriteNotes: Note[];
-    searchResults: Note[] | null;
-    activeNoteId: string | null;
-    searchTerm: string;
-    setSearchTerm: (term: string) => void;
-    searchMode: SearchMode;
-    setSearchMode: (mode: SearchMode) => void;
-    isAiSearching: boolean;
-    aiSearchError: string | null;
-    width: number;
-    activeSmartCollection: SmartCollection | null;
-    onActivateSmartCollection: (collection: SmartCollection) => void;
-    onClearActiveSmartCollection: () => void;
-    onSelectNote: (noteId: string) => void;
-    isCollapsed: boolean;
-    onToggleCollapsed: () => void;
-}
-
-const buildTree = (notes: Note[], collections: Collection[]): TreeNode[] => {
-    const noteMap = new Map(notes.map(note => [note.id, { ...note, children: [] as TreeNode[] }]));
-    const collectionMap = new Map(collections.map(c => [c.id, { ...c, type: 'collection' as const, children: [] as TreeNode[] }]));
-    
-    const tree: TreeNode[] = [];
-    
-    const allItemsMap: Map<string, TreeNode> = new Map<string, TreeNode>([...noteMap.entries(), ...collectionMap.entries()]);
-
-    allItemsMap.forEach(item => {
-        if (item.parentId === null) {
-            tree.push(item);
-        } else {
-            const parent = collectionMap.get(item.parentId);
-            if (parent) {
-                parent.children.push(item);
-            } else {
-                tree.push(item);
-            }
-        }
-    });
-
-    const sortNodes = (nodes: TreeNode[]) => {
-        nodes.sort((a, b) => {
-            const aIsCollection = 'type' in a && a.type === 'collection';
-            const bIsCollection = 'type' in b && b.type === 'collection';
-
-            if (aIsCollection && !bIsCollection) return -1;
-            if (!aIsCollection && bIsCollection) return 1;
-
-            if (!aIsCollection && !bIsCollection) { // both are notes
-                const noteA = a as Note;
-                const noteB = b as Note;
-                if (noteA.isPinned && !noteB.isPinned) return -1;
-                if (!noteA.isPinned && noteB.isPinned) return 1;
-            }
-
-            const aName = aIsCollection ? (a as Collection).name : (a as Note).title;
-            const bName = bIsCollection ? (b as Collection).name : (b as Note).title;
-            return aName.localeCompare(bName);
-        });
-
-        nodes.forEach(node => {
-            if ('children' in node && node.children.length > 0) {
-                sortNodes(node.children);
-            }
-        });
-    };
-    
-    sortNodes(tree);
-
-    return tree;
-};
-
-const FooterButton: React.FC<{
-    onClick?: () => void;
-    tooltip: string;
-    children: React.ReactNode;
-    isActive?: boolean;
-    className?: string;
-    hasIndicator?: boolean;
-}> = ({ onClick, tooltip, children, isActive = false, className = '', hasIndicator = false }) => (
-    <div className="relative group">
-        <button
-            onClick={onClick}
-            className={`p-2 rounded-md transition-colors text-light-text/70 dark:text-dark-text/70 hover:text-light-text dark:hover:text-dark-text ${className} ${
-                isActive
-                    ? 'bg-light-primary/20 dark:bg-dark-primary/20 !text-light-primary dark:!text-dark-primary'
-                    : 'hover:bg-light-background dark:hover:bg-dark-background'
-            }`}
-             aria-label={tooltip}
-        >
-            {children}
-            {hasIndicator && <div className="absolute top-1.5 right-1.5 w-2 h-2 bg-yellow-400 rounded-full border-2 border-light-ui dark:border-dark-ui"></div>}
-        </button>
-        <div className="absolute left-full ml-2 px-2 py-1 bg-zinc-800 dark:bg-zinc-700 text-white dark:text-dark-text text-xs font-semibold rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
-            {tooltip}
-            <div className="absolute right-full top-1/2 -translate-y-1/2 w-0 h-0 border-y-4 border-y-transparent border-r-4 border-r-zinc-800 dark:border-r-zinc-700" />
-        </div>
-    </div>
-);
-
-const CollapsibleSection: React.FC<{
-    title: string;
-    count?: number;
-    actions?: React.ReactNode;
-    children: React.ReactNode;
-    defaultExpanded?: boolean;
-}> = ({ title, count, actions, children, defaultExpanded = true }) => {
-    const [isExpanded, setIsExpanded] = useState(defaultExpanded);
-
-    return (
-        <div className="py-1">
-            <div className="flex justify-between items-center mb-1 px-2 group h-8">
-                <button onClick={() => setIsExpanded(!isExpanded)} className="flex items-center text-xs font-semibold text-light-text/60 dark:text-dark-text/60 w-full hover:text-light-text dark:hover:text-dark-text transition-colors">
-                    {isExpanded ? <ChevronDownIcon className="w-4 h-4 mr-1" /> : <ChevronRightIcon className="w-4 h-4 mr-1" />}
-                    <h3 className="uppercase tracking-wider">{title}</h3>
-                    {typeof count !== 'undefined' && <span className="ml-2 text-light-text/50 dark:text-dark-text/50">({count})</span>}
-                </button>
-                <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                    {actions}
-                </div>
-            </div>
-            {isExpanded && <div className="pl-1 pr-2">{children}</div>}
-        </div>
-    );
-};
-
-const COLLAPSED_WIDTH = 56;
-
-const Sidebar: React.FC<SidebarProps> = ({
-    notes, favoriteNotes, searchResults, activeNoteId, searchTerm, setSearchTerm, searchMode, setSearchMode, isAiSearching, aiSearchError, width,
-    activeSmartCollection, onActivateSmartCollection, onClearActiveSmartCollection, onSelectNote,
-    isCollapsed, onToggleCollapsed
-}) => {
+const Sidebar: React.FC = () => {
     const {
-        collections, smartCollections, onAddNote, addCollection, moveItem,
-        deleteSmartCollection, onAddNoteFromFile, 
-        setNoteToDelete
+        notes, collections, smartCollections,
+        onAddNote, onAddCollection, onAddSmartCollection,
+        onMoveItem, setActiveNoteId, activeNote,
+        bulkSelect, selectedNoteIds, clearBulkSelect
     } = useStoreContext();
-    
     const {
-        theme, toggleTheme, isMobileView, isSidebarOpen, setIsSidebarOpen, view, setView,
-        isAiRateLimited, openSmartFolderModal, onOpenContextMenu, openSettings, isApiKeyMissing,
+        openSettings, toggleTheme, setView, view, isMobileView, isSidebarOpen, onToggleSidebar, sidebarWidth, startSidebarResize
     } = useUIContext();
-    
-    const rootDropRef = useRef<HTMLDivElement>(null);
-    const { isFileOver: isRootFileOver, dragAndDropProps: rootDragAndDropProps } = useDragAndDrop(rootDropRef, {
+    const [searchTerm, setSearchTerm] = useState('');
+    const [isFavoritesOpen, setIsFavoritesOpen] = useState(true);
+    const [isNotesOpen, setIsNotesOpen] = useState(true);
+
+    const rootDropRef = React.useRef<HTMLDivElement>(null);
+
+    const { dragAndDropProps, isFileOver } = useDragAndDrop(rootDropRef, {
         id: null,
         type: 'root',
-        onMoveItem: moveItem,
-        onDropFile: (file, parentId) => {
-            const reader = new FileReader();
-            reader.onload = (loadEvent) => {
-                const content = loadEvent.target?.result as string;
-                if (content !== null) {
-                    onAddNoteFromFile(file.name, content, parentId);
-                }
-            };
-            reader.readAsText(file);
-        },
+        onMoveItem: (draggedId, _targetId, _position) => onMoveItem(draggedId, null, 'inside'),
     });
 
-    const fileTree = useMemo(() => buildTree(notes, collections), [notes, collections]);
-    const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({});
-    const [focusedNodeId, setFocusedNodeId] = useState<string | null>(null);
-
-    const toggleFolder = (folderId: string) => {
-        setExpandedFolders(prev => ({ ...prev, [folderId]: !(prev[folderId] ?? true) }));
-    };
-
-    const getVisibleNodes = useCallback((nodes: TreeNode[]): string[] => {
-        let ids: string[] = [];
-        for (const node of nodes) {
-            ids.push(node.id);
-            const isCollection = 'name' in node;
-            if (isCollection && (expandedFolders[node.id] ?? true)) {
-                ids = ids.concat(getVisibleNodes(node.children));
-            }
-        }
-        return ids;
-    }, [expandedFolders]);
-
-    const visibleNodeIds = useMemo(() => getVisibleNodes(fileTree), [fileTree, getVisibleNodes]);
-
-    useEffect(() => {
-        if (focusedNodeId && !visibleNodeIds.includes(focusedNodeId)) {
-            setFocusedNodeId(null);
-        }
-        if (!activeNoteId && !focusedNodeId && visibleNodeIds.length > 0) {
-            setFocusedNodeId(visibleNodeIds[0]);
-        }
-        if (activeNoteId && focusedNodeId !== activeNoteId) {
-            setFocusedNodeId(activeNoteId);
-        }
-    }, [visibleNodeIds, activeNoteId, focusedNodeId]);
-
-    const handleKeyDown = (e: React.KeyboardEvent) => {
-        if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-            e.preventDefault();
-            const currentIndex = focusedNodeId ? visibleNodeIds.indexOf(focusedNodeId) : -1;
-            const nextIndex = e.key === 'ArrowDown'
-                ? (currentIndex + 1) % visibleNodeIds.length
-                : (currentIndex - 1 + visibleNodeIds.length) % visibleNodeIds.length;
-            setFocusedNodeId(visibleNodeIds[nextIndex]);
-        } else if (e.key === 'Enter') {
-            e.preventDefault();
-            if (focusedNodeId) {
-                const node = collections.find(c => c.id === focusedNodeId);
-                if (node) {
-                    toggleFolder(focusedNodeId);
-                } else {
-                    onSelectNote(focusedNodeId);
-                }
-            }
-        } else if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
-            e.preventDefault();
-            if (focusedNodeId) {
-                const isCollection = collections.some(c => c.id === focusedNodeId);
-                if (isCollection) {
-                    const isExpanded = expandedFolders[focusedNodeId] ?? true;
-                    if (e.key === 'ArrowRight' && !isExpanded) {
-                        setExpandedFolders(prev => ({ ...prev, [focusedNodeId]: true }));
-                    } else if (e.key === 'ArrowLeft' && isExpanded) {
-                        setExpandedFolders(prev => ({ ...prev, [focusedNodeId]: false }));
-                    }
-                }
-            }
-        }
-    };
-    
-    const handleNoteCardContextMenu = (e: React.MouseEvent, note: Note) => {
-        onOpenContextMenu(e, [
-            { label: 'Delete Note', action: () => setNoteToDelete(note), isDestructive: true, icon: <TrashIcon /> },
-        ]);
-    };
-    
-    const renderFavorites = () => (
-        <CollapsibleSection title="Favorites" count={favoriteNotes.length}>
-             {favoriteNotes.length > 0 ? (
-                favoriteNotes.map(note => (
-                    <NoteCard
-                        key={note.id}
-                        note={note}
-                        isActive={note.id === activeNoteId}
-                        onClick={() => onSelectNote(note.id)}
-                        searchTerm={searchTerm}
-                        onContextMenu={(e) => handleNoteCardContextMenu(e, note)}
-                    />
-                ))
-            ) : (
-                 <p className="px-2 py-1 text-xs text-light-text/50 dark:text-dark-text/50">No favorite notes yet.</p>
-            )}
-        </CollapsibleSection>
-    );
-    
-    const renderSmartCollections = () => (
-         <CollapsibleSection
-            title="Smart Folders"
-            count={smartCollections.length}
-            actions={(
-                <button onClick={() => openSmartFolderModal(null)} className="p-1 rounded text-light-text/60 dark:text-dark-text/60 hover:text-light-text dark:hover:text-dark-text hover:bg-light-background dark:hover:bg-dark-background" aria-label="Add new smart folder">
-                    <PlusIcon className="w-4 h-4" />
-                </button>
-            )}
-        >
-            {smartCollections.map(sc => (
-                <div key={sc.id} 
-                    className={`group flex items-center justify-between w-full text-left rounded-md px-2 py-1.5 my-0.5 text-sm cursor-pointer hover:bg-light-background dark:hover:bg-dark-background`}
-                     onClick={() => onActivateSmartCollection(sc)}
-                     onContextMenu={(e) => onOpenContextMenu(e, [
-                         { label: 'Edit Smart Folder', action: () => openSmartFolderModal(sc), icon: <PencilSquareIcon /> },
-                         { label: 'Delete Smart Folder', action: () => deleteSmartCollection(sc.id), isDestructive: true, icon: <TrashIcon /> },
-                     ])}
-                >
-                     <div className="flex items-center truncate">
-                        <BrainIcon className="w-4 h-4 mr-2 flex-shrink-0 text-light-primary dark:text-dark-primary" />
-                        <span className="truncate">{sc.name}</span>
-                    </div>
-                </div>
-            ))}
-        </CollapsibleSection>
-    );
-    
-    const renderFileTree = () => {
-        if (fileTree.length === 0 && notes.length > 0) {
-             return (
-                <CollapsibleSection title="All Notes" count={notes.length}>
-                     {notes.map(note => (
-                         <NoteCard
-                            key={note.id}
-                            note={note}
-                            isActive={note.id === activeNoteId}
-                            onClick={() => onSelectNote(note.id)}
-                            searchTerm={searchTerm}
-                            onContextMenu={(e) => handleNoteCardContextMenu(e, note)}
-                        />
-                     ))}
-                </CollapsibleSection>
-             );
-        }
-
-        return (
-            <CollapsibleSection
-                title="Folders"
-                count={notes.length}
-                actions={(
-                    <button onClick={() => addCollection('New Folder', null)} className="p-1 rounded text-light-text/60 dark:text-dark-text/60 hover:text-light-text dark:hover:text-dark-text hover:bg-light-background dark:hover:bg-dark-background" aria-label="Add new folder">
-                        <FolderPlusIcon className="w-4 h-4" />
-                    </button>
-                )}
-            >
-                {fileTree.length > 0 ? (
-                    fileTree.map(node => (
-                        <SidebarNode 
-                            key={node.id} 
-                            node={node} 
-                            level={0} 
-                            activeNoteId={activeNoteId}
-                            searchTerm={searchTerm}
-                            onSelectNote={onSelectNote}
-                            expandedFolders={expandedFolders}
-                            onToggleFolder={toggleFolder}
-                            isFocused={focusedNodeId === node.id}
-                        />
-                    ))
-                ) : (
-                     <div className="text-center px-4 py-8 text-sm text-light-text/60 dark:text-dark-text/60">
-                        <p>Your workspace is empty.</p>
-                        <button onClick={() => onAddNote()} className="mt-2 text-light-primary dark:text-dark-primary font-semibold">Create your first note</button>
-                    </div>
-                )}
-            </CollapsibleSection>
+    const filteredNotes = useMemo(() => {
+        if (!searchTerm) return [];
+        const lowercasedTerm = searchTerm.toLowerCase();
+        return notes.filter(note =>
+            note.title.toLowerCase().includes(lowercasedTerm) ||
+            note.content.toLowerCase().includes(lowercasedTerm) ||
+            note.tags.some(tag => tag.toLowerCase().includes(lowercasedTerm))
         );
+    }, [searchTerm, notes]);
+
+    const favoriteNotes = useMemo(() => notes.filter(n => n.isFavorite && n.parentId === null), [notes]);
+    const pinnedNotes = useMemo(() => notes.filter(n => n.isPinned), [notes]);
+
+    const buildTree = (
+        collections: Collection[],
+        notes: Note[],
+        parentId: string | null
+    ): (Collection | Note)[] => {
+        const children = [
+            ...collections.filter(c => c.parentId === parentId),
+            ...notes.filter(n => n.parentId === parentId && !n.isFavorite && !n.isPinned)
+        ];
+        return children.sort((a, b) => (a as any).name?.localeCompare((b as any).name) || (a as Note).title.localeCompare((b as Note).title));
     };
 
-    const renderSearchResults = () => (
-        <div className="px-4">
-            {(searchResults && searchResults.length > 0) ? (
-                searchResults.map(note => (
-                    <NoteCard
-                        key={note.id}
-                        note={note}
-                        isActive={note.id === activeNoteId}
-                        onClick={() => onSelectNote(note.id)}
-                        searchTerm={searchTerm}
-                        onContextMenu={(e) => handleNoteCardContextMenu(e, note)}
-                    />
-                ))
-            ) : (
-                <div className="text-center px-4 py-8 text-sm text-light-text/60 dark:text-dark-text/60">
-                    {isAiSearching && 'AI is searching...'}
-                    {!isAiSearching && searchTerm && (
-                        <>
-                            <p className="font-semibold">No results for "{searchTerm}"</p>
-                            <p className="mt-1">Try a different keyword or use AI Search for conceptual matches.</p>
-                        </>
-                    )}
-                    {!isAiSearching && !searchTerm && 'No notes in this view.'}
-                </div>
-            )}
-        </div>
-    );
-    
-    const isSearching = searchResults !== null;
+    const rootNodes = useMemo(() => buildTree(collections, notes, null), [collections, notes]);
 
-    const ExpandedView = () => (
-        <>
-            <div className="p-4 flex-shrink-0 border-b border-light-border dark:border-dark-border">
-                <div className="flex justify-between items-center mb-4">
-                    <h1 className="text-xl font-bold">WesAI Notepad</h1>
-                    {!isMobileView ? (
-                        <button onClick={onToggleCollapsed} className="p-2 -mr-2 rounded-md hover:bg-light-ui-hover dark:hover:bg-dark-ui-hover" aria-label="Collapse sidebar">
-                            <ChevronDoubleLeftIcon />
-                        </button>
-                    ) : (
-                         <button onClick={() => setIsSidebarOpen(false)} className="p-2 -mr-2 rounded-md hover:bg-light-ui-hover dark:hover:bg-dark-ui-hover" aria-label="Close sidebar">
-                            <XMarkIcon />
-                        </button>
-                    )}
+    const handleNoteClick = (e: React.MouseEvent, noteId: string) => {
+        const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+        const modKey = isMac ? e.metaKey : e.ctrlKey;
+        
+        if (modKey) {
+            bulkSelect(noteId, 'ctrl');
+        } else if (e.shiftKey) {
+            bulkSelect(noteId, 'shift');
+        } else {
+            bulkSelect(noteId, 'single');
+            setActiveNoteId(noteId);
+            if (view !== 'NOTES') setView('NOTES');
+            if (isMobileView) onToggleSidebar();
+        }
+    };
+    
+    const handleSelectNode = (noteId: string) => {
+        setActiveNoteId(noteId);
+        if (view !== 'NOTES') setView('NOTES');
+        if (isMobileView) onToggleSidebar();
+    };
+
+    return (
+        <div 
+            className={`fixed top-0 left-0 h-full flex flex-col bg-light-ui dark:bg-dark-ui border-r border-light-border dark:border-dark-border z-40 transform transition-transform md:transform-none ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
+            style={{ width: `${sidebarWidth}px` }}
+        >
+            <header className="p-4 flex-shrink-0 flex justify-between items-center">
+                <div className="flex items-center">
+                     <svg width="28" height="28" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" className="mr-2">
+                      <rect width="64" height="64" rx="12" className="fill-light-primary dark:fill-dark-primary"/>
+                      <path d="M20 18C20 15.7909 21.7909 14 24 14H44C46.2091 14 48 15.7909 48 18V46C48 48.2091 46.2091 50 44 50H24C21.7909 50 20 48.2091 20 46V18Z" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M24 14V50" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                    <h1 className="text-xl font-bold">WesAI</h1>
                 </div>
-                <div className="flex space-x-2">
-                    <button onClick={() => onAddNote()} className="flex-1 flex items-center justify-center bg-light-primary text-white dark:bg-dark-primary dark:text-zinc-900 rounded-md py-2 text-sm font-semibold hover:bg-light-primary-hover dark:hover:bg-dark-primary-hover">
-                        <PencilSquareIcon className="w-4 h-4 mr-2" />
-                        New Note
-                    </button>
+                 <div className="flex items-center space-x-2">
+                    <button onClick={() => { setView('CHAT'); if (isMobileView) onToggleSidebar(); }} className={`p-2 rounded-md ${view === 'CHAT' ? 'bg-light-primary/20 dark:bg-dark-primary/20' : 'hover:bg-light-background dark:hover:bg-dark-background'}`}><SparklesIcon className="text-light-primary dark:text-dark-primary" /></button>
+                    <button onClick={() => onAddNote()} className="p-2 rounded-md hover:bg-light-background dark:hover:bg-dark-background"><PlusIcon /></button>
                 </div>
-            </div>
-            
-            <div className="px-4 py-3 border-b border-light-border dark:border-dark-border flex-shrink-0">
+            </header>
+
+            <div className="px-4 pb-2 flex-shrink-0">
                 <div className="relative">
+                    <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-light-text/50 dark:text-dark-text/50" />
                     <input
                         type="text"
                         placeholder="Search notes..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full pl-9 pr-4 py-2 text-sm bg-light-background dark:bg-dark-background rounded-md border border-light-border dark:border-dark-border focus:ring-1 focus:ring-light-primary focus:outline-none"
+                        className="w-full bg-light-background dark:bg-dark-background pl-9 pr-4 py-2 text-sm rounded-lg border border-light-border dark:border-dark-border focus:ring-1 focus:ring-light-primary focus:outline-none"
                     />
-                    <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-light-text/50 dark:text-dark-text/50" />
                 </div>
-                <div className="flex items-center mt-2 text-xs">
-                     <button
-                        onClick={() => setSearchMode('KEYWORD')}
-                        className={`px-3 py-1 rounded-l-md ${searchMode === 'KEYWORD' ? 'bg-light-primary/80 text-white dark:bg-dark-primary/80 dark:text-zinc-900' : 'bg-light-background dark:bg-dark-background'}`}
-                    >
-                        Keyword
-                    </button>
-                    <button
-                        onClick={() => setSearchMode('AI')}
-                        className={`px-3 py-1 rounded-r-md flex items-center ${searchMode === 'AI' ? 'bg-light-primary/80 text-white dark:bg-dark-primary/80 dark:text-zinc-900' : 'bg-light-background dark:bg-dark-background'}`}
-                        disabled={isAiRateLimited}
-                    >
-                        <SparklesIcon className="w-3 h-3 mr-1" />
-                        AI Search
-                    </button>
-                     {isAiRateLimited && <span className="text-red-500 ml-2 text-xs">Paused</span>}
-                </div>
-                 {aiSearchError && <p className="text-red-500 text-xs mt-1">{aiSearchError}</p>}
             </div>
-
-            <div 
-                className="flex-1 overflow-y-auto focus:outline-none"
-                tabIndex={0}
-                onKeyDown={handleKeyDown}
-            >
-                <div className="py-2">
-                    {activeSmartCollection && (
-                        <div className="px-4 mb-2">
-                            <div className="flex items-center justify-between p-2 rounded-lg bg-light-primary/10 dark:bg-dark-primary/10 text-sm">
-                                <div className="flex items-center gap-2 font-semibold truncate">
-                                    <BrainIcon className="w-4 h-4 text-light-primary dark:text-dark-primary flex-shrink-0" />
-                                    <span className="truncate">{activeSmartCollection.name}</span>
-                                </div>
-                                <button onClick={onClearActiveSmartCollection} className="p-1 rounded-full hover:bg-light-primary/20 dark:hover:bg-dark-primary/20 flex-shrink-0">
-                                    <XMarkIcon className="w-4 h-4" />
-                                </button>
+            
+            <div ref={rootDropRef} {...dragAndDropProps} className={`flex-1 overflow-y-auto px-2 ${isFileOver ? 'bg-light-primary/20 dark:bg-dark-primary/20' : ''}`}>
+                {searchTerm ? (
+                    <div className="p-2">
+                        <h2 className="text-sm font-semibold mb-2 px-2">Search Results</h2>
+                        {filteredNotes.length > 0 ? (
+                            filteredNotes.map(note => (
+                                <NoteCard
+                                    key={note.id}
+                                    note={note}
+                                    isActive={activeNote?.id === note.id}
+                                    isSelected={selectedNoteIds.includes(note.id)}
+                                    onClick={(e) => handleNoteClick(e, note.id)}
+                                    searchTerm={searchTerm}
+                                />
+                            ))
+                        ) : (
+                            <p className="text-center text-sm text-light-text/60 dark:text-dark-text/60 py-4">No notes found.</p>
+                        )}
+                    </div>
+                ) : (
+                    <>
+                         {pinnedNotes.length > 0 && (
+                            <div className="p-2">
+                                <h2 className="text-xs font-bold uppercase text-light-text/60 dark:text-dark-text/60 px-2 pb-1">Pinned</h2>
+                                {pinnedNotes.map(note => (
+                                    <SidebarNode key={note.id} item={note} type="note" onSelect={handleSelectNode} />
+                                ))}
                             </div>
+                        )}
+
+                        <div className="p-2">
+                             <button onClick={() => setIsFavoritesOpen(!isFavoritesOpen)} className="w-full flex justify-between items-center px-2 py-1 rounded hover:bg-light-background dark:hover:bg-dark-background">
+                                <h2 className="text-xs font-bold uppercase text-light-text/60 dark:text-dark-text/60">Favorites</h2>
+                                <ChevronDownIcon className={`w-4 h-4 transition-transform ${isFavoritesOpen ? 'rotate-180' : ''}`} />
+                            </button>
+                            {isFavoritesOpen && favoriteNotes.map(note => (
+                                <SidebarNode key={note.id} item={note} type="note" onSelect={handleSelectNode} />
+                            ))}
                         </div>
-                    )}
-                    
-                    {isSearching ? renderSearchResults() : (
-                        <div
-                            ref={rootDropRef}
-                            {...rootDragAndDropProps}
-                            className={`transition-colors p-1 rounded-md min-h-[10rem] ${isRootFileOver ? 'bg-light-primary/10' : ''}`}
-                        >
-                           {renderFavorites()}
-                           {renderSmartCollections()}
-                           {renderFileTree()}
+
+                        <div className="p-2">
+                            <button onClick={() => setIsNotesOpen(!isNotesOpen)} className="w-full flex justify-between items-center px-2 py-1 rounded hover:bg-light-background dark:hover:bg-dark-background">
+                                <h2 className="text-xs font-bold uppercase text-light-text/60 dark:text-dark-text/60">Notes</h2>
+                                <ChevronDownIcon className={`w-4 h-4 transition-transform ${isNotesOpen ? 'rotate-180' : ''}`} />
+                            </button>
+                            {isNotesOpen && (
+                                <>
+                                    {smartCollections.map(sc => <SidebarNode key={sc.id} item={sc} type="smart-collection" onSelect={() => {}} />)}
+                                    {rootNodes.map(item => (
+                                        <SidebarNode key={item.id} item={item} type={(item as any).query ? 'smart-collection' : (item as any).content !== undefined ? 'note' : 'collection'} onSelect={handleSelectNode} />
+                                    ))}
+                                </>
+                            )}
                         </div>
-                    )}
-                </div>
+                        <div className="p-4 space-y-2">
+                            <button onClick={() => onAddCollection(null)} className="w-full text-left text-sm flex items-center p-2 rounded hover:bg-light-background dark:hover:bg-dark-background text-light-text/80 dark:text-dark-text/80">
+                                <FolderPlusIcon className="mr-2" /> New Folder
+                            </button>
+                             <button onClick={() => onAddSmartCollection()} className="w-full text-left text-sm flex items-center p-2 rounded hover:bg-light-background dark:hover:bg-dark-background text-light-text/80 dark:text-dark-text/80">
+                                <BrainIcon className="mr-2" /> New Smart Folder
+                            </button>
+                        </div>
+                    </>
+                )}
             </div>
 
-            <div className="p-2 flex-shrink-0 border-t border-light-border dark:border-dark-border">
-                <div className="flex justify-end items-center space-x-1">
-                    <FooterButton
-                        onClick={() => setView('CHAT')}
-                        tooltip="Ask AI"
-                        isActive={view === 'CHAT'}
-                    >
-                        <SparklesIcon />
-                    </FooterButton>
+            {selectedNoteIds.length > 0 && <BulkActionToolbar />}
 
-                    <FooterButton
-                        onClick={toggleTheme}
-                        tooltip={`Switch to ${theme === 'light' ? 'Dark' : 'Light'} Mode`}
-                    >
-                        {theme === 'light' ? <MoonIcon /> : <SunIcon />}
-                    </FooterButton>
-
-                    <FooterButton
-                        onClick={openSettings}
-                        tooltip="Settings"
-                        hasIndicator={isApiKeyMissing}
-                    >
-                        <Cog6ToothIcon />
-                    </FooterButton>
-                </div>
-            </div>
-        </>
-    );
-    
-    const CollapsedView = () => (
-      <div className="flex flex-col h-full items-center p-2 overflow-hidden">
-        {/* Logo at top */}
-        <div className="mb-4 flex-shrink-0 pt-2">
-            <svg width="32" height="32" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <rect width="64" height="64" rx="12" fill="#60a5fa"/>
-              <path d="M20 18C20 15.7909 21.7909 14 24 14H44C46.2091 14 48 15.7909 48 18V46C48 48.2091 46.2091 50 44 50H24C21.7909 50 20 48.2091 20 46V18Z" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M24 14V50" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
+            <footer className="p-2 flex-shrink-0 border-t border-light-border dark:border-dark-border">
+                 <button onClick={openSettings} className="w-full flex items-center space-x-2 p-2 text-sm rounded-md hover:bg-light-background dark:hover:bg-dark-background">
+                    <Cog6ToothIcon />
+                    <span>Settings</span>
+                </button>
+            </footer>
         </div>
-
-        {/* Main actions */}
-        <div className="flex flex-col space-y-2 flex-grow">
-          <FooterButton onClick={() => onAddNote()} tooltip="New Note">
-            <PlusIcon />
-          </FooterButton>
-          <FooterButton onClick={onToggleCollapsed} tooltip="Explorer">
-            <FolderIcon />
-          </FooterButton>
-          <FooterButton onClick={onToggleCollapsed} tooltip="Search">
-            <MagnifyingGlassIcon />
-          </FooterButton>
-        </div>
-
-        {/* Footer actions */}
-        <div className="flex flex-col space-y-1 flex-shrink-0">
-          <FooterButton onClick={() => setView('CHAT')} tooltip="Ask AI" isActive={view === 'CHAT'}>
-            <SparklesIcon />
-          </FooterButton>
-          <FooterButton onClick={toggleTheme} tooltip={`Switch to ${theme === 'light' ? 'Dark' : 'Light'} Mode`}>
-            {theme === 'light' ? <MoonIcon /> : <SunIcon />}
-          </FooterButton>
-          <FooterButton onClick={openSettings} tooltip="Settings" hasIndicator={isApiKeyMissing}>
-            <Cog6ToothIcon />
-          </FooterButton>
-        </div>
-      </div>
-    );
-
-    return (
-        <aside 
-            className={`absolute md:relative z-30 flex flex-col h-full bg-light-ui dark:bg-dark-ui border-r border-light-border dark:border-dark-border transform transition-all duration-300 ease-in-out ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 flex-shrink-0`}
-            style={{ width: isMobileView ? '20rem' : isCollapsed ? `${COLLAPSED_WIDTH}px` : `${width}px` }}
-        >
-           {isCollapsed && !isMobileView ? <CollapsedView /> : <ExpandedView />}
-        </aside>
     );
 };
 

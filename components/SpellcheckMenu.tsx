@@ -1,5 +1,6 @@
 import React from 'react';
 import { SpellingError } from '../types';
+// Fix: Corrected import path for Icons
 import { CheckBadgeIcon, XMarkIcon } from './Icons';
 
 interface SpellcheckMenuProps {

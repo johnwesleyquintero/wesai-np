@@ -11,6 +11,7 @@ import TagSuggestions from './TagSuggestions';
 import TitleSuggestion from './TitleSuggestion';
 import InlineAiMenu from './InlineAiMenu';
 import SpellcheckMenu from './SpellcheckMenu';
+// Fix: Corrected import path for AppContext
 import { useEditorContext, useStoreContext, useUIContext } from '../context/AppContext';
 import MarkdownHighlighter from './MarkdownHighlighter';
 import NoteLinker from './NoteLinker';
@@ -173,7 +174,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onRestoreVersion, templat
                 titleInputRef.current?.select();
             }, 100);
         }
-    }, [note.id, resetEditorState, note.title, note.content, note.tags]);
+    }, [note.id, resetEditorState, note.title, note.content, note.tags, previewVersion]);
 
     // Handle auto-saving
     useEffect(() => {

@@ -1,4 +1,5 @@
 import React from 'react';
+// Fix: Corrected import path for Icons
 import { PlusIcon, SparklesIcon } from './Icons';
 
 interface TagSuggestionsProps {

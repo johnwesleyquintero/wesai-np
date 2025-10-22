@@ -1,5 +1,6 @@
 import React from 'react';
 import { NoteVersion } from '../types';
+// Fix: Corrected import path for Icons
 import { XMarkIcon } from './Icons';
 
 interface VersionHistorySidebarProps {

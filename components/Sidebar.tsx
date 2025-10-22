@@ -263,8 +263,8 @@ const Sidebar: React.FC<SidebarProps> = ({
                         activeNoteId={activeNoteId}
                         searchTerm={searchTerm}
                         onSelectNote={onSelectNote}
-                        isExpanded={expandedFolders[node.id] ?? true}
-                        onToggleExpand={() => toggleFolder(node.id)}
+                        expandedFolders={expandedFolders}
+                        onToggleFolder={toggleFolder}
                         isFocused={focusedNodeId === node.id}
                     />
                 ))}

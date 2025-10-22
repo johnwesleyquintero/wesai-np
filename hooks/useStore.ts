@@ -339,7 +339,31 @@ export const useStore = (user: User | undefined) => {
         }
     }, [user]);
     
-    const copyNote = (id: string) => { console.warn("Copy note not implemented for Supabase store yet")};
+    const copyNote = useCallback(async (id: string): Promise<string> => {
+        if (!user) throw new Error("User must be logged in to copy a note.");
+
+        const sourceNote = notes.find(n => n.id === id);
+        if (!sourceNote) {
+            throw new Error("Source note not found.");
+        }
+
+        const newNoteData = {
+            user_id: user.id,
+            parent_id: sourceNote.parentId,
+            title: `Copy of ${sourceNote.title}`,
+            content: sourceNote.content,
+            tags: sourceNote.tags,
+            is_favorite: false, // Copies are not favorited by default
+        };
+
+        const { data, error } = await supabase.from('notes').insert(newNoteData).select().single();
+
+        if (error) {
+            throw new Error(`Failed to copy note: ${error.message}`);
+        }
+        return data.id;
+    }, [user, notes]);
+
     const renameNoteTitle = async (id: string, title: string) => await updateNote(id, { title });
     
     return { 

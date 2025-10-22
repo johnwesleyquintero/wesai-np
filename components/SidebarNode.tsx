@@ -17,13 +17,13 @@ interface SidebarNodeProps {
     activeNoteId: string | null;
     searchTerm: string;
     onSelectNote: (noteId: string) => void;
-    isExpanded: boolean;
-    onToggleExpand: () => void;
+    expandedFolders: Record<string, boolean>;
+    onToggleFolder: (folderId: string) => void;
     isFocused: boolean;
 }
 
 const SidebarNode: React.FC<SidebarNodeProps> = ({ 
-    node, level, activeNoteId, searchTerm, onSelectNote, isExpanded, onToggleExpand, isFocused
+    node, level, activeNoteId, searchTerm, onSelectNote, expandedFolders, onToggleFolder, isFocused
 }) => {
     const { 
         collections, onAddNote, onAddNoteFromFile, updateCollection, renameNoteTitle, moveItem,
@@ -41,6 +41,7 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
     const isRenaming = renamingItemId === node.id;
     const name = isCollection ? node.name : node.title;
     const isActive = !isCollection && activeNoteId === node.id;
+    const isExpanded = expandedFolders[node.id] ?? true;
 
     const handleDropFile = (file: File, parentId: string | null) => {
         const reader = new FileReader();
@@ -74,7 +75,7 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
     const handleNodeClick = (e: React.MouseEvent) => {
         e.stopPropagation();
         if (isCollection) {
-            onToggleExpand();
+            onToggleFolder(node.id);
         } else {
             onSelectNote(node.id);
         }
@@ -93,7 +94,15 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
             const noteAsNote = node as Note;
             menuItems = [
                 { label: 'Rename Note', action: () => setRenamingItemId(node.id), icon: <PencilSquareIcon /> },
-                { label: 'Copy Note', action: () => copyNote(node.id), icon: <DocumentDuplicateIcon /> },
+                { 
+                    label: 'Copy Note', 
+                    action: () => {
+                        copyNote(node.id)
+                            .then(() => showToast({ message: 'Note copied successfully!', type: 'success'}))
+                            .catch((err) => showToast({ message: `Failed to copy note: ${err.message}`, type: 'error'}));
+                    }, 
+                    icon: <DocumentDuplicateIcon /> 
+                },
                 { 
                     label: 'Copy as Markdown', 
                     action: () => {
@@ -198,8 +207,8 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
                             activeNoteId={activeNoteId}
                             searchTerm={searchTerm}
                             onSelectNote={onSelectNote}
-                            isExpanded={isExpanded} // This is incorrect, it needs the child's expansion state
-                            onToggleExpand={onToggleExpand} // This is incorrect, it needs to toggle the child
+                            expandedFolders={expandedFolders}
+                            onToggleFolder={onToggleFolder}
                             isFocused={isFocused}
                         />
                     ))}

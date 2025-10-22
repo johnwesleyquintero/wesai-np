@@ -290,8 +290,8 @@ const Sidebar: React.FC<SidebarProps> = ({
 
     const renderFlatList = () => (
         <div className="px-4">
-            {filteredNotes.length > 0 ? (
-                filteredNotes.map(note => (
+            {(filter === 'TRASH' ? trashedNotes : filteredNotes).length > 0 ? (
+                (filter === 'TRASH' ? trashedNotes : filteredNotes).map(note => (
                     <NoteCard
                         key={note.id}
                         note={note}

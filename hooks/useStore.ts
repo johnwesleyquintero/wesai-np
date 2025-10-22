@@ -54,22 +54,25 @@ export const useStore = (user: User | undefined) => {
         }
         setLoading(true);
         try {
-            const [notesRes, trashedNotesRes, collectionsRes, smartCollectionsRes, templatesRes] = await Promise.all([
-                supabase.from('notes').select('*').eq('user_id', user.id).is('deleted_at', null),
-                supabase.from('notes').select('*').eq('user_id', user.id).not('deleted_at', 'is', null),
+            const [allNotesRes, collectionsRes, smartCollectionsRes, templatesRes] = await Promise.all([
+                supabase.from('notes').select('*').eq('user_id', user.id),
                 supabase.from('collections').select('*').eq('user_id', user.id),
                 supabase.from('smart_collections').select('*').eq('user_id', user.id),
                 supabase.from('templates').select('*').eq('user_id', user.id),
             ]);
 
-            if (notesRes.error) throw notesRes.error;
-            if (trashedNotesRes.error) throw trashedNotesRes.error;
+            if (allNotesRes.error) throw allNotesRes.error;
             if (collectionsRes.error) throw collectionsRes.error;
             if (smartCollectionsRes.error) throw smartCollectionsRes.error;
             if (templatesRes.error) throw templatesRes.error;
+
+            const allNotes = (allNotesRes.data || []).map(processNote);
             
-            setNotes((notesRes.data || []).map(processNote));
-            setTrashedNotes((trashedNotesRes.data || []).map(processNote));
+            const activeNotes = allNotes.filter(note => !note.deletedAt);
+            const newTrashedNotes = allNotes.filter(note => !!note.deletedAt);
+
+            setNotes(activeNotes);
+            setTrashedNotes(newTrashedNotes);
             setCollections((collectionsRes.data || []).map(fromSupabase));
             setSmartCollections((smartCollectionsRes.data || []).map(fromSupabase));
             setTemplates((templatesRes.data || []).map(fromSupabase));

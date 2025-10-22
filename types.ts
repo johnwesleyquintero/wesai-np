@@ -106,3 +106,7 @@ export interface ContextMenuItem {
     icon?: React.ReactElement;
     isDestructive?: boolean;
 }
+
+export type TreeNode = (Note | (Collection & { type: 'collection' })) & {
+    children: TreeNode[];
+};

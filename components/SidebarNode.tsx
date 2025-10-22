@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Collection, Note } from '../types';
+import { Collection, Note, TreeNode } from '../types';
 import { ChevronDownIcon, ChevronRightIcon, DocumentTextIcon, FolderIcon, TrashIcon, PencilSquareIcon, DocumentDuplicateIcon, ClipboardDocumentIcon, GripVerticalIcon } from './Icons';
 import { ContextMenuItem } from '../types';
 import { useStoreContext, useUIContext } from '../context/AppContext';
@@ -7,15 +7,12 @@ import { useToast } from '../context/ToastContext';
 import Highlight from './Highlight';
 import { useDragAndDrop } from '../hooks/useDragAndDrop';
 
-export type TreeNode = (Note | (import('../types').Collection & { type: 'collection' })) & {
-    children: TreeNode[];
-};
-
 interface SidebarNodeProps {
     node: TreeNode;
     level: number;
     activeNoteId: string | null;
     searchTerm: string;
+    searchData: { isSearching: boolean; visibleIds: Set<string> | null; matchIds: Set<string> | null };
     onSelectNote: (noteId: string) => void;
     expandedFolders: Record<string, boolean>;
     onToggleFolder: (folderId: string) => void;
@@ -23,7 +20,7 @@ interface SidebarNodeProps {
 }
 
 const SidebarNode: React.FC<SidebarNodeProps> = ({ 
-    node, level, activeNoteId, searchTerm, onSelectNote, expandedFolders, onToggleFolder, isFocused
+    node, level, activeNoteId, searchTerm, searchData, onSelectNote, expandedFolders, onToggleFolder, isFocused
 }) => {
     const { 
         collections, onAddNote, onAddNoteFromFile, updateCollection, renameNoteTitle, moveItem,
@@ -41,7 +38,13 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
     const isRenaming = renamingItemId === node.id;
     const name = isCollection ? node.name : node.title;
     const isActive = !isCollection && activeNoteId === node.id;
-    const isExpanded = expandedFolders[node.id] ?? true;
+
+    const { isSearching, visibleIds, matchIds } = searchData;
+    const isVisible = !isSearching || (visibleIds && visibleIds.has(node.id));
+    const isMatch = !!(isSearching && matchIds && matchIds.has(node.id));
+    const isDimmed = isSearching && !isMatch;
+    // FIX: Add parentheses to resolve mixed operator precedence between '||' and '??'.
+    const isExpanded = isSearching || (expandedFolders[node.id] ?? true);
 
     const handleDropFile = (file: File, parentId: string | null) => {
         const reader = new FileReader();
@@ -144,6 +147,10 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
         }
     };
 
+    if (!isVisible) {
+        return null;
+    }
+
     return (
         <div className="relative">
             {dropPosition === 'top' && <div className="absolute -top-0.5 left-2 right-2 h-0.5 bg-light-primary dark:bg-dark-primary rounded-full z-10" style={{ marginLeft: `${level * 16}px` }} />}
@@ -158,7 +165,8 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
                         ? 'bg-light-primary/30 dark:bg-dark-primary/30 text-light-primary dark:text-dark-primary font-semibold'
                         : 'hover:bg-light-background dark:hover:bg-dark-background'
                 } ${isDragOver ? 'outline-2 outline-dashed outline-light-primary dark:outline-dark-primary bg-light-primary/10 dark:bg-dark-primary/10' : ''}
-                  ${isFocused ? 'ring-2 ring-light-primary/50 dark:ring-dark-primary/50' : ''}`}
+                  ${isFocused ? 'ring-2 ring-light-primary/50 dark:ring-dark-primary/50' : ''}
+                  ${isDimmed ? 'opacity-50' : ''}`}
                 style={{ paddingLeft: `${level * 16 + 8}px` }}
             >
                 <div className="flex items-center truncate py-1.5">
@@ -189,7 +197,7 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
                         />
                     ) : (
                         <span className="truncate">
-                            <Highlight text={name} highlight={searchTerm} />
+                            <Highlight text={name} highlight={isMatch ? searchTerm : ''} />
                         </span>
                     )}
                 </div>
@@ -197,7 +205,7 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
             {dropPosition === 'bottom' && <div className="absolute -bottom-0.5 left-2 right-2 h-0.5 bg-light-primary dark:bg-dark-primary rounded-full z-10" style={{ marginLeft: `${level * 16}px` }} />}
             {isCollection && isExpanded && (
                 <div>
-                    {node.children.length === 0 && (
+                    {node.children.length === 0 && !isSearching && (
                         <p style={{ paddingLeft: `${(level + 1) * 16 + 28}px` }} className="py-1.5 text-xs text-light-text/50 dark:text-dark-text/50">
                            Empty folder
                         </p>
@@ -209,9 +217,9 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
                             level={level + 1}
                             activeNoteId={activeNoteId}
                             searchTerm={searchTerm}
+                            searchData={searchData}
                             onSelectNote={onSelectNote}
                             expandedFolders={expandedFolders}
-                            // FIX: Pass the 'onToggleFolder' prop correctly instead of an undefined local variable.
                             onToggleFolder={onToggleFolder}
                             isFocused={isFocused}
                         />

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useMemo, useEffect, useRef, useCallback, ReactNode } from 'react';
-import { Note, Template, Collection, SmartCollection, EditorActions, ContextMenuItem, SearchMode, ChatMessage, NoteVersion, AuthSession, ChatMode } from '../types';
+import { Note, Template, Collection, SmartCollection, EditorActions, ContextMenuItem, SearchMode, ChatMessage, NoteVersion, AuthSession, ChatMode, TreeNode } from '../types';
 import { useStore as useSupabaseStore } from '../hooks/useStore';
 import { useDebounce } from '../hooks/useDebounce';
 import { getStreamingChatResponse, semanticSearchNotes, generateCustomerResponse, getGeneralChatSession, resetGeneralChat } from '../services/geminiService';
@@ -10,6 +10,67 @@ import { supabase } from '../lib/supabaseClient';
 
 const CHAT_HISTORIES_STORAGE_KEY = 'wesai-chat-histories';
 
+const buildTree = (notes: Note[], collections: Collection[]): TreeNode[] => {
+    const noteMap = new Map(notes.map(note => [note.id, { ...note, children: [] as TreeNode[] }]));
+    const collectionMap = new Map(collections.map(c => [c.id, { ...c, type: 'collection' as const, children: [] as TreeNode[] }]));
+    
+    const tree: TreeNode[] = [];
+    
+    const allItemsMap: Map<string, TreeNode> = new Map<string, TreeNode>([...noteMap.entries(), ...collectionMap.entries()]);
+
+    allItemsMap.forEach(item => {
+        if (item.parentId === null) {
+            tree.push(item);
+        } else {
+            const parent = collectionMap.get(item.parentId);
+            if (parent) {
+                parent.children.push(item);
+            } else {
+                tree.push(item);
+            }
+        }
+    });
+
+    const sortNodes = (nodes: TreeNode[]) => {
+        nodes.sort((a, b) => {
+            const aIsCollection = 'type' in a && a.type === 'collection';
+            const bIsCollection = 'type' in b && b.type === 'collection';
+
+            if (aIsCollection && !bIsCollection) return -1;
+            if (!aIsCollection && bIsCollection) return 1;
+
+            const aName = aIsCollection ? (a as Collection).name : (a as Note).title;
+            const bName = bIsCollection ? (b as Collection).name : (b as Note).title;
+            return aName.localeCompare(bName);
+        });
+
+        nodes.forEach(node => {
+            if ('children' in node && node.children.length > 0) {
+                sortNodes(node.children);
+            }
+        });
+    };
+    
+    sortNodes(tree);
+
+    return tree;
+};
+
+
+// --- Context Definitions ---
+
+// Auth Context
+interface AuthContextType {
+    session: AuthSession | null;
+    isSessionLoading: boolean;
+}
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+export const useAuthContext = () => {
+    const context = useContext(AuthContext);
+    if (!context) throw new Error('useAuthContext must be used within an AppProvider');
+    return context;
+};
+
 // Store Context
 interface StoreContextType extends Omit<ReturnType<typeof useSupabaseStore>, 'deleteNote'> {
     deleteNote: (id: string) => Promise<void>;
@@ -17,7 +78,7 @@ interface StoreContextType extends Omit<ReturnType<typeof useSupabaseStore>, 'de
     setActiveNoteId: React.Dispatch<React.SetStateAction<string | null>>;
     activeNote: Note | null;
     favoriteNotes: Note[];
-    searchResults: Note[] | null;
+    searchData: { isSearching: boolean; visibleIds: Set<string> | null; matchIds: Set<string> | null; };
     searchTerm: string;
     handleSearchTermChange: (term: string) => void;
     searchMode: SearchMode;
@@ -47,6 +108,7 @@ interface StoreContextType extends Omit<ReturnType<typeof useSupabaseStore>, 'de
     onAddNote: (parentId?: string | null, title?: string, content?: string) => Promise<string>;
     onAddNoteFromFile: (title: string, content: string, parentId: string | null) => Promise<string>;
     triggerNoteImport: () => void;
+    fileTree: TreeNode[];
 }
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
 export const useStoreContext = () => {
@@ -57,8 +119,6 @@ export const useStoreContext = () => {
 
 // UI Context
 interface UIContextType {
-    session: AuthSession | null;
-    isSessionLoading: boolean;
     theme: 'light' | 'dark';
     toggleTheme: () => void;
     view: 'NOTES' | 'CHAT';
@@ -110,9 +170,13 @@ export const useEditorContext = () => {
 
 
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-    // UI State
+    // --- State Hooks ---
+
+    // Auth State
     const [session, setSession] = useState<AuthSession | null>(null);
     const [isSessionLoading, setIsSessionLoading] = useState(true);
+
+    // UI State
     const [theme, setTheme] = useState<'light' | 'dark'>(() => (localStorage.getItem('theme') as 'light' | 'dark') || 'light');
     const [view, setView] = useState<'NOTES' | 'CHAT'>('NOTES');
     const isMobileView = useMobileView();
@@ -135,7 +199,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const [isWelcomeModalOpen, setIsWelcomeModalOpen] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
     
-    // Store Hook
+    // Store Hook & State
     const store = useSupabaseStore(session?.user);
     const { 
         notes, collections, getNoteById, deleteCollection, deleteNote, 
@@ -146,7 +210,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const { showToast } = useToast();
     const { apiKey } = useApiKey();
 
-    // Store State
     const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [searchMode, setSearchMode] = useState<SearchMode>('KEYWORD');
@@ -184,6 +247,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
     // Editor State
     const [editorActions, setEditorActions] = useState<EditorActions | null>(null);
+
+
+    // --- Effects ---
 
     // Auth Effect
     useEffect(() => {
@@ -238,7 +304,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     useEffect(() => {
         const onboardingComplete = localStorage.getItem('wesai-onboarding-complete') === 'true';
     
-        // Run only for authenticated users who haven't completed onboarding, after the initial data load, and if they have no notes.
         if (!onboardingComplete && !isStoreLoading && session?.user && notes.length === 0 && collections.length === 0) {
             
             const createOnboardingNotes = async () => {
@@ -267,47 +332,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         }
     }, [chatHistories]);
 
-    const onAddNote = useCallback(async (parentId: string | null = null, title: string = "Untitled Note", content: string = "") => {
-        const newNoteId = await createNote(parentId, title, content);
-        setActiveNoteId(newNoteId);
-        setView('NOTES');
-        if (isMobileView) setIsSidebarOpen(false);
-        showToast({ message: `Note "${title}" created!`, type: 'success' });
-        return newNoteId;
-    }, [createNote, isMobileView, showToast]);
-
-    const onAddNoteFromFile = useCallback(async (title: string, content: string, parentId: string | null) => {
-        const newNoteId = await addNoteFromFile(title, content, parentId);
-        setActiveNoteId(newNoteId);
-        setView('NOTES');
-        if (isMobileView) setIsSidebarOpen(false);
-        showToast({ message: `Imported "${title}"`, type: 'success'});
-        return newNoteId;
-    }, [addNoteFromFile, isMobileView, showToast]);
-    
-    const triggerNoteImport = useCallback(() => {
-        fileInputRef.current?.click();
-    }, []);
-
-    const handleFileImport = (event: React.ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = (loadEvent) => {
-                const content = loadEvent.target?.result as string;
-                if (content !== null) {
-                    onAddNoteFromFile(file.name, content, null);
-                }
-            };
-            reader.readAsText(file);
-            // Reset input value to allow importing the same file again
-            if (fileInputRef.current) {
-                fileInputRef.current.value = '';
-            }
-        }
-    };
-
-
     // Keyboard shortcuts
     useEffect(() => {
         const handleKeyDown = (event: KeyboardEvent) => {
@@ -322,7 +346,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, []);
-
 
     // AI Search Effect
     useEffect(() => {
@@ -348,59 +371,172 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         }
     }, [debouncedSearchTerm, searchMode, notes]);
 
+    // --- Memoized Derived State ---
     const favoriteNotes = useMemo(() => {
         return notes
             .filter(n => n.isFavorite)
             .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
     }, [notes]);
 
-    const searchResults = useMemo(() => {
-        if (!searchTerm.trim() && !activeSmartCollectionId) return null;
+    const searchData = useMemo(() => {
+        const isSearching = !!searchTerm.trim() || !!activeSmartCollectionId;
+        if (!isSearching) return { isSearching: false, visibleIds: null, matchIds: null };
 
-        const sortedNotes = [...notes].sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+        const query = activeSmartCollectionId ? store.smartCollections.find(sc => sc.id === activeSmartCollectionId)?.query || '' : searchTerm;
+        const currentSearchMode = activeSmartCollectionId ? 'AI' : searchMode;
 
-        if (searchMode === 'AI' && aiSearchResultIds) {
-            const noteMap = new Map(sortedNotes.map(note => [note.id, note]));
-            return aiSearchResultIds.map(id => noteMap.get(id)).filter((note): note is Note => !!note);
-        } else if (searchMode === 'KEYWORD') {
-            const lowercasedSearchTerm = searchTerm.toLowerCase();
-            return sortedNotes.filter(note =>
-                note.title.toLowerCase().includes(lowercasedSearchTerm) ||
-                note.content.toLowerCase().includes(lowercasedSearchTerm) ||
-                note.tags.some(tag => tag.toLowerCase().includes(lowercasedSearchTerm))
-            );
+        const matchIds = new Set<string>();
+        
+        if (currentSearchMode === 'KEYWORD') {
+            const lowercasedQuery = query.toLowerCase();
+            notes.forEach(note => {
+                if (
+                    note.title.toLowerCase().includes(lowercasedQuery) ||
+                    note.content.toLowerCase().includes(lowercasedQuery) ||
+                    note.tags.some(tag => tag.toLowerCase().includes(lowercasedQuery))
+                ) {
+                    matchIds.add(note.id);
+                }
+            });
+            collections.forEach(collection => {
+                if (collection.name.toLowerCase().includes(lowercasedQuery)) {
+                    matchIds.add(collection.id);
+                }
+            });
+        } else if (currentSearchMode === 'AI' && aiSearchResultIds) {
+            aiSearchResultIds.forEach(id => matchIds.add(id));
         }
-        return []; // Return empty array if AI search is pending or fails to find anything
-    }, [notes, searchTerm, searchMode, aiSearchResultIds, activeSmartCollectionId]);
+
+        const visibleIds = new Set<string>(matchIds);
+        const itemMap = new Map([...notes, ...collections].map(item => [item.id, item]));
+
+        matchIds.forEach(id => {
+            let current = itemMap.get(id);
+            while (current && current.parentId) {
+                visibleIds.add(current.parentId);
+                current = itemMap.get(current.parentId);
+            }
+        });
+        
+        return { isSearching, visibleIds, matchIds };
+
+    }, [searchTerm, searchMode, aiSearchResultIds, notes, collections, activeSmartCollectionId, store.smartCollections]);
+
 
     const activeNote = useMemo(() => activeNoteId ? getNoteById(activeNoteId) : null, [activeNoteId, getNoteById]);
     const activeSmartCollection = useMemo(() => activeSmartCollectionId ? store.smartCollections.find(sc => sc.id === activeSmartCollectionId) : null, [activeSmartCollectionId, store.smartCollections]);
+
+    // Performance Optimization: Memoize the file tree
+    const notesRef = useRef(notes);
+    notesRef.current = notes;
+    const collectionsRef = useRef(collections);
+    collectionsRef.current = collections;
     
-    const handleDeleteNoteConfirm = async () => {
+    // Create dependencies that only change when structural properties change
+    const structuralNotesDep = useMemo(() => JSON.stringify(
+        notes.map(n => ({ id: n.id, parentId: n.parentId, title: n.title })).sort((a, b) => a.id.localeCompare(b.id))
+    ), [notes]);
+
+    const structuralCollectionsDep = useMemo(() => JSON.stringify(
+        collections.map(c => ({ id: c.id, parentId: c.parentId, name: c.name })).sort((a, b) => a.id.localeCompare(b.id))
+    ), [collections]);
+
+    const fileTree = useMemo(() => {
+        return buildTree(notesRef.current, collectionsRef.current);
+    }, [structuralNotesDep, structuralCollectionsDep]);
+
+
+    // --- Callbacks ---
+
+    const onAddNote = useCallback(async (parentId: string | null = null, title: string = "Untitled Note", content: string = "") => {
+        const newNoteId = await createNote(parentId, title, content);
+        setActiveNoteId(newNoteId);
+        setView('NOTES');
+        if (isMobileView) setIsSidebarOpen(false);
+        showToast({ message: `Note "${title}" created!`, type: 'success' });
+        return newNoteId;
+    }, [createNote, isMobileView, showToast, setActiveNoteId, setView, setIsSidebarOpen]);
+
+    const onAddNoteFromFile = useCallback(async (title: string, content: string, parentId: string | null) => {
+        const newNoteId = await addNoteFromFile(title, content, parentId);
+        setActiveNoteId(newNoteId);
+        setView('NOTES');
+        if (isMobileView) setIsSidebarOpen(false);
+        showToast({ message: `Imported "${title}"`, type: 'success'});
+        return newNoteId;
+    }, [addNoteFromFile, isMobileView, showToast, setActiveNoteId, setView, setIsSidebarOpen]);
+    
+    const triggerNoteImport = useCallback(() => fileInputRef.current?.click(), []);
+    
+    const handleFileImport = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (loadEvent) => {
+                const content = loadEvent.target?.result as string;
+                if (content !== null) {
+                    onAddNoteFromFile(file.name, content, null);
+                }
+            };
+            reader.readAsText(file);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+        }
+    }, [onAddNoteFromFile]);
+
+    const handleDeleteNoteConfirm = useCallback(async () => {
         if (noteToDelete) {
             await deleteNote(noteToDelete.id);
             if (activeNoteId === noteToDelete.id) setActiveNoteId(null);
             setNoteToDelete(null);
         }
-    };
-    const handleDeleteCollectionConfirm = async () => {
+    }, [noteToDelete, deleteNote, activeNoteId]);
+
+    const handleDeleteCollectionConfirm = useCallback(async () => {
         if (collectionToDelete) {
             const deletedNoteIds = await deleteCollection(collectionToDelete.id);
             if (activeNoteId && deletedNoteIds.includes(activeNoteId)) setActiveNoteId(null);
             setCollectionToDelete(null);
         }
-    };
-    const handleDeleteSmartCollectionConfirm = async () => {
+    }, [collectionToDelete, deleteCollection, activeNoteId]);
+
+    const handleDeleteSmartCollectionConfirm = useCallback(async () => {
         if (smartCollectionToDelete) {
             await deleteSmartCollection(smartCollectionToDelete.id);
             setSmartCollectionToDelete(null);
         }
-    };
-    const handleActivateSmartCollection = (collection: SmartCollection) => { setSearchTerm(collection.query); setSearchMode('AI'); setActiveSmartCollectionId(collection.id); };
-    const handleSearchTermChange = (term: string) => { if (activeSmartCollectionId) setActiveSmartCollectionId(null); setSearchTerm(term); };
-    const handleClearActiveSmartCollection = () => { setActiveSmartCollectionId(null); setSearchTerm(''); };
-    
-    const onSendMessage = async (query: string, image?: string) => {
+    }, [smartCollectionToDelete, deleteSmartCollection]);
+
+    const handleActivateSmartCollection = useCallback((collection: SmartCollection) => {
+        // setSearchTerm(collection.query);
+        // setSearchMode('AI');
+        setActiveSmartCollectionId(collection.id);
+        const performAiSearch = async () => {
+            setIsAiSearching(true);
+            setAiSearchError(null);
+            setAiSearchResultIds(null);
+            try {
+                const resultIds = await semanticSearchNotes(collection.query, notes);
+                setAiSearchResultIds(resultIds);
+            } catch (error) {
+                setAiSearchError(error instanceof Error ? error.message : "An unknown AI search error occurred.");
+            } finally {
+                setIsAiSearching(false);
+            }
+        };
+        performAiSearch();
+    }, [notes]);
+
+    const handleSearchTermChange = useCallback((term: string) => {
+        if (activeSmartCollectionId) setActiveSmartCollectionId(null);
+        setSearchTerm(term);
+    }, [activeSmartCollectionId]);
+
+    const handleClearActiveSmartCollection = useCallback(() => {
+        setActiveSmartCollectionId(null);
+        setSearchTerm('');
+    }, []);
+
+    const onSendMessage = useCallback(async (query: string, image?: string) => {
         setChatError(null);
         const newUserMessage: ChatMessage = { role: 'user', content: query, image };
         setChatHistories(prev => ({ ...prev, [chatMode]: [...prev[chatMode], newUserMessage] }));
@@ -435,9 +571,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         } finally {
             setChatStatus('idle');
         }
-    };
+    }, [chatMode, getNoteById, notes]);
 
-    const onGenerateServiceResponse = async (customerQuery: string, image?: string) => {
+    const onGenerateServiceResponse = useCallback(async (customerQuery: string, image?: string) => {
         setChatError(null);
         const newUserMessage: ChatMessage = { role: 'user', content: customerQuery, image };
         setChatHistories(prev => ({ ...prev, [chatMode]: [...prev[chatMode], newUserMessage] }));
@@ -455,9 +591,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         } finally {
             setChatStatus('idle');
         }
-    };
+    }, [chatMode, getNoteById, notes]);
     
-    const onSendGeneralMessage = async (query: string, image?: string) => {
+    const onSendGeneralMessage = useCallback(async (query: string, image?: string) => {
         setChatError(null);
         const userMessage: ChatMessage = { role: 'user', content: query, image, status: 'processing' };
         setChatHistories(prev => ({ ...prev, [chatMode]: [...prev[chatMode], userMessage] }));
@@ -574,7 +710,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
                     setChatHistories(prev => {
                         const newHistory = [...prev[chatMode]];
-                        // FIX: Replaced findLastIndex with a reverse for-loop for broader compatibility.
                         let lastPendingIndex = -1;
                         for (let i = newHistory.length - 1; i >= 0; i--) {
                             const msg = newHistory[i];
@@ -594,8 +729,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                         if (lastPendingIndex !== -1) {
                             const msgToUpdate = newHistory[lastPendingIndex];
                             const currentContent = msgToUpdate.content;
-
-                            // FIX: Used a type guard to safely spread properties and satisfy TypeScript.
                             if (typeof currentContent === 'object' && currentContent !== null) {
                                 newHistory[lastPendingIndex] = {
                                     ...msgToUpdate,
@@ -609,7 +742,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                         }
                         return { ...prev, [chatMode]: newHistory };
                     });
-
                     functionResponses.push({ id: fc.id, name: fc.name, response: { result }});
                 }
                 
@@ -634,7 +766,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                 return { ...prev, [chatMode]: newHistory };
             });
         }
-    };
+    }, [chatMode, onAddNote, notes, getNoteById, updateNoteInStore, showToast, deleteNote, activeNoteId, store, collections]);
 
 
     const clearChat = useCallback(() => {
@@ -646,55 +778,80 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         }
     }, [chatMode]);
 
-    const toggleTheme = () => setTheme(prevTheme => (prevTheme === 'light' ? 'dark' : 'light'));
-    const toggleSidebarCollapsed = () => setIsSidebarCollapsed(prev => !prev);
+    const toggleTheme = useCallback(() => setTheme(prevTheme => (prevTheme === 'light' ? 'dark' : 'light')), []);
+    const toggleSidebarCollapsed = useCallback(() => setIsSidebarCollapsed(prev => !prev), []);
     const onToggleSidebar = useCallback(() => setIsSidebarOpen(p => !p), []);
-    const openSettings = () => setIsSettingsOpen(true);
-    const openSmartFolderModal = (folder: SmartCollection | null) => { setSmartFolderToEdit(folder); setIsSmartFolderModalOpen(true); };
-    const onOpenContextMenu = (e: React.MouseEvent, items: ContextMenuItem[]) => { e.preventDefault(); e.stopPropagation(); setContextMenu({ x: e.clientX, y: e.clientY, items }); };
-    const closeWelcomeModal = () => { localStorage.setItem('wesai-seen-welcome', 'true'); setIsWelcomeModalOpen(false); };
-    const registerEditorActions = (actions: EditorActions) => setEditorActions(actions);
-    const unregisterEditorActions = () => setEditorActions(null);
+    const openSettings = useCallback(() => setIsSettingsOpen(true), []);
+    const openSmartFolderModal = useCallback((folder: SmartCollection | null) => { setSmartFolderToEdit(folder); setIsSmartFolderModalOpen(true); }, []);
+    const onOpenContextMenu = useCallback((e: React.MouseEvent, items: ContextMenuItem[]) => { e.preventDefault(); e.stopPropagation(); setContextMenu({ x: e.clientX, y: e.clientY, items }); }, []);
+    const closeWelcomeModal = useCallback(() => { localStorage.setItem('wesai-seen-welcome', 'true'); setIsWelcomeModalOpen(false); }, []);
+    const registerEditorActions = useCallback((actions: EditorActions) => setEditorActions(actions), []);
+    const unregisterEditorActions = useCallback(() => setEditorActions(null), []);
+
+    // --- Memoized Context Values ---
+    const authValue = useMemo(() => ({ session, isSessionLoading }), [session, isSessionLoading]);
+
+    const storeValue = useMemo(() => ({
+        ...store, onAddNote, onAddNoteFromFile, triggerNoteImport, fileTree,
+        activeNoteId, setActiveNoteId, activeNote, favoriteNotes, searchData, searchTerm,
+        handleSearchTermChange, searchMode, setSearchMode, isAiSearching, aiSearchError,
+        activeSmartCollection, handleActivateSmartCollection, handleClearActiveSmartCollection,
+        noteToDelete, setNoteToDelete, 
+        collectionToDelete, setCollectionToDelete,
+        smartCollectionToDelete, setSmartCollectionToDelete, handleDeleteNoteConfirm,
+        handleDeleteCollectionConfirm, handleDeleteSmartCollectionConfirm,
+        chatMessages: chatHistories[chatMode] || [], 
+        chatStatus, chatMode, setChatMode, 
+        onSendMessage, onGenerateServiceResponse, onSendGeneralMessage, clearChat
+    }), [
+        store, onAddNote, onAddNoteFromFile, triggerNoteImport, fileTree,
+        activeNoteId, setActiveNoteId, activeNote, favoriteNotes, searchData, searchTerm,
+        handleSearchTermChange, searchMode, setSearchMode, isAiSearching, aiSearchError,
+        activeSmartCollection, handleActivateSmartCollection, handleClearActiveSmartCollection,
+        noteToDelete, setNoteToDelete, collectionToDelete, setCollectionToDelete,
+        smartCollectionToDelete, setSmartCollectionToDelete, handleDeleteNoteConfirm,
+        handleDeleteCollectionConfirm, handleDeleteSmartCollectionConfirm,
+        chatHistories, chatMode, chatStatus, setChatMode,
+        onSendMessage, onGenerateServiceResponse, onSendGeneralMessage, clearChat
+    ]);
+
+    const uiValue = useMemo(() => ({
+        theme, toggleTheme, view, setView, isMobileView, isSidebarOpen, setIsSidebarOpen,
+        onToggleSidebar, isSidebarCollapsed, toggleSidebarCollapsed,
+        isAiRateLimited, renamingItemId, setRenamingItemId, isSettingsOpen, setIsSettingsOpen,
+        openSettings, isCommandPaletteOpen, setIsCommandPaletteOpen, isSmartFolderModalOpen,
+        setIsSmartFolderModalOpen, smartFolderToEdit, openSmartFolderModal, contextMenu,
+        setContextMenu, onOpenContextMenu, isWelcomeModalOpen, closeWelcomeModal, isApiKeyMissing: !apiKey
+    }), [
+        theme, toggleTheme, view, setView, isMobileView, isSidebarOpen, setIsSidebarOpen,
+        onToggleSidebar, isSidebarCollapsed, toggleSidebarCollapsed,
+        isAiRateLimited, renamingItemId, setRenamingItemId, isSettingsOpen, setIsSettingsOpen,
+        openSettings, isCommandPaletteOpen, setIsCommandPaletteOpen, isSmartFolderModalOpen,
+        setIsSmartFolderModalOpen, smartFolderToEdit, openSmartFolderModal, contextMenu,
+        setContextMenu, onOpenContextMenu, isWelcomeModalOpen, closeWelcomeModal, apiKey
+    ]);
+
+    const editorValue = useMemo(() => ({
+        editorActions, registerEditorActions, unregisterEditorActions
+    }), [editorActions, registerEditorActions, unregisterEditorActions]);
+
 
     return (
-        <StoreContext.Provider value={{
-            ...store, onAddNote, onAddNoteFromFile, triggerNoteImport,
-            activeNoteId, setActiveNoteId, activeNote, favoriteNotes, searchResults, searchTerm,
-            handleSearchTermChange, searchMode, setSearchMode, isAiSearching, aiSearchError,
-            activeSmartCollection, handleActivateSmartCollection, handleClearActiveSmartCollection,
-            noteToDelete, setNoteToDelete, 
-            collectionToDelete, setCollectionToDelete,
-            smartCollectionToDelete, setSmartCollectionToDelete, handleDeleteNoteConfirm,
-            handleDeleteCollectionConfirm, handleDeleteSmartCollectionConfirm,
-            chatMessages: chatHistories[chatMode] || [], 
-            chatStatus, 
-            chatMode, 
-            setChatMode, 
-            onSendMessage, 
-            onGenerateServiceResponse, 
-            onSendGeneralMessage, 
-            clearChat
-        }}>
-            <UIContext.Provider value={{
-                session, isSessionLoading,
-                theme, toggleTheme, view, setView, isMobileView, isSidebarOpen, setIsSidebarOpen,
-                onToggleSidebar, isSidebarCollapsed, toggleSidebarCollapsed,
-                isAiRateLimited, renamingItemId, setRenamingItemId, isSettingsOpen, setIsSettingsOpen,
-                openSettings, isCommandPaletteOpen, setIsCommandPaletteOpen, isSmartFolderModalOpen,
-                setIsSmartFolderModalOpen, smartFolderToEdit, openSmartFolderModal, contextMenu,
-                setContextMenu, onOpenContextMenu, isWelcomeModalOpen, closeWelcomeModal, isApiKeyMissing: !apiKey,
-            }}>
-                <EditorContext.Provider value={{ editorActions, registerEditorActions, unregisterEditorActions }}>
-                     <input
-                        type="file"
-                        ref={fileInputRef}
-                        onChange={handleFileImport}
-                        accept=".md,.txt,text/plain,text/markdown"
-                        className="hidden"
-                    />
-                    {children}
-                </EditorContext.Provider>
-            </UIContext.Provider>
-        </StoreContext.Provider>
+        <AuthContext.Provider value={authValue}>
+            <StoreContext.Provider value={storeValue}>
+                <UIContext.Provider value={uiValue}>
+                    <EditorContext.Provider value={editorValue}>
+                        <input
+                            type="file"
+                            ref={fileInputRef}
+                            onChange={handleFileImport}
+                            accept=".md,.txt,text/plain,text/markdown"
+                            className="hidden"
+                        />
+                        {children}
+                    </EditorContext.Provider>
+                </UIContext.Provider>
+            </StoreContext.Provider>
+        </AuthContext.Provider>
     );
 };

@@ -4,7 +4,7 @@ import { useStoreContext } from './context/AppContext';
 import { Note, NoteVersion, Collection, SmartCollection } from './types';
 import ConfirmationModal from './components/ConfirmationModal';
 import { Bars3Icon, PlusIcon, SparklesIcon, ArrowDownTrayIcon, Cog6ToothIcon } from './components/Icons';
-import { AppProvider, useUIContext } from './context/AppContext';
+import { AppProvider, useUIContext, useAuthContext } from './context/AppContext';
 import ContextMenu from './components/ContextMenu';
 import { ToastProvider, useToast } from './context/ToastContext';
 import SidebarResizer from './components/SidebarResizer';
@@ -13,7 +13,6 @@ import Auth from './components/Auth';
 import { isSupabaseConfigured } from './lib/supabaseClient';
 import NoteEditorSkeleton from './components/NoteEditorSkeleton';
 import ChatViewSkeleton from './components/ChatViewSkeleton';
-// FIX: Import the missing ApiKeyIndicator component.
 import ApiKeyIndicator from './components/ApiKeyIndicator';
 
 const NoteEditor = React.lazy(() => import('./components/NoteEditor'));
@@ -116,7 +115,7 @@ function AppContent() {
         collectionToDelete, setCollectionToDelete,
         smartCollectionToDelete, setSmartCollectionToDelete, handleDeleteCollectionConfirm,
         handleDeleteNoteConfirm, handleDeleteSmartCollectionConfirm,
-        searchResults, favoriteNotes, searchTerm, handleSearchTermChange, searchMode,
+        searchData, favoriteNotes, searchTerm, handleSearchTermChange, searchMode,
         setSearchMode, isAiSearching, aiSearchError, activeSmartCollection,
         handleActivateSmartCollection, handleClearActiveSmartCollection, addSmartCollection, updateSmartCollection, templates,
         restoreNoteVersion
@@ -235,9 +234,8 @@ function AppContent() {
     return (
         <div className={`flex h-screen w-screen font-sans text-light-text dark:text-dark-text bg-light-background dark:bg-dark-background overflow-hidden ${isSidebarOpen && isMobileView ? 'fixed' : ''}`}>
             <Sidebar
-                notes={notes}
                 favoriteNotes={favoriteNotes}
-                searchResults={searchResults}
+                searchData={searchData}
                 activeNoteId={activeNoteId}
                 searchTerm={searchTerm}
                 setSearchTerm={handleSearchTermChange}
@@ -320,7 +318,7 @@ function AppContent() {
 
 
 function AppContainer() {
-    const { session, isSessionLoading } = useUIContext();
+    const { session, isSessionLoading } = useAuthContext();
 
     if (isSessionLoading) {
         return <SuspenseLoader />;

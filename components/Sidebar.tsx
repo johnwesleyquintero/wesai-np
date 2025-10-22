@@ -1,5 +1,5 @@
-import React, { useMemo, useState, useRef, useCallback, useEffect } from 'react';
-import { Note, SearchMode, SmartCollection, Collection } from '../types';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
+import { Note, SearchMode, SmartCollection, Collection, TreeNode } from '../types';
 import NoteCard from './NoteCard';
 import {
     PencilSquareIcon, Cog6ToothIcon, SunIcon, MoonIcon, XMarkIcon, MagnifyingGlassIcon, SparklesIcon,
@@ -7,15 +7,14 @@ import {
     ChevronDoubleLeftIcon, FolderIcon,
     TrashIcon
 } from './Icons';
-import SidebarNode, { TreeNode } from './SidebarNode';
+import SidebarNode from './SidebarNode';
 import Highlight from './Highlight';
 import { useStoreContext, useUIContext } from '../context/AppContext';
 import { useDragAndDrop } from '../hooks/useDragAndDrop';
 
 interface SidebarProps {
-    notes: Note[];
     favoriteNotes: Note[];
-    searchResults: Note[] | null;
+    searchData: { isSearching: boolean; visibleIds: Set<string> | null; matchIds: Set<string> | null };
     activeNoteId: string | null;
     searchTerm: string;
     setSearchTerm: (term: string) => void;
@@ -31,52 +30,6 @@ interface SidebarProps {
     isCollapsed: boolean;
     onToggleCollapsed: () => void;
 }
-
-const buildTree = (notes: Note[], collections: Collection[]): TreeNode[] => {
-    const noteMap = new Map(notes.map(note => [note.id, { ...note, children: [] as TreeNode[] }]));
-    const collectionMap = new Map(collections.map(c => [c.id, { ...c, type: 'collection' as const, children: [] as TreeNode[] }]));
-    
-    const tree: TreeNode[] = [];
-    
-    const allItemsMap: Map<string, TreeNode> = new Map<string, TreeNode>([...noteMap.entries(), ...collectionMap.entries()]);
-
-    allItemsMap.forEach(item => {
-        if (item.parentId === null) {
-            tree.push(item);
-        } else {
-            const parent = collectionMap.get(item.parentId);
-            if (parent) {
-                parent.children.push(item);
-            } else {
-                tree.push(item);
-            }
-        }
-    });
-
-    const sortNodes = (nodes: TreeNode[]) => {
-        nodes.sort((a, b) => {
-            const aIsCollection = 'type' in a && a.type === 'collection';
-            const bIsCollection = 'type' in b && b.type === 'collection';
-
-            if (aIsCollection && !bIsCollection) return -1;
-            if (!aIsCollection && bIsCollection) return 1;
-
-            const aName = aIsCollection ? (a as Collection).name : (a as Note).title;
-            const bName = bIsCollection ? (b as Collection).name : (b as Note).title;
-            return aName.localeCompare(bName);
-        });
-
-        nodes.forEach(node => {
-            if ('children' in node && node.children.length > 0) {
-                sortNodes(node.children);
-            }
-        });
-    };
-    
-    sortNodes(tree);
-
-    return tree;
-};
 
 const FooterButton: React.FC<{
     onClick?: () => void;
@@ -135,14 +88,14 @@ const CollapsibleSection: React.FC<{
 const COLLAPSED_WIDTH = 56;
 
 const Sidebar: React.FC<SidebarProps> = ({
-    notes, favoriteNotes, searchResults, activeNoteId, searchTerm, setSearchTerm, searchMode, setSearchMode, isAiSearching, aiSearchError, width,
+    favoriteNotes, searchData, activeNoteId, searchTerm, setSearchTerm, searchMode, setSearchMode, isAiSearching, aiSearchError, width,
     activeSmartCollection, onActivateSmartCollection, onClearActiveSmartCollection, onSelectNote,
     isCollapsed, onToggleCollapsed
 }) => {
     const {
         collections, smartCollections, onAddNote, addCollection, moveItem,
         deleteSmartCollection, onAddNoteFromFile, 
-        setNoteToDelete
+        setNoteToDelete, fileTree, notes
     } = useStoreContext();
     
     const {
@@ -167,7 +120,6 @@ const Sidebar: React.FC<SidebarProps> = ({
         },
     });
 
-    const fileTree = useMemo(() => buildTree(notes, collections), [notes, collections]);
     const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({});
     const [focusedNodeId, setFocusedNodeId] = useState<string | null>(null);
 
@@ -178,16 +130,20 @@ const Sidebar: React.FC<SidebarProps> = ({
     const getVisibleNodes = useCallback((nodes: TreeNode[]): string[] => {
         let ids: string[] = [];
         for (const node of nodes) {
+            if (searchData.isSearching && searchData.visibleIds && !searchData.visibleIds.has(node.id)) {
+                continue;
+            }
             ids.push(node.id);
             const isCollection = 'name' in node;
-            if (isCollection && (expandedFolders[node.id] ?? true)) {
+            const isExpanded = searchData.isSearching || (expandedFolders[node.id] ?? true);
+            if (isCollection && isExpanded) {
                 ids = ids.concat(getVisibleNodes(node.children));
             }
         }
         return ids;
-    }, [expandedFolders]);
+    }, [expandedFolders, searchData]);
 
-    const visibleNodeIds = useMemo(() => getVisibleNodes(fileTree), [fileTree, getVisibleNodes]);
+    const visibleNodeIds = React.useMemo(() => getVisibleNodes(fileTree), [fileTree, getVisibleNodes]);
 
     useEffect(() => {
         if (focusedNodeId && !visibleNodeIds.includes(focusedNodeId)) {
@@ -288,72 +244,11 @@ const Sidebar: React.FC<SidebarProps> = ({
         </CollapsibleSection>
     );
     
-    const renderFileTree = () => {
-        if (fileTree.length === 0 && notes.length > 0) {
-             return (
-                <CollapsibleSection title="All Notes" count={notes.length}>
-                     {notes.map(note => (
-                         <NoteCard
-                            key={note.id}
-                            note={note}
-                            isActive={note.id === activeNoteId}
-                            onClick={() => onSelectNote(note.id)}
-                            searchTerm={searchTerm}
-                            onContextMenu={(e) => handleNoteCardContextMenu(e, note)}
-                        />
-                     ))}
-                </CollapsibleSection>
-             );
-        }
+    const renderContent = () => {
+        const { isSearching, visibleIds } = searchData;
 
-        return (
-            <CollapsibleSection
-                title="Folders"
-                count={notes.length}
-                actions={(
-                    <button onClick={() => addCollection('New Folder', null)} className="p-1 rounded text-light-text/60 dark:text-dark-text/60 hover:text-light-text dark:hover:text-dark-text hover:bg-light-background dark:hover:bg-dark-background" aria-label="Add new folder">
-                        <FolderPlusIcon className="w-4 h-4" />
-                    </button>
-                )}
-            >
-                {fileTree.length > 0 ? (
-                    fileTree.map(node => (
-                        <SidebarNode 
-                            key={node.id} 
-                            node={node} 
-                            level={0} 
-                            activeNoteId={activeNoteId}
-                            searchTerm={searchTerm}
-                            onSelectNote={onSelectNote}
-                            expandedFolders={expandedFolders}
-                            onToggleFolder={toggleFolder}
-                            isFocused={focusedNodeId === node.id}
-                        />
-                    ))
-                ) : (
-                     <div className="text-center px-4 py-8 text-sm text-light-text/60 dark:text-dark-text/60">
-                        <p>Your workspace is empty.</p>
-                        <button onClick={() => onAddNote()} className="mt-2 text-light-primary dark:text-dark-primary font-semibold">Create your first note</button>
-                    </div>
-                )}
-            </CollapsibleSection>
-        );
-    };
-
-    const renderSearchResults = () => (
-        <div className="px-4">
-            {(searchResults && searchResults.length > 0) ? (
-                searchResults.map(note => (
-                    <NoteCard
-                        key={note.id}
-                        note={note}
-                        isActive={note.id === activeNoteId}
-                        onClick={() => onSelectNote(note.id)}
-                        searchTerm={searchTerm}
-                        onContextMenu={(e) => handleNoteCardContextMenu(e, note)}
-                    />
-                ))
-            ) : (
+        if (isSearching && visibleIds?.size === 0) {
+            return (
                 <div className="text-center px-4 py-8 text-sm text-light-text/60 dark:text-dark-text/60">
                     {isAiSearching && 'AI is searching...'}
                     {!isAiSearching && searchTerm && (
@@ -362,13 +257,52 @@ const Sidebar: React.FC<SidebarProps> = ({
                             <p className="mt-1">Try a different keyword or use AI Search for conceptual matches.</p>
                         </>
                     )}
-                    {!isAiSearching && !searchTerm && 'No notes in this view.'}
                 </div>
-            )}
-        </div>
-    );
-    
-    const isSearching = searchResults !== null;
+            );
+        }
+        
+        return (
+            <div
+                ref={rootDropRef}
+                {...rootDragAndDropProps}
+                className={`transition-colors p-1 rounded-md min-h-[10rem] ${isRootFileOver ? 'bg-light-primary/10' : ''}`}
+            >
+                {renderFavorites()}
+                {renderSmartCollections()}
+                <CollapsibleSection
+                    title="Folders"
+                    count={notes.length}
+                    actions={(
+                        <button onClick={() => addCollection('New Folder', null)} className="p-1 rounded text-light-text/60 dark:text-dark-text/60 hover:text-light-text dark:hover:text-dark-text hover:bg-light-background dark:hover:bg-dark-background" aria-label="Add new folder">
+                            <FolderPlusIcon className="w-4 h-4" />
+                        </button>
+                    )}
+                >
+                    {fileTree.length > 0 ? (
+                        fileTree.map(node => (
+                            <SidebarNode 
+                                key={node.id} 
+                                node={node} 
+                                level={0} 
+                                activeNoteId={activeNoteId}
+                                searchTerm={searchTerm}
+                                searchData={searchData}
+                                onSelectNote={onSelectNote}
+                                expandedFolders={expandedFolders}
+                                onToggleFolder={toggleFolder}
+                                isFocused={focusedNodeId === node.id}
+                            />
+                        ))
+                    ) : (
+                         <div className="text-center px-4 py-8 text-sm text-light-text/60 dark:text-dark-text/60">
+                            <p>Your workspace is empty.</p>
+                            <button onClick={() => onAddNote()} className="mt-2 text-light-primary dark:text-dark-primary font-semibold">Create your first note</button>
+                        </div>
+                    )}
+                </CollapsibleSection>
+            </div>
+        );
+    };
 
     const ExpandedView = () => (
         <>
@@ -444,17 +378,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                         </div>
                     )}
                     
-                    {isSearching ? renderSearchResults() : (
-                        <div
-                            ref={rootDropRef}
-                            {...rootDragAndDropProps}
-                            className={`transition-colors p-1 rounded-md min-h-[10rem] ${isRootFileOver ? 'bg-light-primary/10' : ''}`}
-                        >
-                           {renderFavorites()}
-                           {renderSmartCollections()}
-                           {renderFileTree()}
-                        </div>
-                    )}
+                    {renderContent()}
                 </div>
             </div>
 

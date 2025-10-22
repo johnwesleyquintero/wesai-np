@@ -35,7 +35,47 @@ export const useDragAndDrop = (
         e.stopPropagation();
         e.dataTransfer.setData('application/json', JSON.stringify({ id, type, parentId }));
         e.dataTransfer.effectAllowed = 'move';
-    }, [id, type, parentId]);
+
+        if (ref.current) {
+            const ghost = document.createElement('div');
+            const iconContainer = ref.current.querySelector('svg')?.cloneNode(true) as SVGElement;
+            const nameContainer = ref.current.querySelector('span.truncate');
+
+            ghost.style.position = 'absolute';
+            ghost.style.top = '-1000px'; // Position off-screen
+            ghost.style.padding = '4px 8px';
+            ghost.style.backgroundColor = 'rgba(59, 130, 246, 0.9)'; // Tailwind blue-500
+            ghost.style.color = 'white';
+            ghost.style.borderRadius = '6px';
+            ghost.style.fontSize = '14px';
+            ghost.style.fontFamily = 'sans-serif';
+            ghost.style.display = 'flex';
+            ghost.style.alignItems = 'center';
+            ghost.style.gap = '8px';
+            ghost.style.pointerEvents = 'none';
+
+            if (iconContainer) {
+                iconContainer.style.width = '16px';
+                iconContainer.style.height = '16px';
+                ghost.appendChild(iconContainer);
+            }
+            
+            const nameSpan = document.createElement('span');
+            nameSpan.textContent = nameContainer?.textContent || 'Item';
+            ghost.appendChild(nameSpan);
+
+            document.body.appendChild(ghost);
+            e.dataTransfer.setDragImage(ghost, 10, 10);
+
+            // Clean up the ghost element after the drag operation has started
+            setTimeout(() => {
+                if (document.body.contains(ghost)) {
+                    document.body.removeChild(ghost);
+                }
+            }, 0);
+        }
+    }, [id, type, parentId, ref]);
+
 
     const handleDragOver = useCallback((e: React.DragEvent) => {
         e.preventDefault();

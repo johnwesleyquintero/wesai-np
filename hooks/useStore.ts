@@ -36,6 +36,7 @@ const processNote = (noteData: any): Note => {
 
 export const useStore = (user: User | undefined) => {
     const [notes, setNotes] = useState<Note[]>([]);
+    const [trashedNotes, setTrashedNotes] = useState<Note[]>([]);
     const [collections, setCollections] = useState<Collection[]>([]);
     const [smartCollections, setSmartCollections] = useState<SmartCollection[]>([]);
     const [templates, setTemplates] = useState<Template[]>([]);
@@ -45,6 +46,7 @@ export const useStore = (user: User | undefined) => {
         if (!user) {
             setLoading(false);
             setNotes([]);
+            setTrashedNotes([]);
             setCollections([]);
             setSmartCollections([]);
             setTemplates([]);
@@ -52,19 +54,22 @@ export const useStore = (user: User | undefined) => {
         }
         setLoading(true);
         try {
-            const [notesRes, collectionsRes, smartCollectionsRes, templatesRes] = await Promise.all([
-                supabase.from('notes').select('*').eq('user_id', user.id),
+            const [notesRes, trashedNotesRes, collectionsRes, smartCollectionsRes, templatesRes] = await Promise.all([
+                supabase.from('notes').select('*').eq('user_id', user.id).is('deleted_at', null),
+                supabase.from('notes').select('*').eq('user_id', user.id).not('deleted_at', 'is', null),
                 supabase.from('collections').select('*').eq('user_id', user.id),
                 supabase.from('smart_collections').select('*').eq('user_id', user.id),
                 supabase.from('templates').select('*').eq('user_id', user.id),
             ]);
 
             if (notesRes.error) throw notesRes.error;
+            if (trashedNotesRes.error) throw trashedNotesRes.error;
             if (collectionsRes.error) throw collectionsRes.error;
             if (smartCollectionsRes.error) throw smartCollectionsRes.error;
             if (templatesRes.error) throw templatesRes.error;
             
             setNotes((notesRes.data || []).map(processNote));
+            setTrashedNotes((trashedNotesRes.data || []).map(processNote));
             setCollections((collectionsRes.data || []).map(fromSupabase));
             setSmartCollections((smartCollectionsRes.data || []).map(fromSupabase));
             setTemplates((templatesRes.data || []).map(fromSupabase));
@@ -84,39 +89,21 @@ export const useStore = (user: User | undefined) => {
         if (!user) return;
 
         const handleNoteChange = (payload: any) => {
-            const record = payload.new || payload.old;
-            if ((record as any)?.user_id !== user.id) return;
-            
-            if (payload.eventType === 'INSERT') setNotes(prev => [...prev, processNote(payload.new)]);
-            if (payload.eventType === 'UPDATE') setNotes(prev => prev.map(n => n.id === payload.new.id ? processNote(payload.new) : n));
-            if (payload.eventType === 'DELETE') setNotes(prev => prev.filter(n => n.id !== (payload.old as any).id));
+            // Refetch all data for simplicity and to ensure consistency
+            // A more optimized approach would be to update the state arrays directly.
+            fetchData();
         };
         
         const handleCollectionChange = (payload: any) => {
-            const record = payload.new || payload.old;
-            if ((record as any)?.user_id !== user.id) return;
-
-            if (payload.eventType === 'INSERT') setCollections(prev => [...prev, fromSupabase(payload.new as Collection)]);
-            if (payload.eventType === 'UPDATE') setCollections(prev => prev.map(c => c.id === payload.new.id ? fromSupabase(payload.new as Collection) : c));
-            if (payload.eventType === 'DELETE') setCollections(prev => prev.filter(c => c.id !== (payload.old as any).id));
+             fetchData();
         };
 
         const handleSmartCollectionChange = (payload: any) => {
-            const record = payload.new || payload.old;
-            if ((record as any)?.user_id !== user.id) return;
-            
-            if (payload.eventType === 'INSERT') setSmartCollections(prev => [...prev, fromSupabase(payload.new as SmartCollection)]);
-            if (payload.eventType === 'UPDATE') setSmartCollections(prev => prev.map(sc => sc.id === payload.new.id ? fromSupabase(payload.new as SmartCollection) : sc));
-            if (payload.eventType === 'DELETE') setSmartCollections(prev => prev.filter(sc => sc.id !== (payload.old as any).id));
+             fetchData();
         };
 
         const handleTemplateChange = (payload: any) => {
-            const record = payload.new || payload.old;
-            if ((record as any)?.user_id !== user.id) return;
-
-            if (payload.eventType === 'INSERT') setTemplates(prev => [...prev, fromSupabase(payload.new as Template)]);
-            if (payload.eventType === 'UPDATE') setTemplates(prev => prev.map(t => t.id === payload.new.id ? fromSupabase(payload.new as Template) : t));
-            if (payload.eventType === 'DELETE') setTemplates(prev => prev.filter(t => t.id !== (payload.old as any).id));
+             fetchData();
         };
 
         const notesChannel = supabase.channel('public:notes').on('postgres_changes', { event: '*', schema: 'public', table: 'notes' }, handleNoteChange).subscribe();
@@ -130,7 +117,7 @@ export const useStore = (user: User | undefined) => {
             supabase.removeChannel(smartCollectionsChannel);
             supabase.removeChannel(templatesChannel);
         };
-    }, [user]);
+    }, [user, fetchData]);
 
     const addNote = useCallback(async (parentId: string | null = null, title = "Untitled Note", content = "") => {
         if (!user) throw new Error("User must be logged in to create a note.");
@@ -188,8 +175,20 @@ export const useStore = (user: User | undefined) => {
         await updateNote(noteId, { title, content, tags });
     }, [updateNote]);
 
-    const deleteNote = useCallback(async (id: string) => {
+    const deleteNote = useCallback(async (id: string) => { // This is now a soft delete
         if (!user) throw new Error("User must be logged in to delete a note.");
+        const { error } = await supabase.from('notes').update({ deleted_at: new Date().toISOString() }).eq('id', id).eq('user_id', user.id);
+        if (error) throw error;
+    }, [user]);
+
+    const restoreNote = useCallback(async (id: string) => {
+        if (!user) throw new Error("User must be logged in to restore a note.");
+        const { error } = await supabase.from('notes').update({ deleted_at: null }).eq('id', id).eq('user_id', user.id);
+        if (error) throw error;
+    }, [user]);
+
+    const permanentlyDeleteNote = useCallback(async (id: string) => {
+        if (!user) throw new Error("User must be logged in to permanently delete a note.");
         const { error } = await supabase.from('notes').delete().eq('id', id).eq('user_id', user.id);
         if (error) throw error;
     }, [user]);
@@ -385,8 +384,8 @@ export const useStore = (user: User | undefined) => {
     
     return { 
         loading,
-        notes, collections, smartCollections, templates,
-        addNote, addNoteFromFile, updateNote, deleteNote, getNoteById, toggleFavorite, restoreNoteVersion, copyNote, renameNoteTitle,
+        notes, trashedNotes, collections, smartCollections, templates,
+        addNote, addNoteFromFile, updateNote, deleteNote, restoreNote, permanentlyDeleteNote, getNoteById, toggleFavorite, restoreNoteVersion, copyNote, renameNoteTitle,
         addCollection, updateCollection, deleteCollection, getCollectionById, moveItem,
         addSmartCollection, updateSmartCollection, deleteSmartCollection,
         addTemplate, updateTemplate, deleteTemplate,

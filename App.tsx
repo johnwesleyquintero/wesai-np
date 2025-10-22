@@ -110,9 +110,10 @@ const ConfigurationError: React.FC = () => (
 function AppContent() {
     const {
         notes, activeNoteId, setActiveNoteId, onAddNote,
-        noteToDelete, setNoteToDelete, collectionToDelete, setCollectionToDelete,
+        noteToDelete, setNoteToDelete, noteToPermanentlyDelete, setNoteToPermanentlyDelete,
+        collectionToDelete, setCollectionToDelete,
         smartCollectionToDelete, setSmartCollectionToDelete, handleDeleteCollectionConfirm,
-        handleDeleteNoteConfirm, handleDeleteSmartCollectionConfirm,
+        handleDeleteNoteConfirm, handlePermanentlyDeleteNoteConfirm, handleDeleteSmartCollectionConfirm,
         filteredNotes, filter, setFilter, searchTerm, handleSearchTermChange, searchMode,
         setSearchMode, isAiSearching, aiSearchError, activeSmartCollection,
         handleActivateSmartCollection, handleClearActiveSmartCollection, addSmartCollection, updateSmartCollection, templates,
@@ -276,8 +277,17 @@ function AppContent() {
                 isOpen={!!noteToDelete}
                 onClose={() => setNoteToDelete(null)}
                 onConfirm={handleDeleteNoteConfirm}
-                title="Delete Note"
-                message={`Are you sure you want to delete "${noteToDelete?.title}"? This action cannot be undone.`}
+                title="Move Note to Trash"
+                message={`Are you sure you want to move "${noteToDelete?.title}" to the trash?`}
+                confirmText="Move to Trash"
+            />
+            
+            <ConfirmationModal
+                isOpen={!!noteToPermanentlyDelete}
+                onClose={() => setNoteToPermanentlyDelete(null)}
+                onConfirm={handlePermanentlyDeleteNoteConfirm}
+                title="Delete Note Permanently"
+                message={`Are you sure you want to permanently delete "${noteToPermanentlyDelete?.title}"? This action cannot be undone.`}
             />
 
             <ConfirmationModal

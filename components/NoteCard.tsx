@@ -8,9 +8,10 @@ interface NoteCardProps {
     isActive: boolean;
     onClick: () => void;
     searchTerm: string;
+    onContextMenu?: (event: React.MouseEvent) => void;
 }
 
-const NoteCard: React.FC<NoteCardProps> = ({ note, isActive, onClick, searchTerm }) => {
+const NoteCard: React.FC<NoteCardProps> = ({ note, isActive, onClick, searchTerm, onContextMenu }) => {
     const preview = note.content.substring(0, 80) + (note.content.length > 80 ? '...' : '');
 
     const formatDate = (dateString: string) => {
@@ -23,6 +24,7 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isActive, onClick, searchTerm
     return (
         <div
             onClick={onClick}
+            onContextMenu={onContextMenu}
             className={`p-3 mb-2 rounded-lg cursor-pointer transition-colors active:scale-95 transform transition-transform ${
                 isActive
                     ? 'bg-light-primary/30 dark:bg-dark-primary/30'

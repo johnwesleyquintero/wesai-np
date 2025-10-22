@@ -24,6 +24,7 @@ export interface Note {
     tags: string[];
     history: NoteVersion[];
     parentId: string | null;
+    deletedAt?: string | null;
 }
 
 export interface Collection {
@@ -55,7 +56,7 @@ export interface ChatMessage {
     noteId?: string;
 }
 
-export type FilterType = 'RECENT' | 'FAVORITES' | 'ALL';
+export type FilterType = 'RECENT' | 'FAVORITES' | 'ALL' | 'TRASH';
 
 export type SearchMode = 'KEYWORD' | 'AI';
 

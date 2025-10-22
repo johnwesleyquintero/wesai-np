@@ -3,7 +3,7 @@ import { Note, FilterType, SearchMode, SmartCollection, Collection } from '../ty
 import NoteCard from './NoteCard';
 import {
     PencilSquareIcon, Cog6ToothIcon, SunIcon, MoonIcon, XMarkIcon, MagnifyingGlassIcon, SparklesIcon,
-    PlusIcon, FolderPlusIcon, BrainIcon, TrashIcon
+    PlusIcon, FolderPlusIcon, BrainIcon, TrashIcon, ArrowUturnLeftIcon
 } from './Icons';
 import SidebarNode, { TreeNode } from './SidebarNode';
 import Highlight from './Highlight';
@@ -110,7 +110,8 @@ const Sidebar: React.FC<SidebarProps> = ({
 }) => {
     const {
         notes, collections, smartCollections, onAddNote, addCollection, moveItem,
-        deleteSmartCollection, onAddNoteFromFile,
+        deleteSmartCollection, onAddNoteFromFile, trashedNotes, restoreNote, 
+        setNoteToDelete, setNoteToPermanentlyDelete
     } = useStoreContext();
     
     const {
@@ -206,10 +207,25 @@ const Sidebar: React.FC<SidebarProps> = ({
         }
     };
     
-    const { allNotesCount, favoritesCount } = useMemo(() => ({
+    const { allNotesCount, favoritesCount, trashedCount } = useMemo(() => ({
         allNotesCount: notes.length,
-        favoritesCount: notes.filter(n => n.isFavorite).length
-    }), [notes]);
+        favoritesCount: notes.filter(n => n.isFavorite).length,
+        trashedCount: trashedNotes.length,
+    }), [notes, trashedNotes]);
+    
+    const handleNoteCardContextMenu = (e: React.MouseEvent, note: Note) => {
+        if (filter === 'TRASH') {
+            onOpenContextMenu(e, [
+                { label: 'Restore Note', action: () => restoreNote(note.id), icon: <ArrowUturnLeftIcon /> },
+                { label: 'Delete Permanently', action: () => setNoteToPermanentlyDelete(note), isDestructive: true, icon: <TrashIcon /> },
+            ]);
+        } else {
+             onOpenContextMenu(e, [
+                // Add regular note actions here if needed in the future
+                { label: 'Move to Trash', action: () => setNoteToDelete(note), isDestructive: true, icon: <TrashIcon /> },
+            ]);
+        }
+    };
     
     const renderSmartCollections = () => (
         <div className="px-2 mt-4">
@@ -282,6 +298,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                         isActive={note.id === activeNoteId}
                         onClick={() => onSelectNote(note.id)}
                         searchTerm={searchTerm}
+                        onContextMenu={(e) => handleNoteCardContextMenu(e, note)}
                     />
                 ))
             ) : (
@@ -293,7 +310,9 @@ const Sidebar: React.FC<SidebarProps> = ({
                             <p className="mt-1">Try a different keyword or use AI Search for conceptual matches.</p>
                         </>
                     )}
-                    {!isAiSearching && !searchTerm && 'No notes in this view.'}
+                    {!isAiSearching && !searchTerm && (
+                        filter === 'TRASH' ? 'Trash is empty.' : 'No notes in this view.'
+                    )}
                 </div>
             )}
         </div>
@@ -373,39 +392,43 @@ const Sidebar: React.FC<SidebarProps> = ({
                     )}
                     <div className="px-4 mb-2">
                         <div className="flex justify-between items-center">
-                             <div className="flex space-x-1 bg-light-background dark:bg-dark-background p-1 rounded-lg">
+                             <div className="flex space-x-1 bg-light-background dark:bg-dark-background p-1 rounded-lg text-sm flex-wrap">
                                 <button
                                     onClick={() => setFilter('RECENT')}
-                                    className={`px-3 py-1 text-sm rounded-md ${filter === 'RECENT' ? 'bg-white dark:bg-dark-ui-hover shadow-sm' : ''}`}
+                                    className={`px-3 py-1 rounded-md ${filter === 'RECENT' ? 'bg-white dark:bg-dark-ui-hover shadow-sm' : ''}`}
                                 >
-                                    Recent <span className="text-light-text/50 dark:text-dark-text/50">({allNotesCount})</span>
+                                    Recent
                                 </button>
                                 <button
                                     onClick={() => setFilter('FAVORITES')}
-                                    className={`px-3 py-1 text-sm rounded-md ${filter === 'FAVORITES' ? 'bg-white dark:bg-dark-ui-hover shadow-sm' : ''}`}
+                                    className={`px-3 py-1 rounded-md ${filter === 'FAVORITES' ? 'bg-white dark:bg-dark-ui-hover shadow-sm' : ''}`}
                                 >
                                     Favorites <span className="text-light-text/50 dark:text-dark-text/50">({favoritesCount})</span>
                                 </button>
                                 <button
                                     onClick={() => setFilter('ALL')}
-                                    className={`px-3 py-1 text-sm rounded-md ${filter === 'ALL' ? 'bg-white dark:bg-dark-ui-hover shadow-sm' : ''}`}
+                                    className={`px-3 py-1 rounded-md ${filter === 'ALL' ? 'bg-white dark:bg-dark-ui-hover shadow-sm' : ''}`}
                                 >
                                     All <span className="text-light-text/50 dark:text-dark-text/50">({allNotesCount})</span>
+                                </button>
+                                <button
+                                    onClick={() => setFilter('TRASH')}
+                                    className={`px-3 py-1 rounded-md ${filter === 'TRASH' ? 'bg-white dark:bg-dark-ui-hover shadow-sm' : ''}`}
+                                >
+                                    Trash <span className="text-light-text/50 dark:text-dark-text/50">({trashedCount})</span>
                                 </button>
                             </div>
                         </div>
                     </div>
-                    {searchTerm || activeSmartCollection ? renderFlatList() : (
-                        filter === 'ALL' ? (
-                            <div
-                                ref={rootDropRef}
-                                {...rootDragAndDropProps}
-                                className={`transition-colors p-1 rounded-md min-h-[10rem] ${isRootFileOver ? 'bg-light-primary/10' : ''}`}
-                            >
-                               {renderSmartCollections()}
-                               {renderFileTree()}
-                            </div>
-                        ) : renderFlatList()
+                    {searchTerm || activeSmartCollection || filter !== 'ALL' ? renderFlatList() : (
+                        <div
+                            ref={rootDropRef}
+                            {...rootDragAndDropProps}
+                            className={`transition-colors p-1 rounded-md min-h-[10rem] ${isRootFileOver ? 'bg-light-primary/10' : ''}`}
+                        >
+                           {renderSmartCollections()}
+                           {renderFileTree()}
+                        </div>
                     )}
                 </div>
             </div>

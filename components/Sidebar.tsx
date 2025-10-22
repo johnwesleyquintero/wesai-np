@@ -6,7 +6,8 @@ import {
     PlusIcon, FolderPlusIcon, BrainIcon, StarIcon, ChevronDownIcon, ChevronRightIcon,
     ChevronDoubleLeftIcon, FolderIcon,
     // FIX: Imported TrashIcon to resolve reference errors.
-    TrashIcon
+    TrashIcon,
+    PinIcon
 } from './Icons';
 import SidebarNode, { TreeNode } from './SidebarNode';
 import Highlight from './Highlight';
@@ -61,6 +62,13 @@ const buildTree = (notes: Note[], collections: Collection[]): TreeNode[] => {
 
             if (aIsCollection && !bIsCollection) return -1;
             if (!aIsCollection && bIsCollection) return 1;
+
+            if (!aIsCollection && !bIsCollection) { // both are notes
+                const noteA = a as Note;
+                const noteB = b as Note;
+                if (noteA.isPinned && !noteB.isPinned) return -1;
+                if (!noteA.isPinned && noteB.isPinned) return 1;
+            }
 
             const aName = aIsCollection ? (a as Collection).name : (a as Note).title;
             const bName = bIsCollection ? (b as Collection).name : (b as Note).title;

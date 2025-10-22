@@ -21,6 +21,7 @@ export interface Note {
     createdAt: string;
     updatedAt: string;
     isFavorite: boolean;
+    isPinned: boolean;
     tags: string[];
     history: NoteVersion[];
     parentId: string | null;

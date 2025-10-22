@@ -27,6 +27,7 @@ const processNote = (noteData: any): Note => {
     const note = fromSupabase(noteData) as Note;
     note.content = note.content || '';
     note.tags = note.tags || [];
+    note.isPinned = note.isPinned || false;
     // The notes table doesn't have a history column by default, but we safeguard it here
     // in case it's added by joins or other logic in the future.
     note.history = (note as any).history || [];
@@ -119,7 +120,8 @@ export const useStore = (user: User | undefined) => {
         const newNoteForDb = { 
             title, 
             content, 
-            is_favorite: false, 
+            is_favorite: false,
+            is_pinned: false,
             tags: [], 
             parent_id: parentId,
             user_id: user.id,
@@ -134,7 +136,8 @@ export const useStore = (user: User | undefined) => {
         const newNoteForDb = { 
             title: title.replace(/\.(md|txt)$/i, ''), 
             content, 
-            is_favorite: false, 
+            is_favorite: false,
+            is_pinned: false,
             tags: [], 
             parent_id: parentId,
             user_id: user.id,
@@ -183,6 +186,14 @@ export const useStore = (user: User | undefined) => {
         const note = notes.find(n => n.id === id);
         if (!note) return;
         const { error } = await supabase.from('notes').update({ is_favorite: !note.isFavorite }).eq('id', id).eq('user_id', user.id);
+        if (error) throw error;
+    }, [notes, user]);
+
+    const togglePinned = useCallback(async (id: string) => {
+        if (!user) throw new Error("User must be logged in to update a note.");
+        const note = notes.find(n => n.id === id);
+        if (!note) return;
+        const { error } = await supabase.from('notes').update({ is_pinned: !note.isPinned }).eq('id', id).eq('user_id', user.id);
         if (error) throw error;
     }, [notes, user]);
 
@@ -368,7 +379,7 @@ export const useStore = (user: User | undefined) => {
     return { 
         loading,
         notes, collections, smartCollections, templates,
-        addNote, addNoteFromFile, updateNote, deleteNote, getNoteById, toggleFavorite, restoreNoteVersion, copyNote, renameNoteTitle,
+        addNote, addNoteFromFile, updateNote, deleteNote, getNoteById, toggleFavorite, togglePinned, restoreNoteVersion, copyNote, renameNoteTitle,
         addCollection, updateCollection, deleteCollection, getCollectionById, moveItem,
         addSmartCollection, updateSmartCollection, deleteSmartCollection,
         addTemplate, updateTemplate, deleteTemplate,

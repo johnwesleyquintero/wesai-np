@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Note, Template } from '../types';
 import { enhanceText, summarizeAndExtractActions } from '../services/geminiService';
-import { StarIcon, TrashIcon, SparklesIcon, HistoryIcon, ArrowDownTrayIcon, DocumentDuplicateIcon, Bars3Icon, ArrowUturnLeftIcon, ArrowUturnRightIcon, EyeIcon, PencilSquareIcon, CheckBadgeIcon, ClipboardDocumentIcon, InformationCircleIcon, EllipsisVerticalIcon } from './Icons';
+import { StarIcon, TrashIcon, SparklesIcon, HistoryIcon, ArrowDownTrayIcon, DocumentDuplicateIcon, Bars3Icon, ArrowUturnLeftIcon, ArrowUturnRightIcon, EyeIcon, PencilSquareIcon, CheckBadgeIcon, ClipboardDocumentIcon, InformationCircleIcon, EllipsisVerticalIcon, PinIcon } from './Icons';
 import { useToast } from '../context/ToastContext';
 import NoteInfoPopover from './NoteInfoPopover';
 import { useStoreContext } from '../context/AppContext';
@@ -258,7 +258,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
     templates, onApplyTemplate, isMobileView, onToggleSidebar, onUndo, onRedo, canUndo, canRedo,
     viewMode, onToggleViewMode, isCheckingSpelling, isAiRateLimited, wordCount, charCount
 }) => {
-    const { setNoteToDelete } = useStoreContext();
+    const { setNoteToDelete, togglePinned } = useStoreContext();
     const [aiActionInProgress, setAiActionInProgress] = useState<'enhancing' | 'summarizing' | null>(null);
     const [aiActionError, setAiActionError] = useState<string | null>(null);
     const [isInfoOpen, setIsInfoOpen] = useState(false);
@@ -402,7 +402,9 @@ const Toolbar: React.FC<ToolbarProps> = ({
                         </>
                     )}
 
-
+                    <button onClick={() => togglePinned(note.id)} className="p-2 rounded-md hover:bg-light-ui dark:hover:bg-dark-ui transition-colors" aria-label={note.isPinned ? 'Unpin note' : 'Pin note'}>
+                        <PinIcon filled={note.isPinned} className={note.isPinned ? 'text-light-primary dark:text-dark-primary' : ''} />
+                    </button>
                     <button onClick={() => onToggleFavorite(note.id)} className="p-2 rounded-md hover:bg-light-ui dark:hover:bg-dark-ui transition-colors" aria-label={note.isFavorite ? 'Remove from favorites' : 'Add to favorites'}>
                         <StarIcon className={`w-5 h-5 ${note.isFavorite ? 'text-yellow-500' : ''}`} filled={note.isFavorite} />
                     </button>

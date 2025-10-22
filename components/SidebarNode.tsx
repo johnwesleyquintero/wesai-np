@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Collection, Note } from '../types';
-import { ChevronDownIcon, ChevronRightIcon, DocumentTextIcon, FolderIcon, TrashIcon, PencilSquareIcon, DocumentDuplicateIcon, ClipboardDocumentIcon, GripVerticalIcon } from './Icons';
+import { ChevronDownIcon, ChevronRightIcon, DocumentTextIcon, FolderIcon, TrashIcon, PencilSquareIcon, DocumentDuplicateIcon, ClipboardDocumentIcon, GripVerticalIcon, PinIcon } from './Icons';
 import { ContextMenuItem } from '../types';
 import { useStoreContext, useUIContext } from '../context/AppContext';
 import { useToast } from '../context/ToastContext';
@@ -27,7 +27,7 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
 }) => {
     const { 
         collections, onAddNote, onAddNoteFromFile, updateCollection, renameNoteTitle, moveItem,
-        copyNote, setNoteToDelete, setCollectionToDelete
+        copyNote, setNoteToDelete, setCollectionToDelete, togglePinned
     } = useStoreContext();
     const { onOpenContextMenu, renamingItemId, setRenamingItemId } = useUIContext();
 
@@ -94,6 +94,7 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
             const noteAsNote = node as Note;
             menuItems = [
                 { label: 'Rename Note', action: () => setRenamingItemId(node.id), icon: <PencilSquareIcon /> },
+                { label: noteAsNote.isPinned ? 'Unpin Note' : 'Pin Note', action: () => togglePinned(noteAsNote.id), icon: <PinIcon /> },
                 { 
                     label: 'Duplicate Note', 
                     action: () => {

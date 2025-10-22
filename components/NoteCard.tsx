@@ -1,6 +1,6 @@
 import React from 'react';
 import { Note } from '../types';
-import { StarIcon } from './Icons';
+import { StarIcon, PinIcon } from './Icons';
 import Highlight from './Highlight';
 
 interface NoteCardProps {
@@ -33,7 +33,10 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isActive, onClick, searchTerm
         >
             <h3 className="font-semibold truncate flex justify-between items-center">
                 <Highlight text={note.title} highlight={searchTerm} />
-                {note.isFavorite && <StarIcon className="w-4 h-4 text-yellow-500" filled />}
+                <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                    {note.isPinned && <PinIcon className="w-4 h-4 text-light-primary dark:text-dark-primary" filled />}
+                    {note.isFavorite && <StarIcon className="w-4 h-4 text-yellow-500" filled />}
+                </div>
             </h3>
             <p className="text-sm text-light-text/70 dark:text-dark-text/70 truncate">
                  <Highlight text={preview || 'No content'} highlight={searchTerm} />

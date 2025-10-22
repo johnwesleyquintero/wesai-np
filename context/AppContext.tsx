@@ -11,6 +11,7 @@ import { supabase } from '../lib/supabaseClient';
 // Store Context
 interface StoreContextType extends Omit<ReturnType<typeof useSupabaseStore>, 'deleteNote'> {
     deleteNote: (id: string) => Promise<void>;
+    togglePinned: (id: string) => Promise<void>;
     activeNoteId: string | null;
     setActiveNoteId: React.Dispatch<React.SetStateAction<string | null>>;
     activeNote: Note | null;
@@ -321,24 +322,34 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const favoriteNotes = useMemo(() => {
         return notes
             .filter(n => n.isFavorite)
-            .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+            .sort((a, b) => {
+                if (a.isPinned && !b.isPinned) return -1;
+                if (!a.isPinned && b.isPinned) return 1;
+                return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+            });
     }, [notes]);
 
     const searchResults = useMemo(() => {
         if (!searchTerm.trim() && !activeSmartCollectionId) return null;
 
-        const sortedNotes = [...notes].sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+        const sortLogic = (notesToSort: Note[]) => notesToSort.sort((a, b) => {
+            if (a.isPinned && !b.isPinned) return -1;
+            if (!a.isPinned && b.isPinned) return 1;
+            return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+        });
 
         if (searchMode === 'AI' && aiSearchResultIds) {
-            const noteMap = new Map(sortedNotes.map(note => [note.id, note]));
-            return aiSearchResultIds.map(id => noteMap.get(id)).filter((note): note is Note => !!note);
+            const noteMap = new Map(notes.map(note => [note.id, note]));
+            const foundNotes = aiSearchResultIds.map(id => noteMap.get(id)).filter((note): note is Note => !!note);
+            return sortLogic(foundNotes);
         } else if (searchMode === 'KEYWORD') {
             const lowercasedSearchTerm = searchTerm.toLowerCase();
-            return sortedNotes.filter(note =>
+            const filtered = notes.filter(note =>
                 note.title.toLowerCase().includes(lowercasedSearchTerm) ||
                 note.content.toLowerCase().includes(lowercasedSearchTerm) ||
                 note.tags.some(tag => tag.toLowerCase().includes(lowercasedSearchTerm))
             );
+            return sortLogic(filtered);
         }
         return []; // Return empty array if AI search is pending or fails to find anything
     }, [notes, searchTerm, searchMode, aiSearchResultIds, activeSmartCollectionId]);

@@ -133,7 +133,10 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({ title, content, onTog
         };
         
         const parseTableRow = (line: string): string[] => {
-            return line.split('|').map(s => s.trim()).slice(1, -1);
+            let preparedLine = line.trim();
+            if (preparedLine.startsWith('|')) preparedLine = preparedLine.substring(1);
+            if (preparedLine.endsWith('|')) preparedLine = preparedLine.slice(0, -1);
+            return preparedLine.split('|').map(s => s.trim());
         };
 
         for (let i = 0; i < lines.length; i++) {
@@ -145,9 +148,10 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({ title, content, onTog
                 flushList();
 
                 const headerCells = parseTableRow(line);
+                const numColumns = headerCells.length;
                 const separatorLine = lines[i + 1];
                 
-                const alignments = separatorLine.split('|').map(s => s.trim()).slice(1, -1).map(s => {
+                const alignments = parseTableRow(separatorLine).map(s => {
                     const left = s.startsWith(':');
                     const right = s.endsWith(':');
                     if (left && right) return 'center';
@@ -158,9 +162,20 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({ title, content, onTog
                 const tableRows: React.ReactElement[] = [];
                 let rowIndex = i + 2;
                 while(rowIndex < lines.length && lines[rowIndex].includes('|')) {
-                    const rowCells = parseTableRow(lines[rowIndex]);
+                    if (lines[rowIndex].trim() === '') break;
+                    
+                    let rowCells = parseTableRow(lines[rowIndex]);
+
+                    if (rowCells.length > numColumns) {
+                        rowCells = rowCells.slice(0, numColumns);
+                    } else {
+                        while (rowCells.length < numColumns) {
+                            rowCells.push('');
+                        }
+                    }
+
                     tableRows.push(
-                        <tr key={`row-${rowIndex}`}>
+                        <tr key={`row-${rowIndex}`} className={tableRows.length % 2 === 1 ? 'bg-light-ui/50 dark:bg-dark-ui/50' : ''}>
                             {rowCells.map((cell, cellIndex) => (
                                 <td key={cellIndex} className={`border border-light-border dark:border-dark-border px-4 py-2 text-${alignments[cellIndex] || 'left'}`}>
                                     {parseInline(cell)}

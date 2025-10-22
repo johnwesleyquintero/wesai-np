@@ -22,6 +22,16 @@ const toSupabase = <T extends { [key: string]: any }>(data: T) => {
 };
 
 
+// Sanitizes a note object fetched from Supabase to prevent crashes from null fields.
+const processNote = (noteData: any): Note => {
+    const note = fromSupabase(noteData) as Note;
+    note.content = note.content || '';
+    note.tags = note.tags || [];
+    note.history = (note as any).history || []; // The notes table doesn't have history, it's populated on demand.
+    return note;
+};
+
+
 export const useStore = (user: User | undefined) => {
     const [notes, setNotes] = useState<Note[]>([]);
     const [collections, setCollections] = useState<Collection[]>([]);
@@ -52,7 +62,7 @@ export const useStore = (user: User | undefined) => {
             if (smartCollectionsRes.error) throw smartCollectionsRes.error;
             if (templatesRes.error) throw templatesRes.error;
             
-            setNotes((notesRes.data || []).map(fromSupabase));
+            setNotes((notesRes.data || []).map(processNote));
             setCollections((collectionsRes.data || []).map(fromSupabase));
             setSmartCollections((smartCollectionsRes.data || []).map(fromSupabase));
             setTemplates((templatesRes.data || []).map(fromSupabase));
@@ -75,8 +85,8 @@ export const useStore = (user: User | undefined) => {
             const record = payload.new || payload.old;
             if ((record as any)?.user_id !== user.id) return;
             
-            if (payload.eventType === 'INSERT') setNotes(prev => [...prev, fromSupabase(payload.new as Note)]);
-            if (payload.eventType === 'UPDATE') setNotes(prev => prev.map(n => n.id === payload.new.id ? fromSupabase(payload.new as Note) : n));
+            if (payload.eventType === 'INSERT') setNotes(prev => [...prev, processNote(payload.new)]);
+            if (payload.eventType === 'UPDATE') setNotes(prev => prev.map(n => n.id === payload.new.id ? processNote(payload.new) : n));
             if (payload.eventType === 'DELETE') setNotes(prev => prev.filter(n => n.id !== (payload.old as any).id));
         };
         

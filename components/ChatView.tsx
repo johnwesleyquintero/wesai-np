@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ChatMessage, Note, ChatMode } from '../types';
-import { Bars3Icon, SparklesIcon, DocumentTextIcon, PaperAirplaneIcon, MagnifyingGlassIcon, ClipboardDocumentIcon, PaperClipIcon, XMarkIcon, Cog6ToothIcon, CheckBadgeIcon, PencilSquareIcon, ArrowTopRightOnSquareIcon } from './Icons';
+import { Bars3Icon, SparklesIcon, DocumentTextIcon, PaperAirplaneIcon, MagnifyingGlassIcon, ClipboardDocumentIcon, PaperClipIcon, XMarkIcon, Cog6ToothIcon, CheckBadgeIcon, PencilSquareIcon, ArrowTopRightOnSquareIcon, XCircleIcon } from './Icons';
 import MarkdownPreview from './MarkdownPreview';
 import { useUIContext, useStoreContext } from '../context/AppContext';
 import { useToast } from '../context/ToastContext';
@@ -108,32 +108,68 @@ const ChatView: React.FC = () => {
     };
     
     const ToolMessage: React.FC<{ msg: ChatMessage }> = ({ msg }) => {
+        const [isArgsOpen, setIsArgsOpen] = useState(true);
+
         if (typeof msg.content !== 'object' || msg.content === null) return null;
         const { name, args, status, result } = msg.content;
-    
-        if (status === 'pending') {
-            return (
-                <div className="text-center my-4">
-                    <div className="inline-flex items-center gap-2 text-sm text-light-text/70 dark:text-dark-text/70 px-3 py-1.5 bg-light-ui dark:bg-dark-ui rounded-full">
-                        <Cog6ToothIcon className="w-4 h-4 animate-spin" />
-                        Using tool: <span className="font-semibold">{name}</span>...
+
+        const statusConfig = {
+            pending: {
+                icon: <Cog6ToothIcon className="w-5 h-5 animate-spin text-light-text/80 dark:text-dark-text/80" />,
+                title: 'Using Tool',
+                borderColor: 'border-light-border dark:border-dark-border',
+            },
+            complete: {
+                icon: <CheckBadgeIcon className="w-5 h-5 text-green-500" />,
+                title: 'Tool Succeeded',
+                borderColor: 'border-green-300 dark:border-green-800',
+            },
+            error: {
+                icon: <XCircleIcon className="w-5 h-5 text-red-500" />,
+                title: 'Tool Failed',
+                borderColor: 'border-red-300 dark:border-red-800',
+            }
+        };
+
+        const currentStatus = statusConfig[status || 'pending'];
+
+        const renderJson = (jsonObj: any) => {
+            if (jsonObj === undefined || jsonObj === null) return 'null';
+            try {
+                if (Object.keys(jsonObj).length === 0 && jsonObj.constructor === Object) return '{}';
+                return JSON.stringify(jsonObj, null, 2);
+            } catch {
+                return 'Invalid JSON object';
+            }
+        };
+
+        return (
+            <div className={`my-4 border rounded-lg overflow-hidden bg-light-ui/50 dark:bg-dark-ui/50 ${currentStatus.borderColor}`}>
+                <div className="flex items-center justify-between p-3 bg-light-ui/70 dark:bg-dark-ui/70">
+                    <div className="flex items-center gap-3">
+                        {currentStatus.icon}
+                        <span className="font-semibold text-sm">{currentStatus.title}: <span className="font-mono bg-light-background dark:bg-dark-background px-1.5 py-0.5 rounded">{name}</span></span>
                     </div>
+                    <button onClick={() => setIsArgsOpen(!isArgsOpen)} className="text-xs font-medium text-light-text/60 dark:text-dark-text/60 hover:underline">
+                        {isArgsOpen ? 'Hide Details' : 'Show Details'}
+                    </button>
                 </div>
-            );
-        }
-    
-        if (status === 'complete') {
-            return (
-                <div className="text-center my-4">
-                     <div className="inline-flex items-center gap-2 text-sm text-light-text/70 dark:text-dark-text/70 px-3 py-1.5 bg-green-100 dark:bg-green-900/40 rounded-full border border-green-200 dark:border-green-800">
-                        <CheckBadgeIcon className="w-4 h-4 text-green-600 dark:text-green-400" />
-                        Tool <span className="font-semibold">{name}</span> succeeded.
+                {isArgsOpen && (
+                    <div className="p-3 text-xs font-mono bg-light-background dark:bg-dark-background">
+                        <div className="mb-2">
+                            <h4 className="font-semibold text-light-text/70 dark:text-dark-text/70 mb-1">Arguments:</h4>
+                            <pre className="whitespace-pre-wrap break-all p-2 bg-light-ui dark:bg-dark-ui rounded text-light-text dark:text-dark-text">{renderJson(args)}</pre>
+                        </div>
+                         {(status === 'complete' || status === 'error') && result !== undefined && (
+                            <div>
+                                <h4 className="font-semibold text-light-text/70 dark:text-dark-text/70 mb-1">Result:</h4>
+                                <pre className={`whitespace-pre-wrap break-all p-2 rounded ${status === 'error' ? 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200' : 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200'}`}>{renderJson(result)}</pre>
+                            </div>
+                        )}
                     </div>
-                </div>
-            );
-        }
-        
-        return null; // Don't render error states inline for now
+                )}
+            </div>
+        );
     };
 
 

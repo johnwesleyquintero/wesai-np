@@ -7,14 +7,23 @@ import { useToast } from '../context/ToastContext';
 import { suggestTitle } from '../services/geminiService';
 
 const ChatView: React.FC = () => {
-    const { chatMessages: messages, onSendMessage, onGenerateServiceResponse, onSendGeneralMessage, chatStatus, clearChat, onAddNote } = useStoreContext();
+    const { 
+        chatMessages: messages, 
+        onSendMessage, 
+        onGenerateServiceResponse, 
+        onSendGeneralMessage, 
+        chatStatus, 
+        clearChat, 
+        onAddNote,
+        chatMode,
+        setChatMode,
+    } = useStoreContext();
     const { isMobileView, onToggleSidebar, setView, isAiRateLimited } = useUIContext();
     const { setActiveNoteId } = useStoreContext();
     const { showToast } = useToast();
 
     const [input, setInput] = useState('');
     const [imageData, setImageData] = useState<string | null>(null);
-    const [mode, setMode] = useState<ChatMode>('ASSISTANT');
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const isReplying = chatStatus !== 'idle';
@@ -28,9 +37,9 @@ const ChatView: React.FC = () => {
     const handleSend = (e: React.FormEvent) => {
         e.preventDefault();
         if ((input.trim() || imageData) && !isReplying) {
-            if (mode === 'ASSISTANT') {
+            if (chatMode === 'ASSISTANT') {
                 onSendMessage(input, imageData);
-            } else if (mode === 'RESPONDER') {
+            } else if (chatMode === 'RESPONDER') {
                 onGenerateServiceResponse(input, imageData);
             } else {
                 onSendGeneralMessage(input, imageData);
@@ -70,9 +79,8 @@ const ChatView: React.FC = () => {
     };
     
     const handleModeChange = (newMode: ChatMode) => {
-        if (mode !== newMode) {
-            clearChat();
-            setMode(newMode);
+        if (chatMode !== newMode) {
+            setChatMode(newMode);
         }
     };
 
@@ -231,37 +239,44 @@ const ChatView: React.FC = () => {
     return (
         <div className="flex-1 flex flex-col h-full bg-light-background dark:bg-dark-background" onDragOver={handleDragOver} onDrop={handleDrop}>
             <header className="p-4 border-b border-light-border dark:border-dark-border flex-shrink-0">
-                 <div className="flex items-center">
-                    {isMobileView && (
-                        <button onClick={onToggleSidebar} className="p-2 rounded-md hover:bg-light-ui dark:hover:bg-dark-ui mr-2">
-                            <Bars3Icon />
+                 <div className="flex items-center justify-between">
+                    <div className="flex items-center">
+                        {isMobileView && (
+                            <button onClick={onToggleSidebar} className="p-2 rounded-md hover:bg-light-ui dark:hover:bg-dark-ui mr-2">
+                                <Bars3Icon />
+                            </button>
+                        )}
+                        <div className="flex-1">
+                            <h2 className="text-xl font-bold flex items-center">
+                                <SparklesIcon className="w-6 h-6 mr-2 text-light-primary dark:text-dark-primary"/>
+                                AI Assistant
+                            </h2>
+                            <p className="text-sm text-light-text/60 dark:text-dark-text/60">{subtitles[chatMode]}</p>
+                        </div>
+                    </div>
+                    {messages.length > 0 && (
+                        <button onClick={clearChat} className="text-sm px-3 py-1.5 rounded-lg hover:bg-light-ui dark:hover:bg-dark-ui text-light-text/70 dark:text-dark-text/70">
+                            Clear Chat
                         </button>
                     )}
-                    <div className="flex-1">
-                        <h2 className="text-xl font-bold flex items-center">
-                            <SparklesIcon className="w-6 h-6 mr-2 text-light-primary dark:text-dark-primary"/>
-                            AI Assistant
-                        </h2>
-                        <p className="text-sm text-light-text/60 dark:text-dark-text/60">{subtitles[mode]}</p>
-                    </div>
                 </div>
                  <div className="mt-4 flex justify-center">
                     <div className="flex space-x-1 bg-light-ui dark:bg-dark-ui p-1 rounded-lg">
                         <button
                             onClick={() => handleModeChange('ASSISTANT')}
-                            className={`px-3 py-1.5 text-sm font-semibold rounded-md transition-colors ${mode === 'ASSISTANT' ? 'bg-white dark:bg-dark-ui-hover shadow-sm' : 'text-light-text/70 dark:text-dark-text/70 hover:bg-light-background dark:hover:bg-dark-ui-hover'}`}
+                            className={`px-3 py-1.5 text-sm font-semibold rounded-md transition-colors ${chatMode === 'ASSISTANT' ? 'bg-white dark:bg-dark-ui-hover shadow-sm' : 'text-light-text/70 dark:text-dark-text/70 hover:bg-light-background dark:hover:bg-dark-ui-hover'}`}
                         >
                            Knowledge Assistant
                         </button>
                         <button
                             onClick={() => handleModeChange('RESPONDER')}
-                            className={`px-3 py-1.5 text-sm font-semibold rounded-md transition-colors ${mode === 'RESPONDER' ? 'bg-white dark:bg-dark-ui-hover shadow-sm' : 'text-light-text/70 dark:text-dark-text/70 hover:bg-light-background dark:hover:bg-dark-ui-hover'}`}
+                            className={`px-3 py-1.5 text-sm font-semibold rounded-md transition-colors ${chatMode === 'RESPONDER' ? 'bg-white dark:bg-dark-ui-hover shadow-sm' : 'text-light-text/70 dark:text-dark-text/70 hover:bg-light-background dark:hover:bg-dark-ui-hover'}`}
                         >
                            Service Responder
                         </button>
                         <button
                             onClick={() => handleModeChange('GENERAL')}
-                            className={`px-3 py-1.5 text-sm font-semibold rounded-md transition-colors ${mode === 'GENERAL' ? 'bg-white dark:bg-dark-ui-hover shadow-sm' : 'text-light-text/70 dark:text-dark-text/70 hover:bg-light-background dark:hover:bg-dark-ui-hover'}`}
+                            className={`px-3 py-1.5 text-sm font-semibold rounded-md transition-colors ${chatMode === 'GENERAL' ? 'bg-white dark:bg-dark-ui-hover shadow-sm' : 'text-light-text/70 dark:text-dark-text/70 hover:bg-light-background dark:hover:bg-dark-ui-hover'}`}
                         >
                            General Assistant
                         </button>
@@ -274,9 +289,9 @@ const ChatView: React.FC = () => {
                     {messages.length === 0 && (
                         <div className="text-center text-light-text/60 dark:text-dark-text/60 mt-16">
                              <SparklesIcon className="w-16 h-16 mx-auto mb-4 text-light-primary dark:text-dark-primary" />
-                             <h3 className="text-xl font-semibold">{welcomeMessages[mode].title}</h3>
-                             <p className="mt-2">{welcomeMessages[mode].body}</p>
-                             <p className="text-sm mt-4 p-2 bg-light-ui dark:bg-dark-ui rounded-md">{welcomeMessages[mode].example}</p>
+                             <h3 className="text-xl font-semibold">{welcomeMessages[chatMode].title}</h3>
+                             <p className="mt-2">{welcomeMessages[chatMode].body}</p>
+                             <p className="text-sm mt-4 p-2 bg-light-ui dark:bg-dark-ui rounded-md">{welcomeMessages[chatMode].example}</p>
                         </div>
                     )}
                     {messages.map((msg, index) => {
@@ -379,7 +394,7 @@ const ChatView: React.FC = () => {
                             value={input}
                             onChange={e => setInput(e.target.value)}
                             onKeyDown={handleKeyDown}
-                            placeholder={placeholders[mode]}
+                            placeholder={placeholders[chatMode]}
                             rows={1}
                             className="w-full p-3 pl-12 pr-12 bg-light-ui dark:bg-dark-ui rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-light-primary dark:focus:ring-dark-primary disabled:opacity-70"
                             disabled={isReplying || isAiRateLimited}

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useMemo, useEffect, useRef, useCallback, ReactNode } from 'react';
-import { Note, Template, Collection, SmartCollection, EditorActions, ContextMenuItem, SearchMode, ChatMessage, NoteVersion, AuthSession } from '../types';
+import { Note, Template, Collection, SmartCollection, EditorActions, ContextMenuItem, SearchMode, ChatMessage, NoteVersion, AuthSession, ChatMode } from '../types';
 import { useStore as useSupabaseStore } from '../hooks/useStore';
 import { useDebounce } from '../hooks/useDebounce';
 import { getStreamingChatResponse, semanticSearchNotes, generateCustomerResponse, getGeneralChatSession, resetGeneralChat } from '../services/geminiService';
@@ -7,6 +7,8 @@ import { useMobileView } from '../hooks/useMobileView';
 import { useToast } from './ToastContext';
 import { useApiKey } from '../hooks/useApiKey';
 import { supabase } from '../lib/supabaseClient';
+
+const CHAT_HISTORIES_STORAGE_KEY = 'wesai-chat-histories';
 
 // Store Context
 interface StoreContextType extends Omit<ReturnType<typeof useSupabaseStore>, 'deleteNote'> {
@@ -36,6 +38,8 @@ interface StoreContextType extends Omit<ReturnType<typeof useSupabaseStore>, 'de
     handleDeleteSmartCollectionConfirm: () => Promise<void>;
     chatMessages: ChatMessage[];
     chatStatus: 'idle' | 'searching' | 'replying' | 'using_tool';
+    chatMode: ChatMode;
+    setChatMode: React.Dispatch<React.SetStateAction<ChatMode>>;
     onSendMessage: (query: string, image?: string) => Promise<void>;
     onGenerateServiceResponse: (customerQuery: string, image?: string) => Promise<void>;
     onSendGeneralMessage: (query: string, image?: string) => Promise<void>;
@@ -156,7 +160,25 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const debouncedSearchTerm = useDebounce(searchTerm, 500);
 
     // Chat State
-    const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+    const [chatMode, setChatMode] = useState<ChatMode>('ASSISTANT');
+    const [chatHistories, setChatHistories] = useState<Record<ChatMode, ChatMessage[]>>(() => {
+        try {
+            const saved = localStorage.getItem(CHAT_HISTORIES_STORAGE_KEY);
+            const initial = { ASSISTANT: [], RESPONDER: [], GENERAL: [] };
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                return {
+                    ASSISTANT: Array.isArray(parsed.ASSISTANT) ? parsed.ASSISTANT : [],
+                    RESPONDER: Array.isArray(parsed.RESPONDER) ? parsed.RESPONDER : [],
+                    GENERAL: Array.isArray(parsed.GENERAL) ? parsed.GENERAL : [],
+                };
+            }
+            return initial;
+        } catch {
+            return { ASSISTANT: [], RESPONDER: [], GENERAL: [] };
+        }
+    });
+
     const [chatError, setChatError] = useState<string | null>(null);
     const [chatStatus, setChatStatus] = useState<'idle' | 'searching' | 'replying' | 'using_tool'>('idle');
 
@@ -236,6 +258,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             createOnboardingNotes();
         }
     }, [isStoreLoading, session, notes, collections, createNote]);
+
+    useEffect(() => {
+        try {
+            localStorage.setItem(CHAT_HISTORIES_STORAGE_KEY, JSON.stringify(chatHistories));
+        } catch (error) {
+            console.error("Failed to save chat history to localStorage", error);
+        }
+    }, [chatHistories]);
 
     const onAddNote = useCallback(async (parentId: string | null = null, title: string = "Untitled Note", content: string = "") => {
         const newNoteId = await createNote(parentId, title, content);
@@ -373,7 +403,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const onSendMessage = async (query: string, image?: string) => {
         setChatError(null);
         const newUserMessage: ChatMessage = { role: 'user', content: query, image };
-        setChatMessages(prev => [...prev, newUserMessage]);
+        setChatHistories(prev => ({ ...prev, [chatMode]: [...prev[chatMode], newUserMessage] }));
         setChatStatus('searching');
         try {
             const sourceNoteIds = await semanticSearchNotes(query, notes);
@@ -381,16 +411,27 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             setChatStatus('replying');
             const stream = await getStreamingChatResponse(query, sourceNotes, image);
             const newAiMessage: ChatMessage = { role: 'ai', content: '', sources: sourceNotes };
-            setChatMessages(prev => [...prev, newAiMessage]);
+            setChatHistories(prev => ({ ...prev, [chatMode]: [...prev[chatMode], newAiMessage] }));
+
             let fullResponse = '';
             for await (const chunk of stream) {
                 fullResponse += chunk.text;
-                setChatMessages(prev => prev.map((msg, index) => index === prev.length - 1 ? { ...msg, content: fullResponse } : msg));
+                setChatHistories(prev => {
+                    const currentModeHistory = [...prev[chatMode]];
+                    if (currentModeHistory.length > 0) {
+                        const lastMessage = currentModeHistory[currentModeHistory.length - 1];
+                        if(lastMessage.role === 'ai') {
+                             currentModeHistory[currentModeHistory.length - 1] = { ...lastMessage, content: fullResponse };
+                        }
+                    }
+                    return { ...prev, [chatMode]: currentModeHistory };
+                });
             }
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
             setChatError(errorMessage);
-            setChatMessages(prev => [...prev, { role: 'ai', content: `Sorry, I ran into an error: ${errorMessage}` }]);
+            const errorAiMessage: ChatMessage = { role: 'ai', content: `Sorry, I ran into an error: ${errorMessage}` };
+            setChatHistories(prev => ({ ...prev, [chatMode]: [...prev[chatMode], errorAiMessage] }));
         } finally {
             setChatStatus('idle');
         }
@@ -399,18 +440,18 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const onGenerateServiceResponse = async (customerQuery: string, image?: string) => {
         setChatError(null);
         const newUserMessage: ChatMessage = { role: 'user', content: customerQuery, image };
-        setChatMessages(prev => [...prev, newUserMessage]);
+        setChatHistories(prev => ({ ...prev, [chatMode]: [...prev[chatMode], newUserMessage] }));
         setChatStatus('searching');
         try {
             const sourceNoteIds = await semanticSearchNotes(customerQuery, notes);
             const sourceNotes = sourceNoteIds.map(id => getNoteById(id)).filter((n): n is Note => !!n);
             setChatStatus('replying');
             const responseText = await generateCustomerResponse(customerQuery, sourceNotes, image);
-            setChatMessages(prev => [...prev, { role: 'ai', content: responseText, sources: sourceNotes }]);
+            setChatHistories(prev => ({ ...prev, [chatMode]: [...prev[chatMode], { role: 'ai', content: responseText, sources: sourceNotes }] }));
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
             setChatError(errorMessage);
-            setChatMessages(prev => [...prev, { role: 'ai', content: `Sorry, I ran into an error: ${errorMessage}` }]);
+            setChatHistories(prev => ({ ...prev, [chatMode]: [...prev[chatMode], { role: 'ai', content: `Sorry, I ran into an error: ${errorMessage}` }] }));
         } finally {
             setChatStatus('idle');
         }
@@ -419,7 +460,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const onSendGeneralMessage = async (query: string, image?: string) => {
         setChatError(null);
         const userMessage: ChatMessage = { role: 'user', content: query, image, status: 'processing' };
-        setChatMessages(prev => [...prev, userMessage]);
+        setChatHistories(prev => ({ ...prev, [chatMode]: [...prev[chatMode], userMessage] }));
         let lastTouchedNoteId: string | null = null;
 
         try {
@@ -433,7 +474,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                     role: 'tool',
                     content: { name: fc.name, args: fc.args, status: 'pending' }
                 }));
-                setChatMessages(prev => [...prev, ...pendingToolMessages]);
+                setChatHistories(prev => ({ ...prev, [chatMode]: [...prev[chatMode], ...pendingToolMessages] }));
 
                 for (const fc of response.functionCalls) {
                     let result: any;
@@ -531,12 +572,43 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                         status = 'error';
                     }
 
-                    setChatMessages(prev => prev.map(msg => {
-                        if (msg.role === 'tool' && typeof msg.content === 'object' && msg.content.name === fc.name && msg.content.status === 'pending') {
-                            return { ...msg, content: { ...msg.content, status, result } };
+                    setChatHistories(prev => {
+                        const newHistory = [...prev[chatMode]];
+                        // FIX: Replaced findLastIndex with a reverse for-loop for broader compatibility.
+                        let lastPendingIndex = -1;
+                        for (let i = newHistory.length - 1; i >= 0; i--) {
+                            const msg = newHistory[i];
+                            const content = msg.content;
+                            if (
+                                msg.role === 'tool' &&
+                                typeof content === 'object' &&
+                                content !== null &&
+                                'name' in content && content.name === fc.name &&
+                                'status' in content && content.status === 'pending'
+                            ) {
+                                lastPendingIndex = i;
+                                break;
+                            }
                         }
-                        return msg;
-                    }));
+                        
+                        if (lastPendingIndex !== -1) {
+                            const msgToUpdate = newHistory[lastPendingIndex];
+                            const currentContent = msgToUpdate.content;
+
+                            // FIX: Used a type guard to safely spread properties and satisfy TypeScript.
+                            if (typeof currentContent === 'object' && currentContent !== null) {
+                                newHistory[lastPendingIndex] = {
+                                    ...msgToUpdate,
+                                    content: {
+                                        ...currentContent,
+                                        status,
+                                        result,
+                                    }
+                                };
+                            }
+                        }
+                        return { ...prev, [chatMode]: newHistory };
+                    });
 
                     functionResponses.push({ id: fc.id, name: fc.name, response: { result }});
                 }
@@ -548,21 +620,32 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             }
 
             if (response.text) {
-                setChatMessages(prev => [...prev, { role: 'ai', content: response.text, noteId: lastTouchedNoteId }]);
+                setChatHistories(prev => ({ ...prev, [chatMode]: [...prev[chatMode], { role: 'ai', content: response.text, noteId: lastTouchedNoteId }] }));
             }
 
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
             setChatError(errorMessage);
-            setChatMessages(prev => [...prev, { role: 'ai', content: `Sorry, I ran into an error: ${errorMessage}` }]);
+            setChatHistories(prev => ({ ...prev, [chatMode]: [...prev[chatMode], { role: 'ai', content: `Sorry, I ran into an error: ${errorMessage}` }] }));
         } finally {
             setChatStatus('idle');
-            setChatMessages(prev => prev.map(msg => msg === userMessage ? { ...msg, status: 'complete' } : msg));
+            setChatHistories(prev => {
+                const newHistory = prev[chatMode].map(msg => msg === userMessage ? { ...msg, status: 'complete' } : msg);
+                return { ...prev, [chatMode]: newHistory };
+            });
         }
     };
 
 
-    const clearChat = useCallback(() => { setChatMessages([]); setChatError(null); setChatStatus('idle'); resetGeneralChat(); }, []);
+    const clearChat = useCallback(() => {
+        setChatHistories(prev => ({ ...prev, [chatMode]: [] }));
+        setChatError(null);
+        setChatStatus('idle');
+        if (chatMode === 'GENERAL') {
+            resetGeneralChat();
+        }
+    }, [chatMode]);
+
     const toggleTheme = () => setTheme(prevTheme => (prevTheme === 'light' ? 'dark' : 'light'));
     const toggleSidebarCollapsed = () => setIsSidebarCollapsed(prev => !prev);
     const onToggleSidebar = useCallback(() => setIsSidebarOpen(p => !p), []);
@@ -583,7 +666,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             collectionToDelete, setCollectionToDelete,
             smartCollectionToDelete, setSmartCollectionToDelete, handleDeleteNoteConfirm,
             handleDeleteCollectionConfirm, handleDeleteSmartCollectionConfirm,
-            chatMessages, chatStatus, onSendMessage, onGenerateServiceResponse, onSendGeneralMessage, clearChat
+            chatMessages: chatHistories[chatMode] || [], 
+            chatStatus, 
+            chatMode, 
+            setChatMode, 
+            onSendMessage, 
+            onGenerateServiceResponse, 
+            onSendGeneralMessage, 
+            clearChat
         }}>
             <UIContext.Provider value={{
                 session, isSessionLoading,

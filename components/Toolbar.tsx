@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Note, Template } from '../types';
 import { enhanceText, summarizeAndExtractActions } from '../services/geminiService';
-import { StarIcon, TrashIcon, SparklesIcon, HistoryIcon, ArrowDownTrayIcon, DocumentDuplicateIcon, Bars3Icon, ArrowUturnLeftIcon, ArrowUturnRightIcon, EyeIcon, PencilSquareIcon, CheckBadgeIcon, ClipboardDocumentIcon, InformationCircleIcon } from './Icons';
+import { StarIcon, TrashIcon, SparklesIcon, HistoryIcon, ArrowDownTrayIcon, DocumentDuplicateIcon, Bars3Icon, ArrowUturnLeftIcon, ArrowUturnRightIcon, EyeIcon, PencilSquareIcon, CheckBadgeIcon, ClipboardDocumentIcon, InformationCircleIcon, EllipsisVerticalIcon } from './Icons';
 import { useToast } from '../context/ToastContext';
 import NoteInfoPopover from './NoteInfoPopover';
 import { useStoreContext } from '../context/AppContext';
@@ -262,6 +262,8 @@ const Toolbar: React.FC<ToolbarProps> = ({
     const [aiActionInProgress, setAiActionInProgress] = useState<'enhancing' | 'summarizing' | null>(null);
     const [aiActionError, setAiActionError] = useState<string | null>(null);
     const [isInfoOpen, setIsInfoOpen] = useState(false);
+    const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
+    const { showToast } = useToast();
 
     // Clear error after a delay
     React.useEffect(() => {
@@ -270,6 +272,48 @@ const Toolbar: React.FC<ToolbarProps> = ({
             return () => clearTimeout(timer);
         }
     }, [aiActionError]);
+    
+    // --- Logic for Mobile 'More' Menu ---
+    const sanitizeFilename = (name: string) => name.replace(/[\/\\?%*:|"<>]/g, '-').trim() || 'Untitled';
+    
+    const handleMobileExport = (format: 'md' | 'json') => {
+        setIsMoreMenuOpen(false);
+        const filename = `${sanitizeFilename(note.title)}.${format}`;
+        let content = '';
+        let mimeType = '';
+
+        if (format === 'md') {
+            content = `# ${note.title}\n\n${note.content}`;
+            mimeType = 'text/markdown';
+        } else {
+            content = JSON.stringify(note, null, 2);
+            mimeType = 'application/json';
+        }
+
+        const blob = new Blob([content], { type: mimeType });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    };
+
+    const handleMobileCopyMarkdown = () => {
+        setIsMoreMenuOpen(false);
+        const markdownContent = `# ${note.title}\n\n${note.content}`;
+        navigator.clipboard.writeText(markdownContent)
+            .then(() => showToast({ message: "Note copied as Markdown!", type: 'success' }))
+            .catch(err => showToast({ message: "Failed to copy note.", type: 'error' }));
+    };
+
+    const handleMobileTemplateClick = (template: Template) => {
+        onApplyTemplate(template);
+        setIsMoreMenuOpen(false);
+    };
+    // --- End Logic for Mobile 'More' Menu ---
 
     return (
         <>
@@ -305,7 +349,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
                     <button onClick={onRedo} disabled={!canRedo} className="p-2 rounded-md hover:bg-light-ui dark:hover:bg-dark-ui transition-colors disabled:opacity-50 disabled:cursor-not-allowed" aria-label="Redo">
                         <ArrowUturnRightIcon />
                     </button>
-                     <div className="w-px h-6 bg-light-border dark:border-dark-border mx-1 hidden sm:block"></div>
+                     <div className="w-px h-6 bg-light-border dark:border-dark-border mx-1"></div>
                     
                     <AiMenu 
                         contentToEnhance={contentToEnhance} 
@@ -315,8 +359,6 @@ const Toolbar: React.FC<ToolbarProps> = ({
                         setAiActionInProgress={setAiActionInProgress}
                         setAiActionError={setAiActionError}
                     />
-                    
-                    <TemplateMenu templates={templates} onApplyTemplate={onApplyTemplate} />
                     
                      <button onClick={onToggleHistory} className={`p-2 rounded-md transition-colors ${isHistoryOpen ? 'bg-light-ui dark:bg-dark-ui' : 'hover:bg-light-ui dark:hover:bg-dark-ui'}`} aria-label="Toggle Version History">
                         <HistoryIcon />
@@ -332,7 +374,34 @@ const Toolbar: React.FC<ToolbarProps> = ({
                         {isInfoOpen && <NoteInfoPopover note={note} wordCount={wordCount} charCount={charCount} />}
                     </div>
 
-                    <ExportMenu note={note} />
+                    {isMobileView ? (
+                        <div className="relative">
+                            <button onClick={() => setIsMoreMenuOpen(p => !p)} className="p-2 rounded-md hover:bg-light-ui dark:hover:bg-dark-ui transition-colors">
+                                <EllipsisVerticalIcon />
+                            </button>
+                            {isMoreMenuOpen && (
+                                <div className="absolute right-0 mt-2 w-56 bg-light-background dark:bg-dark-background rounded-md shadow-lg border border-light-border dark:border-dark-border z-10 py-1">
+                                    <h3 className="px-3 pt-2 pb-1 text-xs font-semibold text-light-text/60 dark:text-dark-text/60">Templates</h3>
+                                    {templates.length > 0 ? (
+                                        templates.map(template => <button key={template.id} onClick={() => handleMobileTemplateClick(template)} className="w-full text-left flex items-center gap-2 block px-3 py-2 text-sm hover:bg-light-ui dark:hover:bg-dark-ui"><DocumentDuplicateIcon />{template.title}</button>)
+                                    ) : (
+                                        <p className="px-3 py-2 text-sm text-light-text/60 dark:text-dark-text/60">No templates found.</p>
+                                    )}
+                                    <div className="my-1 border-t border-light-border dark:border-dark-border"></div>
+                                    <h3 className="px-3 pt-2 pb-1 text-xs font-semibold text-light-text/60 dark:text-dark-text/60">Export</h3>
+                                    <button onClick={handleMobileCopyMarkdown} className="w-full text-left flex items-center gap-2 block px-3 py-2 text-sm hover:bg-light-ui dark:hover:bg-dark-ui"><ClipboardDocumentIcon /> Copy as Markdown</button>
+                                    <button onClick={() => handleMobileExport('md')} className="w-full text-left flex items-center gap-2 block px-3 py-2 text-sm hover:bg-light-ui dark:hover:bg-dark-ui"><ArrowDownTrayIcon /> Export as .md</button>
+                                    <button onClick={() => handleMobileExport('json')} className="w-full text-left flex items-center gap-2 block px-3 py-2 text-sm hover:bg-light-ui dark:hover:bg-dark-ui"><ArrowDownTrayIcon /> Export as .json</button>
+                                </div>
+                            )}
+                        </div>
+                    ) : (
+                        <>
+                            <TemplateMenu templates={templates} onApplyTemplate={onApplyTemplate} />
+                            <ExportMenu note={note} />
+                        </>
+                    )}
+
 
                     <button onClick={() => onToggleFavorite(note.id)} className="p-2 rounded-md hover:bg-light-ui dark:hover:bg-dark-ui transition-colors" aria-label={note.isFavorite ? 'Remove from favorites' : 'Add to favorites'}>
                         <StarIcon className={`w-5 h-5 ${note.isFavorite ? 'text-yellow-500' : ''}`} filled={note.isFavorite} />

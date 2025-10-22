@@ -1,5 +1,4 @@
 import React from 'react';
-// Fix: Corrected import path for AppContext
 import { useStoreContext, useUIContext } from '../context/AppContext';
 
 const getYoutubeVideoId = (url: string) => {

@@ -1,10 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-// Fix: Corrected import path for Icons
 import { PlusIcon } from './Icons';
 import TemplateEditorModal from './TemplateEditorModal';
 import { Template } from '../types';
 import { useApiKey } from '../hooks/useApiKey';
-// Fix: Corrected import path for AppContext
 import { useStoreContext } from '../context/AppContext';
 import ConfirmationModal from './ConfirmationModal';
 import { useToast } from '../context/ToastContext';
@@ -69,7 +67,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
         onClose();
         // Clear local non-Supabase state if necessary
         // e.g. localStorage.clear();
-        window.location.reload(); // To ensure clean state
+        // window.location.reload(); // To ensure clean state
     };
     
     const handleExport = () => {

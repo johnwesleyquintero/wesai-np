@@ -10,8 +10,7 @@ export const useCommands = (onComplete: () => void): Command[] => {
     const {
         onAddNote,
         activeNote,
-        // Fix: Corrected destructuring from setNoteToDelete to setNotesToDelete.
-        setNotesToDelete,
+        setNoteToDelete,
         toggleFavorite,
     } = useStoreContext();
     
@@ -72,8 +71,7 @@ export const useCommands = (onComplete: () => void): Command[] => {
                 {
                     id: 'delete-note',
                     name: 'Delete Note',
-                    // Fix: Call setNotesToDelete with an array containing the active note.
-                    action: () => { setNotesToDelete([activeNote]); onComplete(); },
+                    action: () => { setNoteToDelete(activeNote); onComplete(); },
                     icon: React.createElement(TrashIcon),
                     keywords: 'remove trash',
                     section: 'Note',
@@ -201,7 +199,7 @@ export const useCommands = (onComplete: () => void): Command[] => {
         setView,
         view,
         activeNote,
-        setNotesToDelete,
+        setNoteToDelete,
         toggleFavorite,
         editorActions,
         isAiRateLimited,

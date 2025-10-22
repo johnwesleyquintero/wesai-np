@@ -1,9 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ChatMessage, Note, ChatMode } from '../types';
-// Fix: Corrected import path for Icons
 import { Bars3Icon, SparklesIcon, DocumentTextIcon, PaperAirplaneIcon, MagnifyingGlassIcon, ClipboardDocumentIcon, PaperClipIcon, XMarkIcon, Cog6ToothIcon, CheckBadgeIcon, PencilSquareIcon, ArrowTopRightOnSquareIcon, XCircleIcon } from './Icons';
 import MarkdownPreview from './MarkdownPreview';
-// Fix: Corrected import path for AppContext
 import { useUIContext, useStoreContext } from '../context/AppContext';
 import { useToast } from '../context/ToastContext';
 import { suggestTitle } from '../services/geminiService';
@@ -372,7 +370,7 @@ const ChatView: React.FC = () => {
                             type="button"
                             onClick={() => fileInputRef.current?.click()}
                             disabled={isReplying || isAiRateLimited}
-                            className="absolute left-3 top-1/2 -translate-y-1/2 p-2 rounded-full hover:bg-light-background dark:hover:bg-dark-background disabled:opacity-50"
+                            className="absolute left-3 top-1/2 -translate-y-1.2 p-2 rounded-full hover:bg-light-background dark:hover:bg-dark-background disabled:opacity-50"
                             aria-label="Attach image"
                         >
                             <PaperClipIcon />
@@ -386,7 +384,7 @@ const ChatView: React.FC = () => {
                             className="w-full p-3 pl-12 pr-12 bg-light-ui dark:bg-dark-ui rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-light-primary dark:focus:ring-dark-primary disabled:opacity-70"
                             disabled={isReplying || isAiRateLimited}
                         />
-                        <button type="submit" disabled={isReplying || (!input.trim() && !imageData) || isAiRateLimited} className="absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-full bg-light-primary dark:bg-dark-primary text-white disabled:bg-light-ui-hover dark:disabled:bg-dark-ui-hover disabled:text-light-text/50 dark:disabled:text-dark-text/50 transition-colors">
+                        <button type="submit" disabled={isReplying || (!input.trim() && !imageData) || isAiRateLimited} className="absolute right-3 top-1/2 -translate-y-1.2 p-2 rounded-full bg-light-primary dark:bg-dark-primary text-white disabled:bg-light-ui-hover dark:disabled:bg-dark-ui-hover disabled:text-light-text/50 dark:disabled:text-dark-text/50 transition-colors">
                            <PaperAirplaneIcon className="w-5 h-5" />
                         </button>
                     </form>

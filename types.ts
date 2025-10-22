@@ -51,7 +51,7 @@ export interface ChatMessage {
     content: string | { name: string; args: any; result?: any; status: 'pending' | 'complete' | 'error' };
     sources?: Note[];
     image?: string;
-    status?: 'pending' | 'processing' | 'complete';
+    status?: 'processing' | 'complete';
     noteId?: string;
 }
 

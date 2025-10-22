@@ -390,9 +390,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     
     const onSendGeneralMessage = async (query: string, image?: string) => {
         setChatError(null);
-        const userMessageId = Date.now();
-        const newUserMessage: ChatMessage = { role: 'user', content: query, image, status: 'processing' };
-        setChatMessages(prev => [...prev, newUserMessage]);
+        const userMessage: ChatMessage = { role: 'user', content: query, image, status: 'processing' };
+        setChatMessages(prev => [...prev, userMessage]);
         let lastTouchedNoteId: string | null = null;
 
         try {
@@ -402,10 +401,15 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             while (response.functionCalls && response.functionCalls.length > 0) {
                 setChatStatus('using_tool');
                 const functionResponses = [];
+                const pendingToolMessages: ChatMessage[] = response.functionCalls.map(fc => ({
+                    role: 'tool',
+                    content: { name: fc.name, args: fc.args, status: 'pending' }
+                }));
+                setChatMessages(prev => [...prev, ...pendingToolMessages]);
 
                 for (const fc of response.functionCalls) {
-                    setChatMessages(prev => [...prev, { role: 'tool', content: { name: fc.name, args: fc.args, status: 'pending' }}]);
                     let result: any;
+                    let status: 'complete' | 'error' = 'complete';
                     try {
                         switch (fc.name) {
                             case 'createNote':
@@ -429,7 +433,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                                 if (noteToRead) {
                                     result = { title: noteToRead.title, content: noteToRead.content };
                                 } else {
-                                    result = { error: "Note not found." };
+                                    throw new Error("Note not found.");
                                 }
                                 break;
                             case 'updateNote':
@@ -437,22 +441,19 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                                 const noteToUpdate = getNoteById(noteIdToUpdate);
                                 if (noteToUpdate) {
                                     const updatedFields: { title?: string, content?: string } = {};
-                                    if (fc.args.title) {
-                                        updatedFields.title = String(fc.args.title);
-                                    }
-                                    if (fc.args.content) {
-                                        updatedFields.content = String(fc.args.content);
-                                    }
+                                    if (fc.args.title) updatedFields.title = String(fc.args.title);
+                                    if (fc.args.content) updatedFields.content = String(fc.args.content);
+                                    
                                     if (Object.keys(updatedFields).length > 0) {
                                         await updateNoteInStore(noteIdToUpdate, updatedFields);
                                         result = { success: true, noteId: noteIdToUpdate };
                                         lastTouchedNoteId = noteIdToUpdate;
                                         showToast({ message: `Note "${updatedFields.title || noteToUpdate.title}" updated!`, type: 'success' });
                                     } else {
-                                        result = { success: false, error: "No fields to update were provided." };
+                                        throw new Error("No fields to update were provided.");
                                     }
                                 } else {
-                                    result = { success: false, error: "Note not found." };
+                                    throw new Error("Note not found.");
                                 }
                                 break;
                             case 'deleteNote':
@@ -464,7 +465,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                                     result = { success: true, noteId: noteIdToDelete };
                                     showToast({ message: `Note "${noteToDeleteInstance.title}" deleted!`, type: 'success' });
                                 } else {
-                                    result = { success: false, error: "Note not found." };
+                                    throw new Error("Note not found.");
                                 }
                                 break;
                              case 'createCollection':
@@ -484,7 +485,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                             case 'moveNoteToCollection':
                                 const noteIdToMove = String(fc.args.noteId || '');
                                 const collectionId = fc.args.collectionId === null || fc.args.collectionId === 'null' ? null : String(fc.args.collectionId);
-                                
                                 const noteToMove = getNoteById(noteIdToMove);
                                 const collection = collectionId ? store.getCollectionById(collectionId) : { name: 'root' };
                                 
@@ -493,17 +493,24 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                                     result = { success: true };
                                     showToast({ message: `Moved "${noteToMove.title}" to "${collection?.name}"`, type: 'success' });
                                 } else {
-                                    result = { success: false, error: "Note or destination folder not found." };
+                                    throw new Error("Note or destination folder not found.");
                                 }
                                 break;
                             default:
-                                result = { success: false, error: `Unknown function: ${fc.name}` };
+                                throw new Error(`Unknown function: ${fc.name}`);
                         }
-                         setChatMessages(prev => [...prev, { role: 'tool', content: { name: fc.name, args: fc.args, status: 'complete', result }}]);
                     } catch (toolError) {
                         result = { success: false, error: (toolError as Error).message };
-                        setChatMessages(prev => [...prev, { role: 'tool', content: { name: fc.name, args: fc.args, status: 'error', result }}]);
+                        status = 'error';
                     }
+
+                    setChatMessages(prev => prev.map(msg => {
+                        if (msg.role === 'tool' && typeof msg.content === 'object' && msg.content.name === fc.name && msg.content.status === 'pending') {
+                            return { ...msg, content: { ...msg.content, status, result } };
+                        }
+                        return msg;
+                    }));
+
                     functionResponses.push({ id: fc.id, name: fc.name, response: { result }});
                 }
                 
@@ -513,14 +520,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                 response = await chat.sendMessage({ message: functionResponseParts });
             }
 
-            setChatMessages(prev => prev.map(msg => {
-                if (msg === newUserMessage) {
-                    const updatedMsg: ChatMessage = { ...msg, status: 'complete' };
-                    return updatedMsg;
-                }
-                return msg;
-            }));
-
             if (response.text) {
                 setChatMessages(prev => [...prev, { role: 'ai', content: response.text, noteId: lastTouchedNoteId }]);
             }
@@ -528,18 +527,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
             setChatError(errorMessage);
-            setChatMessages(prev => {
-                 const updated = prev.map(msg => {
-                    if (msg === newUserMessage) {
-                        const updatedMsg: ChatMessage = { ...msg, status: 'complete' };
-                        return updatedMsg;
-                    }
-                    return msg;
-                 });
-                 return [...updated, { role: 'ai', content: `Sorry, I ran into an error: ${errorMessage}` }];
-            });
+            setChatMessages(prev => [...prev, { role: 'ai', content: `Sorry, I ran into an error: ${errorMessage}` }]);
         } finally {
             setChatStatus('idle');
+            setChatMessages(prev => prev.map(msg => msg === userMessage ? { ...msg, status: 'complete' } : msg));
         }
     };
 

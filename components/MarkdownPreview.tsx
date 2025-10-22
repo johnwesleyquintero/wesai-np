@@ -3,7 +3,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
 import { PrismLight as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { okaidia } from 'react-syntax-highlighter/dist/esm/styles/prism/okaidia';
+import okaidia from 'react-syntax-highlighter/dist/esm/styles/prism/okaidia';
 import jsx from 'react-syntax-highlighter/dist/esm/languages/prism/jsx';
 import typescript from 'react-syntax-highlighter/dist/esm/languages/prism/typescript';
 import json from 'react-syntax-highlighter/dist/esm/languages/prism/json';

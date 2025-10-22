@@ -127,6 +127,7 @@ function AppContent() {
         isWelcomeModalOpen, closeWelcomeModal,
         contextMenu, setContextMenu,
         isApiKeyMissing,
+        isSidebarCollapsed, toggleSidebarCollapsed,
     } = useUIContext();
 
     const isResizing = useRef(false);
@@ -240,8 +241,10 @@ function AppContent() {
                 onActivateSmartCollection={handleActivateSmartCollection}
                 onClearActiveSmartCollection={handleClearActiveSmartCollection}
                 onSelectNote={handleSelectNote}
+                isCollapsed={isSidebarCollapsed}
+                onToggleCollapsed={toggleSidebarCollapsed}
             />
-            {!isMobileView && <SidebarResizer onResizeStart={handleResizeStart} />}
+            {!isMobileView && !isSidebarCollapsed && <SidebarResizer onResizeStart={handleResizeStart} />}
             <main className="flex-1 flex flex-col h-full min-w-0">
                 {isApiKeyMissing && <ApiKeyIndicator />}
                 <Suspense fallback={suspenseFallback}>

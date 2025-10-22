@@ -3,7 +3,10 @@ import { Note, SearchMode, SmartCollection, Collection } from '../types';
 import NoteCard from './NoteCard';
 import {
     PencilSquareIcon, Cog6ToothIcon, SunIcon, MoonIcon, XMarkIcon, MagnifyingGlassIcon, SparklesIcon,
-    PlusIcon, FolderPlusIcon, BrainIcon, TrashIcon, StarIcon, ChevronDownIcon, ChevronRightIcon
+    PlusIcon, FolderPlusIcon, BrainIcon, StarIcon, ChevronDownIcon, ChevronRightIcon,
+    ChevronDoubleLeftIcon, FolderIcon,
+    // FIX: Imported TrashIcon to resolve reference errors.
+    TrashIcon
 } from './Icons';
 import SidebarNode, { TreeNode } from './SidebarNode';
 import Highlight from './Highlight';
@@ -26,6 +29,8 @@ interface SidebarProps {
     onActivateSmartCollection: (collection: SmartCollection) => void;
     onClearActiveSmartCollection: () => void;
     onSelectNote: (noteId: string) => void;
+    isCollapsed: boolean;
+    onToggleCollapsed: () => void;
 }
 
 const buildTree = (notes: Note[], collections: Collection[]): TreeNode[] => {
@@ -95,9 +100,9 @@ const FooterButton: React.FC<{
             {children}
             {hasIndicator && <div className="absolute top-1.5 right-1.5 w-2 h-2 bg-yellow-400 rounded-full border-2 border-light-ui dark:border-dark-ui"></div>}
         </button>
-        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-zinc-800 dark:bg-zinc-700 text-white dark:text-dark-text text-xs font-semibold rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+        <div className="absolute left-full ml-2 px-2 py-1 bg-zinc-800 dark:bg-zinc-700 text-white dark:text-dark-text text-xs font-semibold rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
             {tooltip}
-            <div className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-x-4 border-x-transparent border-t-4 border-t-zinc-800 dark:border-t-zinc-700" />
+            <div className="absolute right-full top-1/2 -translate-y-1/2 w-0 h-0 border-y-4 border-y-transparent border-r-4 border-r-zinc-800 dark:border-r-zinc-700" />
         </div>
     </div>
 );
@@ -128,9 +133,12 @@ const CollapsibleSection: React.FC<{
     );
 };
 
+const COLLAPSED_WIDTH = 56;
+
 const Sidebar: React.FC<SidebarProps> = ({
     notes, favoriteNotes, searchResults, activeNoteId, searchTerm, setSearchTerm, searchMode, setSearchMode, isAiSearching, aiSearchError, width,
-    activeSmartCollection, onActivateSmartCollection, onClearActiveSmartCollection, onSelectNote
+    activeSmartCollection, onActivateSmartCollection, onClearActiveSmartCollection, onSelectNote,
+    isCollapsed, onToggleCollapsed
 }) => {
     const {
         collections, smartCollections, onAddNote, addCollection, moveItem,
@@ -363,16 +371,17 @@ const Sidebar: React.FC<SidebarProps> = ({
     
     const isSearching = searchResults !== null;
 
-    return (
-        <aside 
-            className={`absolute md:relative z-30 flex flex-col h-full bg-light-ui dark:bg-dark-ui border-r border-light-border dark:border-dark-border transition-transform transform duration-300 ease-in-out ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 flex-shrink-0`}
-            style={{ width: isMobileView ? '20rem' : `${width}px` }} // 20rem is 320px
-        >
+    const ExpandedView = () => (
+        <>
             <div className="p-4 flex-shrink-0 border-b border-light-border dark:border-dark-border">
                 <div className="flex justify-between items-center mb-4">
                     <h1 className="text-xl font-bold">WesAI Notepad</h1>
-                    {isMobileView && (
-                        <button onClick={() => setIsSidebarOpen(false)} className="p-2 -mr-2 rounded-md hover:bg-light-ui-hover dark:hover:bg-dark-ui-hover" aria-label="Close sidebar">
+                    {!isMobileView ? (
+                        <button onClick={onToggleCollapsed} className="p-2 -mr-2 rounded-md hover:bg-light-ui-hover dark:hover:bg-dark-ui-hover" aria-label="Collapse sidebar">
+                            <ChevronDoubleLeftIcon />
+                        </button>
+                    ) : (
+                         <button onClick={() => setIsSidebarOpen(false)} className="p-2 -mr-2 rounded-md hover:bg-light-ui-hover dark:hover:bg-dark-ui-hover" aria-label="Close sidebar">
                             <XMarkIcon />
                         </button>
                     )}
@@ -476,6 +485,54 @@ const Sidebar: React.FC<SidebarProps> = ({
                     </FooterButton>
                 </div>
             </div>
+        </>
+    );
+    
+    const CollapsedView = () => (
+      <div className="flex flex-col h-full items-center p-2 overflow-hidden">
+        {/* Logo at top */}
+        <div className="mb-4 flex-shrink-0 pt-2">
+            <svg width="32" height="32" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect width="64" height="64" rx="12" fill="#18181b"/>
+              <path d="M20 18C20 15.7909 21.7909 14 24 14H44C46.2091 14 48 15.7909 48 18V46C48 48.2091 46.2091 50 44 50H24C21.7909 50 20 48.2091 20 46V18Z" stroke="#f5f5f4" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M24 14V50" stroke="#f5f5f4" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+        </div>
+
+        {/* Main actions */}
+        <div className="flex flex-col space-y-2 flex-grow">
+          <FooterButton onClick={() => onAddNote()} tooltip="New Note">
+            <PlusIcon />
+          </FooterButton>
+          <FooterButton onClick={onToggleCollapsed} tooltip="Explorer">
+            <FolderIcon />
+          </FooterButton>
+          <FooterButton onClick={onToggleCollapsed} tooltip="Search">
+            <MagnifyingGlassIcon />
+          </FooterButton>
+        </div>
+
+        {/* Footer actions */}
+        <div className="flex flex-col space-y-1 flex-shrink-0">
+          <FooterButton onClick={() => setView('CHAT')} tooltip="Ask AI" isActive={view === 'CHAT'}>
+            <SparklesIcon />
+          </FooterButton>
+          <FooterButton onClick={toggleTheme} tooltip={`Switch to ${theme === 'light' ? 'Dark' : 'Light'} Mode`}>
+            {theme === 'light' ? <MoonIcon /> : <SunIcon />}
+          </FooterButton>
+          <FooterButton onClick={openSettings} tooltip="Settings" hasIndicator={isApiKeyMissing}>
+            <Cog6ToothIcon />
+          </FooterButton>
+        </div>
+      </div>
+    );
+
+    return (
+        <aside 
+            className={`absolute md:relative z-30 flex flex-col h-full bg-light-ui dark:bg-dark-ui border-r border-light-border dark:border-dark-border transform transition-all duration-300 ease-in-out ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 flex-shrink-0`}
+            style={{ width: isMobileView ? '20rem' : isCollapsed ? `${COLLAPSED_WIDTH}px` : `${width}px` }}
+        >
+           {isCollapsed && !isMobileView ? <CollapsedView /> : <ExpandedView />}
         </aside>
     );
 };

@@ -63,6 +63,8 @@ interface UIContextType {
     isSidebarOpen: boolean;
     setIsSidebarOpen: React.Dispatch<React.SetStateAction<boolean>>;
     onToggleSidebar: () => void;
+    isSidebarCollapsed: boolean;
+    toggleSidebarCollapsed: () => void;
     isAiRateLimited: boolean;
     renamingItemId: string | null;
     setRenamingItemId: React.Dispatch<React.SetStateAction<string | null>>;
@@ -111,6 +113,13 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const [view, setView] = useState<'NOTES' | 'CHAT'>('NOTES');
     const isMobileView = useMobileView();
     const [isSidebarOpen, setIsSidebarOpen] = useState(!isMobileView);
+    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(() => {
+        try {
+            return localStorage.getItem('wesai-sidebar-collapsed') === 'true';
+        } catch {
+            return false;
+        }
+    });
     const [isAiRateLimited, setIsAiRateLimited] = useState(false);
     const rateLimitTimerRef = useRef<number | null>(null);
     const [renamingItemId, setRenamingItemId] = useState<string | null>(null);
@@ -181,6 +190,15 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         else document.documentElement.classList.remove('dark');
         localStorage.setItem('theme', theme);
     }, [theme]);
+
+    useEffect(() => {
+        try {
+            localStorage.setItem('wesai-sidebar-collapsed', String(isSidebarCollapsed));
+        } catch (error) {
+            console.error("Failed to save sidebar collapsed state to localStorage", error);
+        }
+    }, [isSidebarCollapsed]);
+
 
     useEffect(() => {
         const handleRateLimit = () => {
@@ -546,6 +564,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
     const clearChat = useCallback(() => { setChatMessages([]); setChatError(null); setChatStatus('idle'); resetGeneralChat(); }, []);
     const toggleTheme = () => setTheme(prevTheme => (prevTheme === 'light' ? 'dark' : 'light'));
+    const toggleSidebarCollapsed = () => setIsSidebarCollapsed(prev => !prev);
     const onToggleSidebar = useCallback(() => setIsSidebarOpen(p => !p), []);
     const openSettings = () => setIsSettingsOpen(true);
     const openSmartFolderModal = (folder: SmartCollection | null) => { setSmartFolderToEdit(folder); setIsSmartFolderModalOpen(true); };
@@ -569,7 +588,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             <UIContext.Provider value={{
                 session, isSessionLoading,
                 theme, toggleTheme, view, setView, isMobileView, isSidebarOpen, setIsSidebarOpen,
-                onToggleSidebar,
+                onToggleSidebar, isSidebarCollapsed, toggleSidebarCollapsed,
                 isAiRateLimited, renamingItemId, setRenamingItemId, isSettingsOpen, setIsSettingsOpen,
                 openSettings, isCommandPaletteOpen, setIsCommandPaletteOpen, isSmartFolderModalOpen,
                 setIsSmartFolderModalOpen, smartFolderToEdit, openSmartFolderModal, contextMenu,

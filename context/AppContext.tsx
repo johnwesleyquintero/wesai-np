@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useMemo, useEffect, useRef, useCallback, ReactNode } from 'react';
-import { Note, Template, Collection, SmartCollection, EditorActions, ContextMenuItem, FilterType, SearchMode, ChatMessage, NoteVersion, AuthSession } from '../types';
+import { Note, Template, Collection, SmartCollection, EditorActions, ContextMenuItem, SearchMode, ChatMessage, NoteVersion, AuthSession } from '../types';
 import { useStore as useSupabaseStore } from '../hooks/useStore';
 import { useDebounce } from '../hooks/useDebounce';
 import { getStreamingChatResponse, semanticSearchNotes, generateCustomerResponse, getGeneralChatSession, resetGeneralChat } from '../services/geminiService';
@@ -14,9 +14,8 @@ interface StoreContextType extends Omit<ReturnType<typeof useSupabaseStore>, 'de
     activeNoteId: string | null;
     setActiveNoteId: React.Dispatch<React.SetStateAction<string | null>>;
     activeNote: Note | null;
-    filteredNotes: Note[];
-    filter: FilterType;
-    setFilter: React.Dispatch<React.SetStateAction<FilterType>>;
+    favoriteNotes: Note[];
+    searchResults: Note[] | null;
     searchTerm: string;
     handleSearchTermChange: (term: string) => void;
     searchMode: SearchMode;
@@ -136,7 +135,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
     // Store State
     const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
-    const [filter, setFilter] = useState<FilterType>('RECENT');
     const [searchTerm, setSearchTerm] = useState('');
     const [searchMode, setSearchMode] = useState<SearchMode>('KEYWORD');
     const [isAiSearching, setIsAiSearching] = useState(false);
@@ -301,24 +299,30 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         }
     }, [debouncedSearchTerm, searchMode, notes]);
 
-    const filteredNotes = useMemo(() => {
-        let sortedNotes = [...notes].sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
-        if (filter === 'FAVORITES') sortedNotes = sortedNotes.filter(note => note.isFavorite);
-        if (searchTerm.trim() || activeSmartCollectionId) {
-            if (searchMode === 'AI' && aiSearchResultIds) {
-                const noteMap = new Map(sortedNotes.map(note => [note.id, note]));
-                return aiSearchResultIds.map(id => noteMap.get(id)).filter((note): note is Note => !!note);
-            } else if (searchMode === 'KEYWORD') {
-                const lowercasedSearchTerm = searchTerm.toLowerCase();
-                return sortedNotes.filter(note =>
-                    note.title.toLowerCase().includes(lowercasedSearchTerm) ||
-                    note.content.toLowerCase().includes(lowercasedSearchTerm) ||
-                    note.tags.some(tag => tag.toLowerCase().includes(lowercasedSearchTerm))
-                );
-            } else if (searchMode === 'AI') return [];
+    const favoriteNotes = useMemo(() => {
+        return notes
+            .filter(n => n.isFavorite)
+            .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+    }, [notes]);
+
+    const searchResults = useMemo(() => {
+        if (!searchTerm.trim() && !activeSmartCollectionId) return null;
+
+        const sortedNotes = [...notes].sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+
+        if (searchMode === 'AI' && aiSearchResultIds) {
+            const noteMap = new Map(sortedNotes.map(note => [note.id, note]));
+            return aiSearchResultIds.map(id => noteMap.get(id)).filter((note): note is Note => !!note);
+        } else if (searchMode === 'KEYWORD') {
+            const lowercasedSearchTerm = searchTerm.toLowerCase();
+            return sortedNotes.filter(note =>
+                note.title.toLowerCase().includes(lowercasedSearchTerm) ||
+                note.content.toLowerCase().includes(lowercasedSearchTerm) ||
+                note.tags.some(tag => tag.toLowerCase().includes(lowercasedSearchTerm))
+            );
         }
-        return sortedNotes;
-    }, [notes, filter, searchTerm, searchMode, aiSearchResultIds, activeSmartCollectionId]);
+        return []; // Return empty array if AI search is pending or fails to find anything
+    }, [notes, searchTerm, searchMode, aiSearchResultIds, activeSmartCollectionId]);
 
     const activeNote = useMemo(() => activeNoteId ? getNoteById(activeNoteId) : null, [activeNoteId, getNoteById]);
     const activeSmartCollection = useMemo(() => activeSmartCollectionId ? store.smartCollections.find(sc => sc.id === activeSmartCollectionId) : null, [activeSmartCollectionId, store.smartCollections]);
@@ -343,7 +347,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             setSmartCollectionToDelete(null);
         }
     };
-    const handleActivateSmartCollection = (collection: SmartCollection) => { setSearchTerm(collection.query); setSearchMode('AI'); setActiveSmartCollectionId(collection.id); setFilter('ALL'); };
+    const handleActivateSmartCollection = (collection: SmartCollection) => { setSearchTerm(collection.query); setSearchMode('AI'); setActiveSmartCollectionId(collection.id); };
     const handleSearchTermChange = (term: string) => { if (activeSmartCollectionId) setActiveSmartCollectionId(null); setSearchTerm(term); };
     const handleClearActiveSmartCollection = () => { setActiveSmartCollectionId(null); setSearchTerm(''); };
     
@@ -553,7 +557,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     return (
         <StoreContext.Provider value={{
             ...store, onAddNote, onAddNoteFromFile, triggerNoteImport,
-            activeNoteId, setActiveNoteId, activeNote, filteredNotes, filter, setFilter, searchTerm,
+            activeNoteId, setActiveNoteId, activeNote, favoriteNotes, searchResults, searchTerm,
             handleSearchTermChange, searchMode, setSearchMode, isAiSearching, aiSearchError,
             activeSmartCollection, handleActivateSmartCollection, handleClearActiveSmartCollection,
             noteToDelete, setNoteToDelete, 

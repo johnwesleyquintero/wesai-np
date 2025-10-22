@@ -114,7 +114,7 @@ function AppContent() {
         collectionToDelete, setCollectionToDelete,
         smartCollectionToDelete, setSmartCollectionToDelete, handleDeleteCollectionConfirm,
         handleDeleteNoteConfirm, handleDeleteSmartCollectionConfirm,
-        filteredNotes, filter, setFilter, searchTerm, handleSearchTermChange, searchMode,
+        searchResults, favoriteNotes, searchTerm, handleSearchTermChange, searchMode,
         setSearchMode, isAiSearching, aiSearchError, activeSmartCollection,
         handleActivateSmartCollection, handleClearActiveSmartCollection, addSmartCollection, updateSmartCollection, templates,
         restoreNoteVersion
@@ -225,10 +225,10 @@ function AppContent() {
     return (
         <div className={`flex h-screen w-screen font-sans text-light-text dark:text-dark-text bg-light-background dark:bg-dark-background overflow-hidden ${isSidebarOpen && isMobileView ? 'fixed' : ''}`}>
             <Sidebar
-                filteredNotes={filteredNotes}
+                notes={notes}
+                favoriteNotes={favoriteNotes}
+                searchResults={searchResults}
                 activeNoteId={activeNoteId}
-                filter={filter}
-                setFilter={setFilter}
                 searchTerm={searchTerm}
                 setSearchTerm={handleSearchTermChange}
                 searchMode={searchMode}

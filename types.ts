@@ -55,8 +55,6 @@ export interface ChatMessage {
     noteId?: string;
 }
 
-export type FilterType = 'RECENT' | 'FAVORITES' | 'ALL';
-
 export type SearchMode = 'KEYWORD' | 'AI';
 
 export type ChatMode = 'ASSISTANT' | 'RESPONDER' | 'GENERAL';

@@ -1,9 +1,9 @@
 import React, { useMemo, useState, useRef, useCallback, useEffect } from 'react';
-import { Note, FilterType, SearchMode, SmartCollection, Collection } from '../types';
+import { Note, SearchMode, SmartCollection, Collection } from '../types';
 import NoteCard from './NoteCard';
 import {
     PencilSquareIcon, Cog6ToothIcon, SunIcon, MoonIcon, XMarkIcon, MagnifyingGlassIcon, SparklesIcon,
-    PlusIcon, FolderPlusIcon, BrainIcon, TrashIcon, ArrowUturnLeftIcon
+    PlusIcon, FolderPlusIcon, BrainIcon, TrashIcon, StarIcon, ChevronDownIcon, ChevronRightIcon
 } from './Icons';
 import SidebarNode, { TreeNode } from './SidebarNode';
 import Highlight from './Highlight';
@@ -11,10 +11,10 @@ import { useStoreContext, useUIContext } from '../context/AppContext';
 import { useDragAndDrop } from '../hooks/useDragAndDrop';
 
 interface SidebarProps {
-    filteredNotes: Note[];
+    notes: Note[];
+    favoriteNotes: Note[];
+    searchResults: Note[] | null;
     activeNoteId: string | null;
-    filter: FilterType;
-    setFilter: (filter: FilterType) => void;
     searchTerm: string;
     setSearchTerm: (term: string) => void;
     searchMode: SearchMode;
@@ -54,11 +54,9 @@ const buildTree = (notes: Note[], collections: Collection[]): TreeNode[] => {
             const aIsCollection = 'type' in a && a.type === 'collection';
             const bIsCollection = 'type' in b && b.type === 'collection';
 
-            // Collections should come before notes
             if (aIsCollection && !bIsCollection) return -1;
             if (!aIsCollection && bIsCollection) return 1;
 
-            // Sort alphabetically within type
             const aName = aIsCollection ? (a as Collection).name : (a as Note).title;
             const bName = bIsCollection ? (b as Collection).name : (b as Note).title;
             return aName.localeCompare(bName);
@@ -104,12 +102,38 @@ const FooterButton: React.FC<{
     </div>
 );
 
+const CollapsibleSection: React.FC<{
+    title: string;
+    count?: number;
+    actions?: React.ReactNode;
+    children: React.ReactNode;
+    defaultExpanded?: boolean;
+}> = ({ title, count, actions, children, defaultExpanded = true }) => {
+    const [isExpanded, setIsExpanded] = useState(defaultExpanded);
+
+    return (
+        <div className="py-1">
+            <div className="flex justify-between items-center mb-1 px-2 group h-8">
+                <button onClick={() => setIsExpanded(!isExpanded)} className="flex items-center text-xs font-semibold text-light-text/60 dark:text-dark-text/60 w-full hover:text-light-text dark:hover:text-dark-text transition-colors">
+                    {isExpanded ? <ChevronDownIcon className="w-4 h-4 mr-1" /> : <ChevronRightIcon className="w-4 h-4 mr-1" />}
+                    <h3 className="uppercase tracking-wider">{title}</h3>
+                    {typeof count !== 'undefined' && <span className="ml-2 text-light-text/50 dark:text-dark-text/50">({count})</span>}
+                </button>
+                <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                    {actions}
+                </div>
+            </div>
+            {isExpanded && <div className="pl-1 pr-2">{children}</div>}
+        </div>
+    );
+};
+
 const Sidebar: React.FC<SidebarProps> = ({
-    filteredNotes, activeNoteId, filter, setFilter, searchTerm, setSearchTerm, searchMode, setSearchMode, isAiSearching, aiSearchError, width,
+    notes, favoriteNotes, searchResults, activeNoteId, searchTerm, setSearchTerm, searchMode, setSearchMode, isAiSearching, aiSearchError, width,
     activeSmartCollection, onActivateSmartCollection, onClearActiveSmartCollection, onSelectNote
 }) => {
     const {
-        notes, collections, smartCollections, onAddNote, addCollection, moveItem,
+        collections, smartCollections, onAddNote, addCollection, moveItem,
         deleteSmartCollection, onAddNoteFromFile, 
         setNoteToDelete
     } = useStoreContext();
@@ -159,15 +183,12 @@ const Sidebar: React.FC<SidebarProps> = ({
     const visibleNodeIds = useMemo(() => getVisibleNodes(fileTree), [fileTree, getVisibleNodes]);
 
     useEffect(() => {
-        // Ensure focusedNodeId is always valid/visible
         if (focusedNodeId && !visibleNodeIds.includes(focusedNodeId)) {
             setFocusedNodeId(null);
         }
-        // Set a default focus when no note is active and no focus is set
         if (!activeNoteId && !focusedNodeId && visibleNodeIds.length > 0) {
             setFocusedNodeId(visibleNodeIds[0]);
         }
-        // If an active note is set, focus it for keyboard context
         if (activeNoteId && focusedNodeId !== activeNoteId) {
             setFocusedNodeId(activeNoteId);
         }
@@ -207,25 +228,41 @@ const Sidebar: React.FC<SidebarProps> = ({
         }
     };
     
-    const { allNotesCount, favoritesCount } = useMemo(() => ({
-        allNotesCount: notes.length,
-        favoritesCount: notes.filter(n => n.isFavorite).length,
-    }), [notes]);
-    
     const handleNoteCardContextMenu = (e: React.MouseEvent, note: Note) => {
         onOpenContextMenu(e, [
             { label: 'Delete Note', action: () => setNoteToDelete(note), isDestructive: true, icon: <TrashIcon /> },
         ]);
     };
     
+    const renderFavorites = () => (
+        <CollapsibleSection title="Favorites" count={favoriteNotes.length}>
+             {favoriteNotes.length > 0 ? (
+                favoriteNotes.map(note => (
+                    <NoteCard
+                        key={note.id}
+                        note={note}
+                        isActive={note.id === activeNoteId}
+                        onClick={() => onSelectNote(note.id)}
+                        searchTerm={searchTerm}
+                        onContextMenu={(e) => handleNoteCardContextMenu(e, note)}
+                    />
+                ))
+            ) : (
+                 <p className="px-2 py-1 text-xs text-light-text/50 dark:text-dark-text/50">No favorite notes yet.</p>
+            )}
+        </CollapsibleSection>
+    );
+    
     const renderSmartCollections = () => (
-        <div className="px-2 mt-4">
-             <div className="flex justify-between items-center mb-1 px-2">
-                <h3 className="text-sm font-semibold text-light-text/60 dark:text-dark-text/60">Smart Folders</h3>
+         <CollapsibleSection
+            title="Smart Folders"
+            count={smartCollections.length}
+            actions={(
                 <button onClick={() => openSmartFolderModal(null)} className="p-1 rounded text-light-text/60 dark:text-dark-text/60 hover:text-light-text dark:hover:text-dark-text hover:bg-light-ui dark:hover:bg-dark-ui" aria-label="Add new smart folder">
                     <PlusIcon className="w-4 h-4" />
                 </button>
-            </div>
+            )}
+        >
             {smartCollections.map(sc => (
                 <div key={sc.id} 
                     className={`group flex items-center justify-between w-full text-left rounded-md px-2 py-1.5 my-0.5 text-sm cursor-pointer hover:bg-light-background dark:hover:bg-dark-background`}
@@ -241,48 +278,65 @@ const Sidebar: React.FC<SidebarProps> = ({
                     </div>
                 </div>
             ))}
-        </div>
+        </CollapsibleSection>
     );
     
     const renderFileTree = () => {
-        if (fileTree.length === 0 && smartCollections.length === 0 && filter === 'ALL') {
-            return (
-                <div className="text-center px-4 py-8 text-sm text-light-text/60 dark:text-dark-text/60">
-                    <p>Your workspace is empty.</p>
-                    <button onClick={() => onAddNote()} className="mt-2 text-light-primary dark:text-dark-primary font-semibold">Create your first note</button>
-                </div>
-            );
+        if (fileTree.length === 0 && notes.length > 0) {
+             return (
+                <CollapsibleSection title="All Notes" count={notes.length}>
+                     {notes.map(note => (
+                         <NoteCard
+                            key={note.id}
+                            note={note}
+                            isActive={note.id === activeNoteId}
+                            onClick={() => onSelectNote(note.id)}
+                            searchTerm={searchTerm}
+                            onContextMenu={(e) => handleNoteCardContextMenu(e, note)}
+                        />
+                     ))}
+                </CollapsibleSection>
+             );
         }
 
         return (
-            <div className="px-2 mt-2">
-                 <div className="flex justify-between items-center mb-1 px-2">
-                    <h3 className="text-sm font-semibold text-light-text/60 dark:text-dark-text/60">Folders</h3>
-                     <button onClick={() => addCollection('New Folder', null)} className="p-1 rounded text-light-text/60 dark:text-dark-text/60 hover:text-light-text dark:hover:text-dark-text hover:bg-light-ui dark:hover:bg-dark-ui" aria-label="Add new folder">
+            <CollapsibleSection
+                title="Folders"
+                count={notes.length}
+                actions={(
+                    <button onClick={() => addCollection('New Folder', null)} className="p-1 rounded text-light-text/60 dark:text-dark-text/60 hover:text-light-text dark:hover:text-dark-text hover:bg-light-ui dark:hover:bg-dark-ui" aria-label="Add new folder">
                         <FolderPlusIcon className="w-4 h-4" />
                     </button>
-                </div>
-                {fileTree.map(node => (
-                    <SidebarNode 
-                        key={node.id} 
-                        node={node} 
-                        level={0} 
-                        activeNoteId={activeNoteId}
-                        searchTerm={searchTerm}
-                        onSelectNote={onSelectNote}
-                        expandedFolders={expandedFolders}
-                        onToggleFolder={toggleFolder}
-                        isFocused={focusedNodeId === node.id}
-                    />
-                ))}
-            </div>
+                )}
+            >
+                {fileTree.length > 0 ? (
+                    fileTree.map(node => (
+                        <SidebarNode 
+                            key={node.id} 
+                            node={node} 
+                            level={0} 
+                            activeNoteId={activeNoteId}
+                            searchTerm={searchTerm}
+                            onSelectNote={onSelectNote}
+                            expandedFolders={expandedFolders}
+                            onToggleFolder={toggleFolder}
+                            isFocused={focusedNodeId === node.id}
+                        />
+                    ))
+                ) : (
+                     <div className="text-center px-4 py-8 text-sm text-light-text/60 dark:text-dark-text/60">
+                        <p>Your workspace is empty.</p>
+                        <button onClick={() => onAddNote()} className="mt-2 text-light-primary dark:text-dark-primary font-semibold">Create your first note</button>
+                    </div>
+                )}
+            </CollapsibleSection>
         );
     };
 
-    const renderFlatList = () => (
+    const renderSearchResults = () => (
         <div className="px-4">
-            {filteredNotes.length > 0 ? (
-                filteredNotes.map(note => (
+            {(searchResults && searchResults.length > 0) ? (
+                searchResults.map(note => (
                     <NoteCard
                         key={note.id}
                         note={note}
@@ -306,6 +360,8 @@ const Sidebar: React.FC<SidebarProps> = ({
             )}
         </div>
     );
+    
+    const isSearching = searchResults !== null;
 
     return (
         <aside 
@@ -379,36 +435,14 @@ const Sidebar: React.FC<SidebarProps> = ({
                             </div>
                         </div>
                     )}
-                    <div className="px-4 mb-2">
-                        <div className="flex justify-between items-center">
-                             <div className="flex space-x-1 bg-light-background dark:bg-dark-background p-1 rounded-lg text-sm flex-wrap">
-                                <button
-                                    onClick={() => setFilter('RECENT')}
-                                    className={`px-3 py-1 rounded-md ${filter === 'RECENT' ? 'bg-white dark:bg-dark-ui-hover shadow-sm' : ''}`}
-                                >
-                                    Recent
-                                </button>
-                                <button
-                                    onClick={() => setFilter('FAVORITES')}
-                                    className={`px-3 py-1 rounded-md ${filter === 'FAVORITES' ? 'bg-white dark:bg-dark-ui-hover shadow-sm' : ''}`}
-                                >
-                                    Favorites <span className="text-light-text/50 dark:text-dark-text/50">({favoritesCount})</span>
-                                </button>
-                                <button
-                                    onClick={() => setFilter('ALL')}
-                                    className={`px-3 py-1 rounded-md ${filter === 'ALL' ? 'bg-white dark:bg-dark-ui-hover shadow-sm' : ''}`}
-                                >
-                                    All <span className="text-light-text/50 dark:text-dark-text/50">({allNotesCount})</span>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    {searchTerm || activeSmartCollection || filter !== 'ALL' ? renderFlatList() : (
+                    
+                    {isSearching ? renderSearchResults() : (
                         <div
                             ref={rootDropRef}
                             {...rootDragAndDropProps}
                             className={`transition-colors p-1 rounded-md min-h-[10rem] ${isRootFileOver ? 'bg-light-primary/10' : ''}`}
                         >
+                           {renderFavorites()}
                            {renderSmartCollections()}
                            {renderFileTree()}
                         </div>

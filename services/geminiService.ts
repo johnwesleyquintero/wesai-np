@@ -177,12 +177,69 @@ const deleteNoteTool: FunctionDeclaration = {
   },
 };
 
+const createCollectionTool: FunctionDeclaration = {
+  name: 'createCollection',
+  parameters: {
+    type: Type.OBJECT,
+    description: 'Creates a new folder (collection) to organize notes.',
+    properties: {
+      name: {
+        type: Type.STRING,
+        description: 'The name of the new folder.',
+      },
+      parentId: {
+        type: Type.STRING,
+        description: 'Optional. The ID of the parent folder to create this folder inside.',
+      },
+    },
+    required: ['name'],
+  },
+};
+
+const findCollectionsTool: FunctionDeclaration = {
+  name: 'findCollections',
+  parameters: {
+    type: Type.OBJECT,
+    description: 'Finds folders (collections) based on a search query.',
+    properties: {
+      query: {
+        type: Type.STRING,
+        description: 'The search query to find relevant folders.',
+      },
+    },
+    required: ['query'],
+  },
+};
+
+const moveNoteToCollectionTool: FunctionDeclaration = {
+  name: 'moveNoteToCollection',
+  parameters: {
+    type: Type.OBJECT,
+    description: 'Moves a note into a specific folder (collection).',
+    properties: {
+      noteId: {
+        type: Type.STRING,
+        description: 'The ID of the note to move.',
+      },
+      collectionId: {
+        type: Type.STRING,
+        description: 'The ID of the destination folder. Use null to move the note to the root level.',
+      },
+    },
+    required: ['noteId', 'collectionId'],
+  },
+};
+
+
 const aiTools: FunctionDeclaration[] = [
     createNoteTool,
     findNotesTool,
     getNoteContentTool,
     updateNoteTool,
     deleteNoteTool,
+    createCollectionTool,
+    findCollectionsTool,
+    moveNoteToCollectionTool,
 ];
 
 
@@ -627,7 +684,22 @@ export const getGeneralChatSession = (): Chat => {
              generalChatSession = ai.chats.create({
                 model: 'gemini-2.5-flash',
                 config: {
-                    systemInstruction: "You are WesAI, a helpful and general-purpose AI assistant. Your primary role is to help the user manage their notes. You can create, find, read, update, and delete notes using the provided tools. \n\n**Your workflow for editing or refining a note should be:**\n1. Use `findNotes` to locate the relevant note(s) based on the user's request. If multiple notes match, ask the user for clarification.\n2. Once the target note ID is confirmed, use `getNoteContent` to retrieve its current content.\n3. Perform the requested refinement (e.g., proofreading, summarizing, reformatting) on the content you retrieved.\n4. Use `updateNote` with the `noteId` and the new, complete `content` to save the changes.\n\nAlways inform the user of the actions you have taken, such as which note you have updated or deleted.",
+                    systemInstruction: `You are WesAI, a helpful and general-purpose AI assistant. Your primary role is to help the user manage their notes. You can create, find, read, update, delete, and organize notes and folders using the provided tools.
+
+**Your workflow for editing or refining a note should be:**
+1. Use \`findNotes\` to locate the relevant note(s).
+2. Use \`getNoteContent\` to retrieve its current content.
+3. Perform the requested refinement (e.g., proofreading, summarizing).
+4. Use \`updateNote\` with the \`noteId\` and the new, complete \`content\` to save the changes.
+
+**Your workflow for organizing notes should be:**
+1. Understand the user's categorization goal (e.g., "group all project notes").
+2. Use \`findNotes\` to identify the notes that need to be organized.
+3. Use \`findCollections\` to see if a suitable folder already exists.
+4. If a folder doesn't exist, use \`createCollection\` to make a new one.
+5. For each note, use \`moveNoteToCollection\` to place it in the correct folder. You can use a \`collectionId\` of \`null\` to move a note to the root.
+
+Always inform the user of the actions you have taken, such as which note you have updated or which notes you have moved.`,
                     tools: [{ functionDeclarations: aiTools }],
                 }
             });

@@ -122,7 +122,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     
     // Store Hook
     const store = useSupabaseStore(session?.user);
-    const { notes, getNoteById, deleteCollection, deleteNote, deleteSmartCollection, addNote: createNote, addNoteFromFile, loading: isStoreLoading, updateNote: updateNoteInStore } = store;
+    const { notes, collections, getNoteById, deleteCollection, deleteNote, deleteSmartCollection, addNote: createNote, addNoteFromFile, loading: isStoreLoading, updateNote: updateNoteInStore } = store;
     
     const { showToast } = useToast();
     const { apiKey } = useApiKey();
@@ -415,6 +415,35 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                                     showToast({ message: `Note "${noteToDeleteInstance.title}" deleted!`, type: 'success' });
                                 } else {
                                     result = { success: false, error: "Note not found." };
+                                }
+                                break;
+                             case 'createCollection':
+                                const name = String(fc.args.name || 'New Folder');
+                                const parentId = fc.args.parentId ? String(fc.args.parentId) : null;
+                                const newCollectionId = await store.addCollection(name, parentId);
+                                result = { success: true, collectionId: newCollectionId };
+                                showToast({ message: `Folder "${name}" created!`, type: 'success' });
+                                break;
+                            case 'findCollections':
+                                const collectionQuery = String(fc.args.query || '').toLowerCase();
+                                const foundCollections = collections
+                                    .filter(c => c.name.toLowerCase().includes(collectionQuery))
+                                    .map(c => ({ id: c.id, name: c.name }));
+                                result = { collections: foundCollections };
+                                break;
+                            case 'moveNoteToCollection':
+                                const noteIdToMove = String(fc.args.noteId || '');
+                                const collectionId = fc.args.collectionId === null || fc.args.collectionId === 'null' ? null : String(fc.args.collectionId);
+                                
+                                const noteToMove = getNoteById(noteIdToMove);
+                                const collection = collectionId ? store.getCollectionById(collectionId) : { name: 'root' };
+                                
+                                if (noteToMove && (collection || collectionId === null)) {
+                                    await store.moveItem(noteIdToMove, collectionId, 'inside');
+                                    result = { success: true };
+                                    showToast({ message: `Moved "${noteToMove.title}" to "${collection?.name}"`, type: 'success' });
+                                } else {
+                                    result = { success: false, error: "Note or destination folder not found." };
                                 }
                                 break;
                             default:

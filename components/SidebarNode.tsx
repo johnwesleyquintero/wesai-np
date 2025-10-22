@@ -98,7 +98,10 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
                     label: 'Duplicate Note', 
                     action: () => {
                         copyNote(node.id)
-                            .then(() => showToast({ message: 'Note duplicated successfully!', type: 'success'}))
+                            .then((newNoteId) => {
+                                onSelectNote(newNoteId);
+                                showToast({ message: 'Note duplicated successfully!', type: 'success'});
+                            })
                             .catch((err) => showToast({ message: `Failed to duplicate note: ${err.message}`, type: 'error'}));
                     }, 
                     icon: <DocumentDuplicateIcon /> 
@@ -208,6 +211,7 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
                             searchTerm={searchTerm}
                             onSelectNote={onSelectNote}
                             expandedFolders={expandedFolders}
+                            // FIX: Pass the 'onToggleFolder' prop correctly instead of an undefined local variable.
                             onToggleFolder={onToggleFolder}
                             isFocused={isFocused}
                         />

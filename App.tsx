@@ -2,25 +2,27 @@ import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } fr
 import Sidebar from './components/Sidebar';
 import { useStoreContext } from './context/AppContext';
 import { Note, NoteVersion, Collection, SmartCollection } from './types';
-import SettingsModal from './components/SettingsModal';
 import ConfirmationModal from './components/ConfirmationModal';
 import { Bars3Icon, PlusIcon, SparklesIcon, ArrowDownTrayIcon, Cog6ToothIcon } from './components/Icons';
 import { AppProvider, useUIContext } from './context/AppContext';
-import CommandPalette from './components/CommandPalette';
 import ContextMenu from './components/ContextMenu';
-import SmartFolderModal from './components/SmartFolderModal';
 import { ToastProvider, useToast } from './context/ToastContext';
 import SidebarResizer from './components/SidebarResizer';
 import SuspenseLoader from './components/SuspenseLoader';
-import WelcomeModal from './components/WelcomeModal';
-import ApiKeyIndicator from './components/ApiKeyIndicator';
 import Auth from './components/Auth';
 import { isSupabaseConfigured } from './lib/supabaseClient';
 import NoteEditorSkeleton from './components/NoteEditorSkeleton';
 import ChatViewSkeleton from './components/ChatViewSkeleton';
+// FIX: Import the missing ApiKeyIndicator component.
+import ApiKeyIndicator from './components/ApiKeyIndicator';
 
 const NoteEditor = React.lazy(() => import('./components/NoteEditor'));
 const ChatView = React.lazy(() => import('./components/ChatView'));
+const CommandPalette = React.lazy(() => import('./components/CommandPalette'));
+const SettingsModal = React.lazy(() => import('./components/SettingsModal'));
+const SmartFolderModal = React.lazy(() => import('./components/SmartFolderModal'));
+const WelcomeModal = React.lazy(() => import('./components/WelcomeModal'));
+
 
 const WELCOME_SCREEN_SIDEBAR_WIDTH_KEY = 'wesai-sidebar-width';
 const MIN_SIDEBAR_WIDTH = 280;
@@ -109,7 +111,7 @@ const ConfigurationError: React.FC = () => (
 
 function AppContent() {
     const {
-        notes, activeNoteId, setActiveNoteId, onAddNote,
+        notes, collections, activeNoteId, setActiveNoteId, onAddNote,
         noteToDelete, setNoteToDelete,
         collectionToDelete, setCollectionToDelete,
         smartCollectionToDelete, setSmartCollectionToDelete, handleDeleteCollectionConfirm,
@@ -157,6 +159,13 @@ function AppContent() {
         if (!activeNoteId) return null;
         return notes.find(n => n.id === activeNoteId) || null;
     }, [activeNoteId, notes]);
+    
+    const isCollectionToDeleteEmpty = useMemo(() => {
+        if (!collectionToDelete) return false;
+        // A folder is empty if no note or other folder has it as a parent.
+        const hasChildren = notes.some(n => n.parentId === collectionToDelete.id) || collections.some(c => c.parentId === collectionToDelete.id);
+        return !hasChildren;
+    }, [collectionToDelete, notes, collections]);
 
     useEffect(() => {
         if (activeNoteId && !notes.some(n => n.id === activeNoteId)) {
@@ -290,8 +299,12 @@ function AppContent() {
                 onClose={() => setCollectionToDelete(null)}
                 onConfirm={handleDeleteCollectionConfirm}
                 title="Delete Folder"
-                message={`Are you sure you want to delete the folder "${collectionToDelete?.name}"? All notes and folders inside it will also be permanently deleted. This action cannot be undone.`}
-                confirmationRequiredText={collectionToDelete?.name}
+                message={
+                    isCollectionToDeleteEmpty
+                        ? `Are you sure you want to delete the empty folder "${collectionToDelete?.name}"? This action cannot be undone.`
+                        : `Are you sure you want to delete the folder "${collectionToDelete?.name}"? All notes and folders inside it will also be permanently deleted. This action cannot be undone.`
+                }
+                confirmationRequiredText={isCollectionToDeleteEmpty ? undefined : collectionToDelete?.name}
             />
 
             <ConfirmationModal

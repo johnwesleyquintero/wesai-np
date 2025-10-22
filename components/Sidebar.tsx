@@ -5,7 +5,6 @@ import {
     PencilSquareIcon, Cog6ToothIcon, SunIcon, MoonIcon, XMarkIcon, MagnifyingGlassIcon, SparklesIcon,
     PlusIcon, FolderPlusIcon, BrainIcon, StarIcon, ChevronDownIcon, ChevronRightIcon,
     ChevronDoubleLeftIcon, FolderIcon,
-    // FIX: Imported TrashIcon to resolve reference errors.
     TrashIcon
 } from './Icons';
 import SidebarNode, { TreeNode } from './SidebarNode';

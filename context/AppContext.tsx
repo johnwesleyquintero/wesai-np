@@ -148,7 +148,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
     // Editor State
     const [editorActions, setEditorActions] = useState<EditorActions | null>(null);
-    const onboardingDoneRef = useRef(false);
 
     // Auth Effect
     useEffect(() => {
@@ -192,10 +191,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }, []);
     
     useEffect(() => {
-        // Only run for authenticated users, after initial load, if they have no notes, and only once per session.
-        if (!isStoreLoading && session?.user && notes.length === 0 && collections.length === 0 && !onboardingDoneRef.current) {
-            onboardingDoneRef.current = true;
+        const onboardingComplete = localStorage.getItem('wesai-onboarding-complete') === 'true';
     
+        // Run only for authenticated users who haven't completed onboarding, after the initial data load, and if they have no notes.
+        if (!onboardingComplete && !isStoreLoading && session?.user && notes.length === 0 && collections.length === 0) {
+            
             const createOnboardingNotes = async () => {
                 try {
                     const secondNoteContent = `# This is a Linked Note\n\nYou've successfully navigated here from the welcome note!\n\nThis demonstrates how you can create a personal wiki or a "second brain" by connecting your thoughts and ideas.\n\nGo back to the welcome note by checking the "Linked Mentions" section at the bottom of this note.`;
@@ -203,7 +203,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                     
                     const firstNoteContent = `# Welcome to WesAI Notepad, Brother!\n\nThis is your new digital command center. Here's a quick rundown of what you can do.\n\n## Write in Markdown\n\nYou can use Markdown to format your notes.\n\n- Use asterisks for **bold** and *italic* text.\n- Create lists like this one.\n- Use hashtags for headers.\n\n## Create To-Do Lists\n\n- [x] Learn about WesAI Notepad\n- [ ] Build my second brain\n- [ ] Conquer the world\n\n## Link Your Ideas\n\nCreate a network of knowledge by linking notes together. Just type \`[[\` to get started.\n\nHere's a link to another note I created for you: [[${secondNoteId}|A Linked Note Example]]\n\n## Use the AI Assistant\n\nSelect any text to get AI suggestions, or open the AI Chat to ask questions about your notes.\n\nTry this: highlight the text below, and in the popup menu, select **AI Assistant -> Make Shorter**.\n\n> WesAI Notepad is a sophisticated, high-performance software application designed to facilitate the seamless creation, organization, and retrieval of digital notes, leveraging advanced artificial intelligence capabilities to enhance user productivity and streamline complex information management workflows.`;
                     const firstNoteId = await createNote(null, 'Welcome to WesAI Notepad!', firstNoteContent);
-                    setActiveNoteId(firstNoteId); // Open the welcome note
+                    setActiveNoteId(firstNoteId);
+                    localStorage.setItem('wesai-onboarding-complete', 'true');
                 } catch (error) {
                     console.error("Failed to create onboarding notes:", error);
                 }

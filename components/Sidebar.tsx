@@ -110,8 +110,8 @@ const Sidebar: React.FC<SidebarProps> = ({
 }) => {
     const {
         notes, collections, smartCollections, onAddNote, addCollection, moveItem,
-        deleteSmartCollection, onAddNoteFromFile, trashedNotes, restoreNote, 
-        setNoteToDelete, setNoteToPermanentlyDelete
+        deleteSmartCollection, onAddNoteFromFile, 
+        setNoteToDelete
     } = useStoreContext();
     
     const {
@@ -207,24 +207,15 @@ const Sidebar: React.FC<SidebarProps> = ({
         }
     };
     
-    const { allNotesCount, favoritesCount, trashedCount } = useMemo(() => ({
+    const { allNotesCount, favoritesCount } = useMemo(() => ({
         allNotesCount: notes.length,
         favoritesCount: notes.filter(n => n.isFavorite).length,
-        trashedCount: trashedNotes.length,
-    }), [notes, trashedNotes]);
+    }), [notes]);
     
     const handleNoteCardContextMenu = (e: React.MouseEvent, note: Note) => {
-        if (filter === 'TRASH') {
-            onOpenContextMenu(e, [
-                { label: 'Restore Note', action: () => restoreNote(note.id), icon: <ArrowUturnLeftIcon /> },
-                { label: 'Delete Permanently', action: () => setNoteToPermanentlyDelete(note), isDestructive: true, icon: <TrashIcon /> },
-            ]);
-        } else {
-             onOpenContextMenu(e, [
-                // Add regular note actions here if needed in the future
-                { label: 'Move to Trash', action: () => setNoteToDelete(note), isDestructive: true, icon: <TrashIcon /> },
-            ]);
-        }
+        onOpenContextMenu(e, [
+            { label: 'Delete Note', action: () => setNoteToDelete(note), isDestructive: true, icon: <TrashIcon /> },
+        ]);
     };
     
     const renderSmartCollections = () => (
@@ -290,8 +281,8 @@ const Sidebar: React.FC<SidebarProps> = ({
 
     const renderFlatList = () => (
         <div className="px-4">
-            {(filter === 'TRASH' ? trashedNotes : filteredNotes).length > 0 ? (
-                (filter === 'TRASH' ? trashedNotes : filteredNotes).map(note => (
+            {filteredNotes.length > 0 ? (
+                filteredNotes.map(note => (
                     <NoteCard
                         key={note.id}
                         note={note}
@@ -310,9 +301,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                             <p className="mt-1">Try a different keyword or use AI Search for conceptual matches.</p>
                         </>
                     )}
-                    {!isAiSearching && !searchTerm && (
-                        filter === 'TRASH' ? 'Trash is empty.' : 'No notes in this view.'
-                    )}
+                    {!isAiSearching && !searchTerm && 'No notes in this view.'}
                 </div>
             )}
         </div>
@@ -410,12 +399,6 @@ const Sidebar: React.FC<SidebarProps> = ({
                                     className={`px-3 py-1 rounded-md ${filter === 'ALL' ? 'bg-white dark:bg-dark-ui-hover shadow-sm' : ''}`}
                                 >
                                     All <span className="text-light-text/50 dark:text-dark-text/50">({allNotesCount})</span>
-                                </button>
-                                <button
-                                    onClick={() => setFilter('TRASH')}
-                                    className={`px-3 py-1 rounded-md ${filter === 'TRASH' ? 'bg-white dark:bg-dark-ui-hover shadow-sm' : ''}`}
-                                >
-                                    Trash <span className="text-light-text/50 dark:text-dark-text/50">({trashedCount})</span>
                                 </button>
                             </div>
                         </div>

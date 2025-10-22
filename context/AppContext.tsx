@@ -10,7 +10,7 @@ import { supabase } from '../lib/supabaseClient';
 
 // Store Context
 interface StoreContextType extends Omit<ReturnType<typeof useSupabaseStore>, 'deleteNote'> {
-    deleteNote: (id: string) => Promise<void>; // Overriding to ensure it's the soft delete
+    deleteNote: (id: string) => Promise<void>;
     activeNoteId: string | null;
     setActiveNoteId: React.Dispatch<React.SetStateAction<string | null>>;
     activeNote: Note | null;
@@ -28,14 +28,11 @@ interface StoreContextType extends Omit<ReturnType<typeof useSupabaseStore>, 'de
     handleClearActiveSmartCollection: () => void;
     noteToDelete: Note | null;
     setNoteToDelete: React.Dispatch<React.SetStateAction<Note | null>>;
-    noteToPermanentlyDelete: Note | null;
-    setNoteToPermanentlyDelete: React.Dispatch<React.SetStateAction<Note | null>>;
     collectionToDelete: Collection | null;
     setCollectionToDelete: React.Dispatch<React.SetStateAction<Collection | null>>;
     smartCollectionToDelete: SmartCollection | null;
     setSmartCollectionToDelete: React.Dispatch<React.SetStateAction<SmartCollection | null>>;
     handleDeleteNoteConfirm: () => Promise<void>;
-    handlePermanentlyDeleteNoteConfirm: () => Promise<void>;
     handleDeleteCollectionConfirm: () => Promise<void>;
     handleDeleteSmartCollectionConfirm: () => Promise<void>;
     chatMessages: ChatMessage[];
@@ -129,8 +126,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     // Store Hook
     const store = useSupabaseStore(session?.user);
     const { 
-        notes, trashedNotes, collections, getNoteById, deleteCollection, deleteNote: softDeleteNote, 
-        permanentlyDeleteNote, deleteSmartCollection, addNote: createNote, 
+        notes, collections, getNoteById, deleteCollection, deleteNote, 
+        deleteSmartCollection, addNote: createNote, 
         addNoteFromFile, loading: isStoreLoading, updateNote: updateNoteInStore 
     } = store;
     
@@ -146,7 +143,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const [aiSearchError, setAiSearchError] = useState<string | null>(null);
     const [aiSearchResultIds, setAiSearchResultIds] = useState<string[] | null>(null);
     const [noteToDelete, setNoteToDelete] = useState<Note | null>(null);
-    const [noteToPermanentlyDelete, setNoteToPermanentlyDelete] = useState<Note | null>(null);
     const [collectionToDelete, setCollectionToDelete] = useState<Collection | null>(null);
     const [smartCollectionToDelete, setSmartCollectionToDelete] = useState<SmartCollection | null>(null);
     const [activeSmartCollectionId, setActiveSmartCollectionId] = useState<string | null>(null);
@@ -306,10 +302,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }, [debouncedSearchTerm, searchMode, notes]);
 
     const filteredNotes = useMemo(() => {
-        if (filter === 'TRASH') {
-            return [...trashedNotes].sort((a, b) => new Date(b.deletedAt!).getTime() - new Date(a.deletedAt!).getTime());
-        }
-
         let sortedNotes = [...notes].sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
         if (filter === 'FAVORITES') sortedNotes = sortedNotes.filter(note => note.isFavorite);
         if (searchTerm.trim() || activeSmartCollectionId) {
@@ -326,22 +318,16 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             } else if (searchMode === 'AI') return [];
         }
         return sortedNotes;
-    }, [notes, trashedNotes, filter, searchTerm, searchMode, aiSearchResultIds, activeSmartCollectionId]);
+    }, [notes, filter, searchTerm, searchMode, aiSearchResultIds, activeSmartCollectionId]);
 
     const activeNote = useMemo(() => activeNoteId ? getNoteById(activeNoteId) : null, [activeNoteId, getNoteById]);
     const activeSmartCollection = useMemo(() => activeSmartCollectionId ? store.smartCollections.find(sc => sc.id === activeSmartCollectionId) : null, [activeSmartCollectionId, store.smartCollections]);
     
     const handleDeleteNoteConfirm = async () => {
         if (noteToDelete) {
-            await softDeleteNote(noteToDelete.id);
+            await deleteNote(noteToDelete.id);
             if (activeNoteId === noteToDelete.id) setActiveNoteId(null);
             setNoteToDelete(null);
-        }
-    };
-    const handlePermanentlyDeleteNoteConfirm = async () => {
-        if (noteToPermanentlyDelete) {
-            await permanentlyDeleteNote(noteToPermanentlyDelete.id);
-            setNoteToPermanentlyDelete(null);
         }
     };
     const handleDeleteCollectionConfirm = async () => {
@@ -479,7 +465,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                                 const noteIdToDelete = String(fc.args.noteId || '');
                                 const noteToDeleteInstance = getNoteById(noteIdToDelete);
                                 if (noteToDeleteInstance) {
-                                    await softDeleteNote(noteIdToDelete);
+                                    await deleteNote(noteIdToDelete);
                                     if (activeNoteId === noteIdToDelete) setActiveNoteId(null);
                                     result = { success: true, noteId: noteIdToDelete };
                                     showToast({ message: `Note "${noteToDeleteInstance.title}" moved to trash!`, type: 'success' });
@@ -566,14 +552,13 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
     return (
         <StoreContext.Provider value={{
-            ...store, deleteNote: softDeleteNote, onAddNote, onAddNoteFromFile, triggerNoteImport,
+            ...store, onAddNote, onAddNoteFromFile, triggerNoteImport,
             activeNoteId, setActiveNoteId, activeNote, filteredNotes, filter, setFilter, searchTerm,
             handleSearchTermChange, searchMode, setSearchMode, isAiSearching, aiSearchError,
             activeSmartCollection, handleActivateSmartCollection, handleClearActiveSmartCollection,
-            noteToDelete, setNoteToDelete, noteToPermanentlyDelete, setNoteToPermanentlyDelete, 
+            noteToDelete, setNoteToDelete, 
             collectionToDelete, setCollectionToDelete,
             smartCollectionToDelete, setSmartCollectionToDelete, handleDeleteNoteConfirm,
-            handlePermanentlyDeleteNoteConfirm,
             handleDeleteCollectionConfirm, handleDeleteSmartCollectionConfirm,
             chatMessages, chatStatus, onSendMessage, onGenerateServiceResponse, onSendGeneralMessage, clearChat
         }}>

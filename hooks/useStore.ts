@@ -36,7 +36,6 @@ const processNote = (noteData: any): Note => {
 
 export const useStore = (user: User | undefined) => {
     const [notes, setNotes] = useState<Note[]>([]);
-    const [trashedNotes, setTrashedNotes] = useState<Note[]>([]);
     const [collections, setCollections] = useState<Collection[]>([]);
     const [smartCollections, setSmartCollections] = useState<SmartCollection[]>([]);
     const [templates, setTemplates] = useState<Template[]>([]);
@@ -46,7 +45,6 @@ export const useStore = (user: User | undefined) => {
         if (!user) {
             setLoading(false);
             setNotes([]);
-            setTrashedNotes([]);
             setCollections([]);
             setSmartCollections([]);
             setTemplates([]);
@@ -54,25 +52,19 @@ export const useStore = (user: User | undefined) => {
         }
         setLoading(true);
         try {
-            const [allNotesRes, collectionsRes, smartCollectionsRes, templatesRes] = await Promise.all([
+            const [notesRes, collectionsRes, smartCollectionsRes, templatesRes] = await Promise.all([
                 supabase.from('notes').select('*').eq('user_id', user.id),
                 supabase.from('collections').select('*').eq('user_id', user.id),
                 supabase.from('smart_collections').select('*').eq('user_id', user.id),
                 supabase.from('templates').select('*').eq('user_id', user.id),
             ]);
 
-            if (allNotesRes.error) throw allNotesRes.error;
+            if (notesRes.error) throw notesRes.error;
             if (collectionsRes.error) throw collectionsRes.error;
             if (smartCollectionsRes.error) throw smartCollectionsRes.error;
             if (templatesRes.error) throw templatesRes.error;
 
-            const allNotes = (allNotesRes.data || []).map(processNote);
-            
-            const activeNotes = allNotes.filter(note => !note.deletedAt);
-            const newTrashedNotes = allNotes.filter(note => !!note.deletedAt);
-
-            setNotes(activeNotes);
-            setTrashedNotes(newTrashedNotes);
+            setNotes((notesRes.data || []).map(processNote));
             setCollections((collectionsRes.data || []).map(fromSupabase));
             setSmartCollections((smartCollectionsRes.data || []).map(fromSupabase));
             setTemplates((templatesRes.data || []).map(fromSupabase));
@@ -178,20 +170,8 @@ export const useStore = (user: User | undefined) => {
         await updateNote(noteId, { title, content, tags });
     }, [updateNote]);
 
-    const deleteNote = useCallback(async (id: string) => { // This is now a soft delete
+    const deleteNote = useCallback(async (id: string) => {
         if (!user) throw new Error("User must be logged in to delete a note.");
-        const { error } = await supabase.from('notes').update({ deleted_at: new Date().toISOString() }).eq('id', id).eq('user_id', user.id);
-        if (error) throw error;
-    }, [user]);
-
-    const restoreNote = useCallback(async (id: string) => {
-        if (!user) throw new Error("User must be logged in to restore a note.");
-        const { error } = await supabase.from('notes').update({ deleted_at: null }).eq('id', id).eq('user_id', user.id);
-        if (error) throw error;
-    }, [user]);
-
-    const permanentlyDeleteNote = useCallback(async (id: string) => {
-        if (!user) throw new Error("User must be logged in to permanently delete a note.");
         const { error } = await supabase.from('notes').delete().eq('id', id).eq('user_id', user.id);
         if (error) throw error;
     }, [user]);
@@ -387,8 +367,8 @@ export const useStore = (user: User | undefined) => {
     
     return { 
         loading,
-        notes, trashedNotes, collections, smartCollections, templates,
-        addNote, addNoteFromFile, updateNote, deleteNote, restoreNote, permanentlyDeleteNote, getNoteById, toggleFavorite, restoreNoteVersion, copyNote, renameNoteTitle,
+        notes, collections, smartCollections, templates,
+        addNote, addNoteFromFile, updateNote, deleteNote, getNoteById, toggleFavorite, restoreNoteVersion, copyNote, renameNoteTitle,
         addCollection, updateCollection, deleteCollection, getCollectionById, moveItem,
         addSmartCollection, updateSmartCollection, deleteSmartCollection,
         addTemplate, updateTemplate, deleteTemplate,

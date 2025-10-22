@@ -110,10 +110,10 @@ const ConfigurationError: React.FC = () => (
 function AppContent() {
     const {
         notes, activeNoteId, setActiveNoteId, onAddNote,
-        noteToDelete, setNoteToDelete, noteToPermanentlyDelete, setNoteToPermanentlyDelete,
+        noteToDelete, setNoteToDelete,
         collectionToDelete, setCollectionToDelete,
         smartCollectionToDelete, setSmartCollectionToDelete, handleDeleteCollectionConfirm,
-        handleDeleteNoteConfirm, handlePermanentlyDeleteNoteConfirm, handleDeleteSmartCollectionConfirm,
+        handleDeleteNoteConfirm, handleDeleteSmartCollectionConfirm,
         filteredNotes, filter, setFilter, searchTerm, handleSearchTermChange, searchMode,
         setSearchMode, isAiSearching, aiSearchError, activeSmartCollection,
         handleActivateSmartCollection, handleClearActiveSmartCollection, addSmartCollection, updateSmartCollection, templates,
@@ -277,19 +277,11 @@ function AppContent() {
                 isOpen={!!noteToDelete}
                 onClose={() => setNoteToDelete(null)}
                 onConfirm={handleDeleteNoteConfirm}
-                title="Move Note to Trash"
-                message={`Are you sure you want to move "${noteToDelete?.title}" to the trash?`}
-                confirmText="Move to Trash"
+                title="Delete Note"
+                message={`Are you sure you want to permanently delete "${noteToDelete?.title}"? This action cannot be undone.`}
+                confirmText="Delete"
             />
             
-            <ConfirmationModal
-                isOpen={!!noteToPermanentlyDelete}
-                onClose={() => setNoteToPermanentlyDelete(null)}
-                onConfirm={handlePermanentlyDeleteNoteConfirm}
-                title="Delete Note Permanently"
-                message={`Are you sure you want to permanently delete "${noteToPermanentlyDelete?.title}"? This action cannot be undone.`}
-            />
-
             <ConfirmationModal
                 isOpen={!!collectionToDelete}
                 onClose={() => setCollectionToDelete(null)}

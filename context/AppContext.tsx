@@ -42,6 +42,7 @@ interface StoreContextType extends ReturnType<typeof useSupabaseStore> {
     clearChat: () => void;
     onAddNote: (parentId?: string | null, title?: string, content?: string) => Promise<string>;
     onAddNoteFromFile: (title: string, content: string, parentId: string | null) => Promise<string>;
+    triggerNoteImport: () => void;
 }
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
 export const useStoreContext = () => {
@@ -119,6 +120,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const [smartFolderToEdit, setSmartFolderToEdit] = useState<SmartCollection | null>(null);
     const [contextMenu, setContextMenu] = useState<{ x: number; y: number; items: ContextMenuItem[] } | null>(null);
     const [isWelcomeModalOpen, setIsWelcomeModalOpen] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
     
     // Store Hook
     const store = useSupabaseStore(session?.user);
@@ -230,6 +232,28 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         showToast({ message: `Imported "${title}"`, type: 'success'});
         return newNoteId;
     }, [addNoteFromFile, isMobileView, showToast]);
+    
+    const triggerNoteImport = useCallback(() => {
+        fileInputRef.current?.click();
+    }, []);
+
+    const handleFileImport = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (loadEvent) => {
+                const content = loadEvent.target?.result as string;
+                if (content !== null) {
+                    onAddNoteFromFile(file.name, content, null);
+                }
+            };
+            reader.readAsText(file);
+            // Reset input value to allow importing the same file again
+            if (fileInputRef.current) {
+                fileInputRef.current.value = '';
+            }
+        }
+    };
 
 
     // Keyboard shortcuts
@@ -532,7 +556,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
     return (
         <StoreContext.Provider value={{
-            ...store, onAddNote, onAddNoteFromFile,
+            ...store, onAddNote, onAddNoteFromFile, triggerNoteImport,
             activeNoteId, setActiveNoteId, activeNote, filteredNotes, filter, setFilter, searchTerm,
             handleSearchTermChange, searchMode, setSearchMode, isAiSearching, aiSearchError,
             activeSmartCollection, handleActivateSmartCollection, handleClearActiveSmartCollection,
@@ -551,6 +575,13 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                 setContextMenu, onOpenContextMenu, isWelcomeModalOpen, closeWelcomeModal, isApiKeyMissing: !apiKey,
             }}>
                 <EditorContext.Provider value={{ editorActions, registerEditorActions, unregisterEditorActions }}>
+                     <input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handleFileImport}
+                        accept=".md,.txt,text/plain,text/markdown"
+                        className="hidden"
+                    />
                     {children}
                 </EditorContext.Provider>
             </UIContext.Provider>

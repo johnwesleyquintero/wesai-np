@@ -275,7 +275,6 @@ const UIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const toggleSidebarCollapsed = useCallback(() => setIsSidebarCollapsed(prev => !prev), []);
     const onToggleSidebar = useCallback(() => setIsSidebarOpen(p => !p), []);
     const openSettings = useCallback(() => setIsSettingsOpen(true), []);
-    // FIX: Replace comma operator with semicolon to avoid unused expression error.
     const openSmartFolderModal = useCallback((folder: SmartCollection | null) => { setSmartFolderToEdit(folder); setIsSmartFolderModalOpen(true); }, []);
     const onOpenContextMenu = useCallback((e: React.MouseEvent, items: ContextMenuItem[]) => { e.preventDefault(); e.stopPropagation(); setContextMenu({ x: e.clientX, y: e.clientY, items }); }, []);
     const closeWelcomeModal = useCallback(() => { localStorage.setItem('wesai-seen-welcome', 'true'); setIsWelcomeModalOpen(false); }, []);
@@ -287,7 +286,7 @@ const UIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
         openSettings, isCommandPaletteOpen, setIsCommandPaletteOpen, isSmartFolderModalOpen,
         setIsSmartFolderModalOpen, smartFolderToEdit, openSmartFolderModal, contextMenu,
         setContextMenu, onOpenContextMenu, isWelcomeModalOpen, closeWelcomeModal, isApiKeyMissing: !apiKey
-    }, [
+    }), [
         theme, toggleTheme, view, setView, isMobileView, isSidebarOpen, setIsSidebarOpen,
         onToggleSidebar, isSidebarCollapsed, toggleSidebarCollapsed,
         isAiRateLimited, renamingItemId, setRenamingItemId, isSettingsOpen, setIsSettingsOpen,

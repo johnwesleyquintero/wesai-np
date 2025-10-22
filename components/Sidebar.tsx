@@ -493,9 +493,9 @@ const Sidebar: React.FC<SidebarProps> = ({
         {/* Logo at top */}
         <div className="mb-4 flex-shrink-0 pt-2">
             <svg width="32" height="32" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <rect width="64" height="64" rx="12" fill="#18181b"/>
-              <path d="M20 18C20 15.7909 21.7909 14 24 14H44C46.2091 14 48 15.7909 48 18V46C48 48.2091 46.2091 50 44 50H24C21.7909 50 20 48.2091 20 46V18Z" stroke="#60a5fa" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M24 14V50" stroke="#60a5fa" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+              <rect width="64" height="64" rx="12" fill="#60a5fa"/>
+              <path d="M20 18C20 15.7909 21.7909 14 24 14H44C46.2091 14 48 15.7909 48 18V46C48 48.2091 46.2091 50 44 50H24C21.7909 50 20 48.2091 20 46V18Z" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M24 14V50" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
         </div>
 

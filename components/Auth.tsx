@@ -96,6 +96,13 @@ const Auth: React.FC = () => {
     return (
         <div className="flex items-center justify-center h-screen w-screen bg-light-background dark:bg-dark-background">
             <div className="w-full max-w-sm p-8 space-y-6 bg-light-ui dark:bg-dark-ui rounded-xl shadow-lg">
+                <div className="flex justify-center">
+                    <svg width="48" height="48" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <rect width="64" height="64" rx="12" fill="#60a5fa"/>
+                      <path d="M20 18C20 15.7909 21.7909 14 24 14H44C46.2091 14 48 15.7909 48 18V46C48 48.2091 46.2091 50 44 50H24C21.7909 50 20 48.2091 20 46V18Z" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M24 14V50" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                </div>
                 <div className="text-center">
                     <h1 className="text-3xl font-bold text-light-text dark:text-dark-text">WesAI Notepad</h1>
                     <p className="mt-2 text-sm text-light-text/60 dark:text-dark-text/60">

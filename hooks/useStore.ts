@@ -83,28 +83,27 @@ export const useStore = (user: User | undefined) => {
      useEffect(() => {
         if (!user) return;
 
-        const handleNoteChange = (payload: any) => {
+        const genericHandler = (payload: any) => {
             // Refetch all data for simplicity and to ensure consistency
             // A more optimized approach would be to update the state arrays directly.
             fetchData();
         };
-        
-        const handleCollectionChange = (payload: any) => {
-             fetchData();
-        };
 
-        const handleSmartCollectionChange = (payload: any) => {
-             fetchData();
-        };
+        const notesChannel = supabase.channel(`notes-user-${user.id}`)
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'notes', filter: `user_id=eq.${user.id}` }, genericHandler)
+          .subscribe();
 
-        const handleTemplateChange = (payload: any) => {
-             fetchData();
-        };
+        const collectionsChannel = supabase.channel(`collections-user-${user.id}`)
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'collections', filter: `user_id=eq.${user.id}` }, genericHandler)
+          .subscribe();
 
-        const notesChannel = supabase.channel('public:notes').on('postgres_changes', { event: '*', schema: 'public', table: 'notes' }, handleNoteChange).subscribe();
-        const collectionsChannel = supabase.channel('public:collections').on('postgres_changes', { event: '*', schema: 'public', table: 'collections' }, handleCollectionChange).subscribe();
-        const smartCollectionsChannel = supabase.channel('public:smart_collections').on('postgres_changes', { event: '*', schema: 'public', table: 'smart_collections' }, handleSmartCollectionChange).subscribe();
-        const templatesChannel = supabase.channel('public:templates').on('postgres_changes', { event: '*', schema: 'public', table: 'templates' }, handleTemplateChange).subscribe();
+        const smartCollectionsChannel = supabase.channel(`smart-collections-user-${user.id}`)
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'smart_collections', filter: `user_id=eq.${user.id}` }, genericHandler)
+          .subscribe();
+
+        const templatesChannel = supabase.channel(`templates-user-${user.id}`)
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'templates', filter: `user_id=eq.${user.id}` }, genericHandler)
+          .subscribe();
 
         return () => {
             supabase.removeChannel(notesChannel);

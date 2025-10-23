@@ -1,7 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl: string = 'https://kdohgvaoefxkfbcsjnmw.supabase.co';
-const supabaseAnonKey: string = 'eyJhbGciOiJIUzI1NiIsInRزعIkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtkb2hndmFvZWZ4a2ZiY3Nqbm13Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA5MDgzNzYsImV4cCI6MjA3NjQ4NDM3Nn0.jQoaYIVUVTG6Kqmh2Fe3OadsHwRRSMZV2qIIBpPrh9A';
+// CRITICAL: The key below was corrupted. I have fixed the structural damage, 
+// but please double-check and ensure this is your correct and valid Supabase anonymous key.
+const supabaseAnonKey: string = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtkb2hndmFvZWZ4a2ZiY3Nqbm13Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA5MDgzNzYsImV4cCI6MjA3NjQ4NDM3Nn0.jQoaYIVUVTG6Kqmh2Fe3OadsHwRRSMZV2qIIBpPrh9A';
 
 // This flag checks if you have updated the placeholder values.
 // The app will show a configuration screen until these are changed.

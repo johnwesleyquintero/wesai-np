@@ -11,11 +11,13 @@ import TagSuggestions from './TagSuggestions';
 import TitleSuggestion from './TitleSuggestion';
 import InlineAiMenu from './InlineAiMenu';
 import SpellcheckMenu from './SpellcheckMenu';
-import { useEditorContext, useStoreContext, useUIContext } from '../context/AppContext';
+import { useEditorContext, useStoreContext, useUIContext, useAuthContext } from '../context/AppContext';
 import NoteLinker from './NoteLinker';
 import BacklinksDisplay from './BacklinksDisplay';
 import { useBacklinks } from '../hooks/useBacklinks';
 import SlashCommandMenu from './SlashCommandMenu';
+import { uploadImage, getPublicUrl } from '../lib/supabaseClient';
+import { useToast } from '../context/ToastContext';
 
 interface NoteEditorProps {
     note: Note;
@@ -39,6 +41,8 @@ const StatusBar: React.FC<{ wordCount: number; charCount: number }> = ({ wordCou
 const NoteEditor: React.FC<NoteEditorProps> = ({ note, onRestoreVersion, templates }) => {
     const { updateNote, deleteNote, toggleFavorite, notes } = useStoreContext();
     const { isMobileView, onToggleSidebar, isAiRateLimited } = useUIContext();
+    const { session } = useAuthContext();
+    const { showToast } = useToast();
     const { registerEditorActions, unregisterEditorActions } = useEditorContext();
 
     const {
@@ -630,22 +634,25 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onRestoreVersion, templat
     const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
         e.preventDefault();
         setIsDragOver(false);
-        if (isEffectivelyReadOnly) return;
+        if (isEffectivelyReadOnly || !session?.user) return;
 
         const file = e.dataTransfer.files[0];
         if (file) {
             if (file.type.startsWith('image/')) {
-                const reader = new FileReader();
-                reader.onload = (loadEvent) => {
-                    const base64 = loadEvent.target?.result;
-                    if (typeof base64 === 'string') {
-                        const markdownImage = `\n![${file.name}](${base64})\n`;
+                showToast({ message: 'Uploading image...', type: 'info' });
+                uploadImage(session.user.id, note.id, file)
+                    .then(path => {
+                        const publicUrl = getPublicUrl(path);
+                        const markdownImage = `\n![${file.name}](${publicUrl})\n`;
                         const { selectionStart } = textareaRef.current!;
                         const newContent = editorState.content.slice(0, selectionStart) + markdownImage + editorState.content.slice(selectionStart);
                         setEditorState({ ...editorState, content: newContent });
-                    }
-                };
-                reader.readAsDataURL(file);
+                        showToast({ message: 'Image uploaded successfully!', type: 'success' });
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        showToast({ message: err.message || 'Failed to upload image.', type: 'error' });
+                    });
             } else if (file.type.startsWith('text/') || file.name.endsWith('.md')) {
                  const reader = new FileReader();
                 reader.onload = (loadEvent) => {

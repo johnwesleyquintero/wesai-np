@@ -13,20 +13,7 @@ import { useStoreContext, useUIContext } from '../context/AppContext';
 import { useDragAndDrop } from '../hooks/useDragAndDrop';
 
 interface SidebarProps {
-    favoriteNotes: Note[];
-    searchData: { isSearching: boolean; visibleIds: Set<string> | null; matchIds: Set<string> | null };
-    activeNoteId: string | null;
-    searchTerm: string;
-    setSearchTerm: (term: string) => void;
-    searchMode: SearchMode;
-    setSearchMode: (mode: SearchMode) => void;
-    isAiSearching: boolean;
-    aiSearchError: string | null;
     width: number;
-    activeSmartCollection: SmartCollection | null;
-    onActivateSmartCollection: (collection: SmartCollection) => void;
-    onClearActiveSmartCollection: () => void;
-    onSelectNote: (noteId: string) => void;
     isCollapsed: boolean;
     onToggleCollapsed: () => void;
 }
@@ -88,14 +75,17 @@ const CollapsibleSection: React.FC<{
 const COLLAPSED_WIDTH = 56;
 
 const Sidebar: React.FC<SidebarProps> = ({
-    favoriteNotes, searchData, activeNoteId, searchTerm, setSearchTerm, searchMode, setSearchMode, isAiSearching, aiSearchError, width,
-    activeSmartCollection, onActivateSmartCollection, onClearActiveSmartCollection, onSelectNote,
-    isCollapsed, onToggleCollapsed
+    width, isCollapsed, onToggleCollapsed
 }) => {
     const {
         collections, smartCollections, onAddNote, addCollection, moveItem,
         deleteSmartCollection, onAddNoteFromFile, 
-        setNoteToDelete, fileTree, notes
+        setNoteToDelete, fileTree, notes, favoriteNotes, searchData, activeNoteId,
+        searchTerm, handleSearchTermChange: setSearchTerm, searchMode, setSearchMode,
+        isAiSearching, aiSearchError, activeSmartCollection,
+        handleActivateSmartCollection: onActivateSmartCollection,
+        handleClearActiveSmartCollection: onClearActiveSmartCollection,
+        setActiveNoteId
     } = useStoreContext();
     
     const {
@@ -122,6 +112,14 @@ const Sidebar: React.FC<SidebarProps> = ({
 
     const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({});
     const [focusedNodeId, setFocusedNodeId] = useState<string | null>(null);
+
+    const onSelectNote = useCallback((id: string) => {
+        setActiveNoteId(id);
+        setView('NOTES');
+        if (isMobileView) {
+            setIsSidebarOpen(false);
+        }
+    }, [isMobileView, setActiveNoteId, setIsSidebarOpen, setView]);
 
     const toggleFolder = useCallback((folderId: string) => {
         setExpandedFolders(prev => ({ ...prev, [folderId]: !(prev[folderId] ?? true) }));

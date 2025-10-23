@@ -11,6 +11,7 @@ WesAI Notepad is a secure, AI-enhanced application designed for privacy, perform
 - **Flexible Authentication:** Sign up quickly with an email and password or use the convenient one-click Google Sign-In option.
 - **Drag & Drop Organization:** Intuitively organize your workspace by dragging notes and folders to reorder them or nest them within each other.
 - **Rich Markdown Editor:** A full-featured Markdown editor with syntax highlighting and a live preview mode that supports tables, images, embedded videos, and more.
+- **Cloud Image Storage:** Images are uploaded to secure Supabase Storage, keeping your note content clean and your database lean.
 - **Smart Folders:** Create dynamic, saved searches that automatically display notes matching a specific AI-powered query.
 - **Bi-Directional Linking:** Connect ideas by linking notes using `[[note-id|display text]]` syntax. A "Linked Mentions" section automatically displays all backlinks to the current note.
 - **Tagging System:** Assign multiple tags to notes for flexible, cross-folder organization.
@@ -64,6 +65,7 @@ WesAI Notepad is a secure, AI-enhanced application designed for privacy, perform
     - Create a new project on [Supabase](https://supabase.com/).
     - In your Supabase project, navigate to the **SQL Editor** and run the `schema.sql` script from this repository to set up your database tables and policies.
     - Go to **Settings** > **API**. Find your Project URL and your `public` anonymous key.
+    - **Note on Supabase Storage:** The application will automatically attempt to create a public storage bucket named `note_images` for image uploads. Ensure your Supabase project has Storage enabled.
 3.  **Configure the Client:**
     - Open the file: `lib/supabaseClient.ts`.
     - Replace the placeholder values for `supabaseUrl` and `supabaseAnonKey` with the keys from your Supabase project.
@@ -76,6 +78,6 @@ WesAI Notepad is a secure, AI-enhanced application designed for privacy, perform
 
 ## Technology Stack
 - **Frontend:** React, TypeScript, Tailwind CSS
-- **Backend & Database:** Supabase (Authentication, PostgreSQL, Realtime Subscriptions)
+- **Backend & Database:** Supabase (Authentication, PostgreSQL, Realtime Subscriptions, Storage)
 - **AI Integration:** Google Gemini API (`@google/genai`)
 - **State Management:** React Hooks and Context API

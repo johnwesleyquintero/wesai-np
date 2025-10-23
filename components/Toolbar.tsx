@@ -166,34 +166,14 @@ const AiMenu: React.FC<Pick<ToolbarProps, 'contentToEnhance' | 'onContentUpdate'
     );
 };
 
-const TemplateMenu: React.FC<Pick<ToolbarProps, 'templates' | 'onApplyTemplate'>> = ({ templates, onApplyTemplate }) => {
+const MoreActionsMenu: React.FC<{
+    note: Note;
+    templates: Template[];
+    onApplyTemplate: (template: Template) => void;
+    onSaveAsTemplate: () => void;
+}> = ({ note, templates, onApplyTemplate, onSaveAsTemplate }) => {
     const [isOpen, setIsOpen] = useState(false);
-
-    const handleTemplateClick = (template: Template) => {
-        onApplyTemplate(template);
-        setIsOpen(false);
-    };
-
-    return (
-        <div className="relative hidden sm:block">
-            <button onClick={() => setIsOpen(prev => !prev)} className="p-2 rounded-md hover:bg-light-ui dark:hover:bg-dark-ui transition-colors flex items-center">
-                <DocumentDuplicateIcon className="mr-1" /> Template
-            </button>
-            {isOpen && (
-                <div className="absolute right-0 mt-2 w-56 bg-light-background dark:bg-dark-background rounded-md shadow-lg border border-light-border dark:border-dark-border z-10">
-                    {templates.length > 0 ? (
-                        templates.map(template => <button key={template.id} onClick={() => handleTemplateClick(template)} className="w-full text-left block px-4 py-2 text-sm hover:bg-light-ui dark:hover:bg-dark-ui">{template.title}</button>)
-                    ) : (
-                        <p className="px-4 py-2 text-sm text-light-text/60 dark:text-dark-text/60">No templates found.</p>
-                    )}
-                </div>
-            )}
-        </div>
-    );
-};
-
-const ExportMenu: React.FC<{ note: Note }> = ({ note }) => {
-    const [isOpen, setIsOpen] = useState(false);
+    const [isTemplatesSubMenuOpen, setIsTemplatesSubMenuOpen] = useState(false);
     const { showToast } = useToast();
 
     const sanitizeFilename = (name: string) => name.replace(/[\/\\?%*:|"<>]/g, '-').trim() || 'Untitled';
@@ -228,26 +208,40 @@ const ExportMenu: React.FC<{ note: Note }> = ({ note }) => {
         setIsOpen(false);
         const markdownContent = `# ${note.title}\n\n${note.content}`;
         navigator.clipboard.writeText(markdownContent)
-            .then(() => {
-                showToast({ message: "Note copied as Markdown!", type: 'success' });
-            })
-            .catch(err => {
-                showToast({ message: "Failed to copy note.", type: 'error' });
-                console.error('Failed to copy text: ', err);
-            });
+            .then(() => showToast({ message: "Note copied as Markdown!", type: 'success' }))
+            .catch(err => showToast({ message: "Failed to copy note.", type: 'error' }));
     };
 
     return (
         <div className="relative">
             <button onClick={() => setIsOpen(prev => !prev)} className="p-2 rounded-md hover:bg-light-ui dark:hover:bg-dark-ui transition-colors">
-                <ArrowDownTrayIcon />
+                <EllipsisVerticalIcon />
             </button>
             {isOpen && (
                 <div className="absolute right-0 mt-2 w-56 bg-light-background dark:bg-dark-background rounded-md shadow-lg border border-light-border dark:border-dark-border z-10 py-1">
-                    <button onClick={handleCopyMarkdown} className="w-full text-left flex items-center gap-2 block px-4 py-2 text-sm hover:bg-light-ui dark:hover:bg-dark-ui"><ClipboardDocumentIcon /> Copy as Markdown</button>
+                    <div
+                        onMouseEnter={() => setIsTemplatesSubMenuOpen(true)}
+                        onMouseLeave={() => setIsTemplatesSubMenuOpen(false)}
+                        className="relative"
+                    >
+                        <button className="w-full text-left flex items-center justify-between gap-2 block px-4 py-2 text-sm hover:bg-light-ui dark:hover:bg-dark-ui">
+                           <span className="flex items-center gap-2"><DocumentDuplicateIcon /> Apply Template</span> &rarr;
+                        </button>
+                        {isTemplatesSubMenuOpen && (
+                             <div className="absolute right-full -top-1 mr-1 w-56 bg-light-background dark:bg-dark-background rounded-md shadow-lg border border-light-border dark:border-dark-border py-1">
+                                {templates.length > 0 ? (
+                                    templates.map(template => <button key={template.id} onClick={() => { onApplyTemplate(template); setIsOpen(false); }} className="w-full text-left block px-4 py-2 text-sm hover:bg-light-ui dark:hover:bg-dark-ui">{template.title}</button>)
+                                ) : (
+                                    <p className="px-4 py-2 text-sm text-light-text/60 dark:text-dark-text/60">No templates.</p>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                    <button onClick={() => { onSaveAsTemplate(); setIsOpen(false); }} className="w-full text-left flex items-center gap-2 block px-4 py-2 text-sm hover:bg-light-ui dark:hover:bg-dark-ui"><DocumentPlusIcon /> Save as Template</button>
                     <div className="my-1 border-t border-light-border dark:border-dark-border"></div>
-                    <button onClick={() => handleExport('md')} className="w-full text-left block px-4 py-2 text-sm hover:bg-light-ui dark:hover:bg-dark-ui">Export as Markdown (.md)</button>
-                    <button onClick={() => handleExport('json')} className="w-full text-left block px-4 py-2 text-sm hover:bg-light-ui dark:hover:bg-dark-ui">Export as JSON (.json)</button>
+                    <button onClick={handleCopyMarkdown} className="w-full text-left flex items-center gap-2 block px-4 py-2 text-sm hover:bg-light-ui dark:hover:bg-dark-ui"><ClipboardDocumentIcon /> Copy as Markdown</button>
+                    <button onClick={() => handleExport('md')} className="w-full text-left flex items-center gap-2 block px-4 py-2 text-sm hover:bg-light-ui dark:hover:bg-dark-ui"><ArrowDownTrayIcon /> Export as .md</button>
+                    <button onClick={() => handleExport('json')} className="w-full text-left flex items-center gap-2 block px-4 py-2 text-sm hover:bg-light-ui dark:hover:bg-dark-ui"><ArrowDownTrayIcon /> Export as .json</button>
                 </div>
             )}
         </div>
@@ -263,7 +257,6 @@ const Toolbar: React.FC<ToolbarProps> = ({
     const [aiActionInProgress, setAiActionInProgress] = useState<'enhancing' | 'summarizing' | null>(null);
     const [aiActionError, setAiActionError] = useState<string | null>(null);
     const [isInfoOpen, setIsInfoOpen] = useState(false);
-    const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
     const { showToast } = useToast();
 
     // Clear error after a delay
@@ -282,55 +275,8 @@ const Toolbar: React.FC<ToolbarProps> = ({
             .catch((err) => {
                 showToast({ message: `Failed to save template: ${err.message}`, type: 'error' });
             });
-        
-        // Close mobile menu if it was used to trigger this
-        if (isMoreMenuOpen) {
-            setIsMoreMenuOpen(false);
-        }
     };
     
-    // --- Logic for Mobile 'More' Menu ---
-    const sanitizeFilename = (name: string) => name.replace(/[\/\\?%*:|"<>]/g, '-').trim() || 'Untitled';
-    
-    const handleMobileExport = (format: 'md' | 'json') => {
-        setIsMoreMenuOpen(false);
-        const filename = `${sanitizeFilename(note.title)}.${format}`;
-        let content = '';
-        let mimeType = '';
-
-        if (format === 'md') {
-            content = `# ${note.title}\n\n${note.content}`;
-            mimeType = 'text/markdown';
-        } else {
-            content = JSON.stringify(note, null, 2);
-            mimeType = 'application/json';
-        }
-
-        const blob = new Blob([content], { type: mimeType });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-    };
-
-    const handleMobileCopyMarkdown = () => {
-        setIsMoreMenuOpen(false);
-        const markdownContent = `# ${note.title}\n\n${note.content}`;
-        navigator.clipboard.writeText(markdownContent)
-            .then(() => showToast({ message: "Note copied as Markdown!", type: 'success' }))
-            .catch(err => showToast({ message: "Failed to copy note.", type: 'error' }));
-    };
-
-    const handleMobileTemplateClick = (template: Template) => {
-        onApplyTemplate(template);
-        setIsMoreMenuOpen(false);
-    };
-    // --- End Logic for Mobile 'More' Menu ---
-
     return (
         <>
             {aiActionError && (
@@ -390,38 +336,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
                         {isInfoOpen && <NoteInfoPopover note={note} wordCount={wordCount} charCount={charCount} />}
                     </div>
 
-                    {isMobileView ? (
-                        <div className="relative">
-                            <button onClick={() => setIsMoreMenuOpen(p => !p)} className="p-2 rounded-md hover:bg-light-ui dark:hover:bg-dark-ui transition-colors">
-                                <EllipsisVerticalIcon />
-                            </button>
-                            {isMoreMenuOpen && (
-                                <div className="absolute right-0 mt-2 w-56 bg-light-background dark:bg-dark-background rounded-md shadow-lg border border-light-border dark:border-dark-border z-10 py-1">
-                                    <h3 className="px-3 pt-2 pb-1 text-xs font-semibold text-light-text/60 dark:text-dark-text/60">Templates</h3>
-                                    {templates.length > 0 ? (
-                                        templates.map(template => <button key={template.id} onClick={() => handleMobileTemplateClick(template)} className="w-full text-left flex items-center gap-2 block px-3 py-2 text-sm hover:bg-light-ui dark:hover:bg-dark-ui"><DocumentDuplicateIcon />{template.title}</button>)
-                                    ) : (
-                                        <p className="px-3 py-2 text-sm text-light-text/60 dark:text-dark-text/60">No templates found.</p>
-                                    )}
-                                     <button onClick={handleSaveAsTemplate} className="w-full text-left flex items-center gap-2 block px-3 py-2 text-sm hover:bg-light-ui dark:hover:bg-dark-ui"><DocumentPlusIcon /> Save as Template</button>
-                                    <div className="my-1 border-t border-light-border dark:border-dark-border"></div>
-                                    <h3 className="px-3 pt-2 pb-1 text-xs font-semibold text-light-text/60 dark:text-dark-text/60">Export</h3>
-                                    <button onClick={handleMobileCopyMarkdown} className="w-full text-left flex items-center gap-2 block px-3 py-2 text-sm hover:bg-light-ui dark:hover:bg-dark-ui"><ClipboardDocumentIcon /> Copy as Markdown</button>
-                                    <button onClick={() => handleMobileExport('md')} className="w-full text-left flex items-center gap-2 block px-3 py-2 text-sm hover:bg-light-ui dark:hover:bg-dark-ui"><ArrowDownTrayIcon /> Export as .md</button>
-                                    <button onClick={() => handleMobileExport('json')} className="w-full text-left flex items-center gap-2 block px-3 py-2 text-sm hover:bg-light-ui dark:hover:bg-dark-ui"><ArrowDownTrayIcon /> Export as .json</button>
-                                </div>
-                            )}
-                        </div>
-                    ) : (
-                        <>
-                            <TemplateMenu templates={templates} onApplyTemplate={onApplyTemplate} />
-                            <button onClick={handleSaveAsTemplate} className="p-2 rounded-md hover:bg-light-ui dark:hover:bg-dark-ui transition-colors" aria-label="Save current note as Template">
-                                <DocumentPlusIcon />
-                            </button>
-                            <ExportMenu note={note} />
-                        </>
-                    )}
-
+                    <div className="w-px h-6 bg-light-border dark:border-dark-border mx-1"></div>
 
                     <button onClick={() => onToggleFavorite(note.id)} className="p-2 rounded-md hover:bg-light-ui dark:hover:bg-dark-ui transition-colors" aria-label={note.isFavorite ? 'Remove from favorites' : 'Add to favorites'}>
                         <StarIcon className={`w-5 h-5 ${note.isFavorite ? 'text-yellow-500' : ''}`} filled={note.isFavorite} />
@@ -429,6 +344,13 @@ const Toolbar: React.FC<ToolbarProps> = ({
                     <button onClick={() => setNoteToDelete(note)} className="p-2 rounded-md hover:bg-light-ui dark:hover:bg-dark-ui transition-colors text-red-500" aria-label="Delete note">
                         <TrashIcon />
                     </button>
+
+                    <MoreActionsMenu 
+                        note={note}
+                        templates={templates}
+                        onApplyTemplate={onApplyTemplate}
+                        onSaveAsTemplate={handleSaveAsTemplate}
+                    />
                 </div>
             </div>
         </>

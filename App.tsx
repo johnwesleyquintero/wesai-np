@@ -10,7 +10,7 @@ import { ToastProvider, useToast } from './context/ToastContext';
 import SidebarResizer from './components/SidebarResizer';
 import SuspenseLoader from './components/SuspenseLoader';
 import Auth from './components/Auth';
-import { isSupabaseConfigured } from './lib/supabaseClient';
+import { isSupabaseConfigured, setupStorageBucket } from './lib/supabaseClient';
 import NoteEditorSkeleton from './components/NoteEditorSkeleton';
 import ChatViewSkeleton from './components/ChatViewSkeleton';
 import ApiKeyIndicator from './components/ApiKeyIndicator';
@@ -115,20 +115,17 @@ function AppContent() {
         collectionToDelete, setCollectionToDelete,
         smartCollectionToDelete, setSmartCollectionToDelete, handleDeleteCollectionConfirm,
         handleDeleteNoteConfirm, handleDeleteSmartCollectionConfirm,
-        searchData, favoriteNotes, searchTerm, handleSearchTermChange, searchMode,
-        setSearchMode, isAiSearching, aiSearchError, activeSmartCollection,
-        handleActivateSmartCollection, handleClearActiveSmartCollection, addSmartCollection, updateSmartCollection, templates,
+        addSmartCollection, updateSmartCollection, templates,
         restoreNoteVersion
     } = useStoreContext();
 
     const {
-        isMobileView, isSidebarOpen, setIsSidebarOpen, view, setView,
+        isMobileView, setIsSidebarOpen, view, setView,
         isSettingsOpen, setIsSettingsOpen, isCommandPaletteOpen, setIsCommandPaletteOpen,
-        isSmartFolderModalOpen, setIsSmartFolderModalOpen, smartFolderToEdit, openSmartFolderModal,
+        isSmartFolderModalOpen, setIsSmartFolderModalOpen, smartFolderToEdit,
         isWelcomeModalOpen, closeWelcomeModal,
         contextMenu, setContextMenu,
         isApiKeyMissing,
-        isSidebarCollapsed, toggleSidebarCollapsed,
     } = useUIContext();
 
     const isResizing = useRef(false);
@@ -145,14 +142,6 @@ function AppContent() {
     useEffect(() => {
         localStorage.setItem(WELCOME_SCREEN_SIDEBAR_WIDTH_KEY, String(sidebarWidth));
     }, [sidebarWidth]);
-
-    const handleSelectNote = useCallback((id: string) => {
-        setActiveNoteId(id);
-        setView('NOTES');
-        if (isMobileView) {
-            setIsSidebarOpen(false);
-        }
-    }, [isMobileView, setActiveNoteId, setIsSidebarOpen, setView]);
     
     const activeNote = useMemo(() => {
         if (!activeNoteId) return null;
@@ -232,26 +221,9 @@ function AppContent() {
     const suspenseFallback = view === 'CHAT' ? <ChatViewSkeleton /> : <NoteEditorSkeleton />;
 
     return (
-        <div className={`flex h-screen w-screen font-sans text-light-text dark:text-dark-text bg-light-background dark:bg-dark-background overflow-hidden ${isSidebarOpen && isMobileView ? 'fixed' : ''}`}>
-            <Sidebar
-                favoriteNotes={favoriteNotes}
-                searchData={searchData}
-                activeNoteId={activeNoteId}
-                searchTerm={searchTerm}
-                setSearchTerm={handleSearchTermChange}
-                searchMode={searchMode}
-                setSearchMode={setSearchMode}
-                isAiSearching={isAiSearching}
-                aiSearchError={aiSearchError}
-                width={sidebarWidth}
-                activeSmartCollection={activeSmartCollection}
-                onActivateSmartCollection={handleActivateSmartCollection}
-                onClearActiveSmartCollection={handleClearActiveSmartCollection}
-                onSelectNote={handleSelectNote}
-                isCollapsed={isSidebarCollapsed}
-                onToggleCollapsed={toggleSidebarCollapsed}
-            />
-            {!isMobileView && !isSidebarCollapsed && <SidebarResizer onResizeStart={handleResizeStart} />}
+        <div className="flex h-screen w-screen font-sans text-light-text dark:text-dark-text bg-light-background dark:bg-dark-background overflow-hidden">
+            <Sidebar width={sidebarWidth} />
+            <SidebarResizer onResizeStart={handleResizeStart} />
             <main className="flex-1 flex flex-col h-full min-w-0">
                 {isApiKeyMissing && <ApiKeyIndicator />}
                 <Suspense fallback={suspenseFallback}>
@@ -319,6 +291,12 @@ function AppContent() {
 
 function AppContainer() {
     const { session, isSessionLoading } = useAuthContext();
+
+    useEffect(() => {
+        if (session) {
+            setupStorageBucket();
+        }
+    }, [session]);
 
     if (isSessionLoading) {
         return <SuspenseLoader />;

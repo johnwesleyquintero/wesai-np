@@ -14,8 +14,6 @@ import { useDragAndDrop } from '../hooks/useDragAndDrop';
 
 interface SidebarProps {
     width: number;
-    isCollapsed: boolean;
-    onToggleCollapsed: () => void;
 }
 
 const FooterButton: React.FC<{
@@ -75,7 +73,7 @@ const CollapsibleSection: React.FC<{
 const COLLAPSED_WIDTH = 56;
 
 const Sidebar: React.FC<SidebarProps> = ({
-    width, isCollapsed, onToggleCollapsed
+    width
 }) => {
     const {
         collections, smartCollections, onAddNote, addCollection, moveItem,
@@ -91,6 +89,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     const {
         theme, toggleTheme, isMobileView, isSidebarOpen, setIsSidebarOpen, view, setView,
         isAiRateLimited, openSmartFolderModal, onOpenContextMenu, openSettings, isApiKeyMissing,
+        isSidebarCollapsed, toggleSidebarCollapsed: onToggleCollapsed,
     } = useUIContext();
     
     const rootDropRef = useRef<HTMLDivElement>(null);
@@ -451,9 +450,9 @@ const Sidebar: React.FC<SidebarProps> = ({
     return (
         <aside 
             className={`absolute md:relative z-30 flex flex-col h-full bg-light-ui dark:bg-dark-ui border-r border-light-border dark:border-dark-border transform transition-all duration-300 ease-in-out ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 flex-shrink-0`}
-            style={{ width: isMobileView ? '20rem' : isCollapsed ? `${COLLAPSED_WIDTH}px` : `${width}px` }}
+            style={{ width: isMobileView ? '20rem' : isSidebarCollapsed ? `${COLLAPSED_WIDTH}px` : `${width}px` }}
         >
-           {isCollapsed && !isMobileView ? <CollapsedView /> : <ExpandedView />}
+           {isSidebarCollapsed && !isMobileView ? <CollapsedView /> : <ExpandedView />}
         </aside>
     );
 };

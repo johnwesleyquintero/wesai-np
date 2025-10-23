@@ -89,7 +89,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     const {
         theme, toggleTheme, isMobileView, isSidebarOpen, setIsSidebarOpen, view, setView,
         isAiRateLimited, openSmartFolderModal, onOpenContextMenu, openSettings, isApiKeyMissing,
-        isSidebarCollapsed, toggleSidebarCollapsed: onToggleCollapsed,
+        isSidebarCollapsed, toggleSidebarCollapsed: onToggleCollapsed, setIsCommandPaletteOpen,
     } = useUIContext();
     
     const rootDropRef = useRef<HTMLDivElement>(null);
@@ -411,12 +411,18 @@ const Sidebar: React.FC<SidebarProps> = ({
     const CollapsedView = () => (
       <div className="flex flex-col h-full items-center p-2 overflow-hidden">
         {/* Logo at top */}
-        <div className="mb-4 flex-shrink-0 pt-2">
-            <svg width="32" height="32" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <rect width="64" height="64" rx="12" fill="#60a5fa"/>
-              <path d="M20 18C20 15.7909 21.7909 14 24 14H44C46.2091 14 48 15.7909 48 18V46C48 48.2091 46.2091 50 44 50H24C21.7909 50 20 48.2091 20 46V18Z" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M24 14V50" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
+        <div className="relative group mb-4 flex-shrink-0 pt-2">
+            <button onClick={onToggleCollapsed} className="p-1 rounded-md transition-colors hover:bg-light-ui-hover dark:hover:bg-dark-ui-hover" aria-label="Expand sidebar">
+                <svg width="32" height="32" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect width="64" height="64" rx="12" fill="#60a5fa"/>
+                  <path d="M20 18C20 15.7909 21.7909 14 24 14H44C46.2091 14 48 15.7909 48 18V46C48 48.2091 46.2091 50 44 50H24C21.7909 50 20 48.2091 20 46V18Z" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M24 14V50" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+            </button>
+            <div className="absolute left-full ml-2 px-2 py-1 bg-zinc-800 dark:bg-zinc-700 text-white dark:text-dark-text text-xs font-semibold rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                Expand
+                <div className="absolute right-full top-1/2 -translate-y-1/2 w-0 h-0 border-y-4 border-y-transparent border-r-4 border-r-zinc-800 dark:border-r-zinc-700" />
+            </div>
         </div>
 
         {/* Main actions */}
@@ -427,7 +433,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           <FooterButton onClick={onToggleCollapsed} tooltip="Explorer">
             <FolderIcon />
           </FooterButton>
-          <FooterButton onClick={onToggleCollapsed} tooltip="Search">
+          <FooterButton onClick={() => setIsCommandPaletteOpen(true)} tooltip="Command Palette (Cmd+K)">
             <MagnifyingGlassIcon />
           </FooterButton>
         </div>

@@ -3,8 +3,9 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { SmartCollection, ContextMenuItem, ViewState } from '../types';
 import { useMobileView } from './useMobileView';
 import { useApiKey } from './useApiKey';
+import { SupabaseClient } from '@supabase/supabase-js';
 
-export const useUIProviderLogic = () => {
+export const useUIProviderLogic = (supabase: SupabaseClient) => {
     const [theme, setTheme] = useState<'light' | 'dark'>(() => (localStorage.getItem('theme') as 'light' | 'dark') || 'light');
     const [view, setView] = useState<ViewState>('NOTES');
     const isMobileView = useMobileView();
@@ -90,14 +91,15 @@ export const useUIProviderLogic = () => {
         isAiRateLimited, renamingItemId, setRenamingItemId, isSettingsOpen, setIsSettingsOpen,
         openSettings, isCommandPaletteOpen, setIsCommandPaletteOpen, isSmartFolderModalOpen,
         setIsSmartFolderModalOpen, smartFolderToEdit, openSmartFolderModal, contextMenu,
-        setContextMenu, onOpenContextMenu, isWelcomeModalOpen, closeWelcomeModal, isApiKeyMissing: !apiKey
+        setContextMenu, onOpenContextMenu, isWelcomeModalOpen, closeWelcomeModal, isApiKeyMissing: !apiKey,
+        supabase
     }), [
         theme, toggleTheme, view, setView, isMobileView, isSidebarOpen, setIsSidebarOpen,
         onToggleSidebar, isSidebarCollapsed, toggleSidebarCollapsed,
         isAiRateLimited, renamingItemId, setRenamingItemId, isSettingsOpen, setIsSettingsOpen,
         openSettings, isCommandPaletteOpen, setIsCommandPaletteOpen, isSmartFolderModalOpen,
         setIsSmartFolderModalOpen, smartFolderToEdit, openSmartFolderModal, contextMenu,
-        setContextMenu, onOpenContextMenu, isWelcomeModalOpen, closeWelcomeModal, apiKey
+        setContextMenu, onOpenContextMenu, isWelcomeModalOpen, closeWelcomeModal, apiKey, supabase
     ]);
     
     return uiValue;

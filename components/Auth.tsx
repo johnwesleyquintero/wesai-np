@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabaseClient';
+import { useSupabase } from '../context/AppContext';
 import { GoogleIcon } from './Icons';
 
 type AuthView = 'login' | 'signup' | 'resend_confirmation';
 
 const Auth: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
+    const { supabase } = useSupabase();
     const [view, setView] = useState<AuthView>('login');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -49,7 +50,7 @@ const Auth: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
                     email,
                     password,
                     options: {
-                        emailRedirectTo: 'https://wesai-np.vercel.app/',
+                        emailRedirectTo: window.location.origin,
                     },
                 });
                 if (error) throw error;

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Note, NoteVersion, Collection, SmartCollection, Template } from '../types';
-import { supabase } from '../lib/supabaseClient';
 import { User } from '@supabase/supabase-js';
+import { useSupabase } from '../context/AppContext';
 
 const fromSupabase = <T extends { [key: string]: any }>(data: T) => {
     const result: { [key: string]: any } = {};
@@ -35,6 +35,7 @@ const processNote = (noteData: any): Note => {
 
 
 export const useStore = (user: User | undefined) => {
+    const { supabase } = useSupabase();
     const [notes, setNotes] = useState<Note[]>([]);
     const [collections, setCollections] = useState<Collection[]>([]);
     const [smartCollections, setSmartCollections] = useState<SmartCollection[]>([]);
@@ -74,7 +75,7 @@ export const useStore = (user: User | undefined) => {
         } finally {
             setLoading(false);
         }
-    }, [user]);
+    }, [user, supabase]);
 
     useEffect(() => {
         fetchData();
@@ -145,7 +146,7 @@ export const useStore = (user: User | undefined) => {
             supabase.removeChannel(smartCollectionsChannel);
             supabase.removeChannel(templatesChannel);
         };
-    }, [user, fetchData]);
+    }, [user, fetchData, supabase]);
 
     const addNote = useCallback(async (parentId: string | null = null, title = "Untitled Note", content = "") => {
         if (!user) throw new Error("User must be logged in to create a note.");
@@ -160,7 +161,7 @@ export const useStore = (user: User | undefined) => {
         const { data, error } = await supabase.from('notes').insert(newNoteForDb).select().single();
         if (error) throw error;
         return data.id;
-    }, [user]);
+    }, [user, supabase]);
 
     const addNoteFromFile = useCallback(async (title: string, content: string, parentId: string | null) => {
         if (!user) throw new Error("User must be logged in to create a note.");
@@ -175,7 +176,7 @@ export const useStore = (user: User | undefined) => {
         const { data, error } = await supabase.from('notes').insert(newNoteForDb).select().single();
         if (error) throw error;
         return data.id;
-    }, [user]);
+    }, [user, supabase]);
 
     const updateNote = useCallback(async (id: string, updatedFields: Partial<Omit<Note, 'id' | 'createdAt'>>) => {
         if (!user) throw new Error("User must be logged in to update a note.");
@@ -196,7 +197,7 @@ export const useStore = (user: User | undefined) => {
 
         const { error } = await supabase.from('notes').update(toSupabase({ ...updatedFields, updatedAt: new Date().toISOString() })).eq('id', id).eq('user_id', user.id);
         if (error) throw error;
-    }, [notes, user]);
+    }, [notes, user, supabase]);
     
     const restoreNoteVersion = useCallback(async (noteId: string, version: NoteVersion) => {
         const { title, content, tags } = version;
@@ -207,7 +208,7 @@ export const useStore = (user: User | undefined) => {
         if (!user) throw new Error("User must be logged in to delete a note.");
         const { error } = await supabase.from('notes').delete().eq('id', id).eq('user_id', user.id);
         if (error) throw error;
-    }, [user]);
+    }, [user, supabase]);
 
     const getNoteById = useCallback((id: string) => notes.find(note => note.id === id), [notes]);
 
@@ -217,7 +218,7 @@ export const useStore = (user: User | undefined) => {
         if (!note) return;
         const { error } = await supabase.from('notes').update({ is_favorite: !note.isFavorite }).eq('id', id).eq('user_id', user.id);
         if (error) throw error;
-    }, [notes, user]);
+    }, [notes, user, supabase]);
 
     const addCollection = useCallback(async (name: string, parentId: string | null = null) => {
         if (!user) throw new Error("User must be logged in to create a collection.");
@@ -225,20 +226,20 @@ export const useStore = (user: User | undefined) => {
         const { data, error } = await supabase.from('collections').insert(toSupabase(newCollection)).select().single();
         if (error) throw error;
         return data.id;
-    }, [user]);
+    }, [user, supabase]);
 
     const updateCollection = useCallback(async (id: string, updatedFields: Partial<Omit<Collection, 'id'>>) => {
         if (!user) throw new Error("User must be logged in to update a collection.");
         const { error } = await supabase.from('collections').update(toSupabase(updatedFields)).eq('id', id).eq('user_id', user.id);
         if (error) throw error;
-    }, [user]);
+    }, [user, supabase]);
 
     const deleteCollection = useCallback(async (collectionId: string) => {
         if (!user) throw new Error("User must be logged in to delete a collection.");
         const { data, error } = await supabase.rpc('delete_collection_and_descendants', { p_collection_id: collectionId });
         if (error) throw error;
         return (data as any)?.deleted_note_ids || [];
-    }, [user]);
+    }, [user, supabase]);
 
     const getCollectionById = useCallback((id: string) => collections.find(c => c.id === id), [collections]);
 
@@ -264,44 +265,44 @@ export const useStore = (user: User | undefined) => {
         const table = isNote ? 'notes' : 'collections';
         const { error } = await supabase.from(table).update({ parent_id: newParentId }).eq('id', draggedItemId).eq('user_id', user.id);
         if (error) throw error;
-    }, [notes, collections, user]);
+    }, [notes, collections, user, supabase]);
 
     const addSmartCollection = useCallback(async (name: string, query: string) => {
         if (!user) throw new Error("User must be logged in to create a smart collection.");
         const newSmartCollection = { name, query, userId: user.id };
         const { error } = await supabase.from('smart_collections').insert(toSupabase(newSmartCollection));
         if (error) throw error;
-    }, [user]);
+    }, [user, supabase]);
 
     const updateSmartCollection = useCallback(async (id: string, updatedFields: Partial<Omit<SmartCollection, 'id'>>) => {
         if (!user) throw new Error("User must be logged in to update a smart collection.");
         const { error } = await supabase.from('smart_collections').update(toSupabase(updatedFields)).eq('id', id).eq('user_id', user.id);
         if (error) throw error;
-    }, [user]);
+    }, [user, supabase]);
 
     const deleteSmartCollection = useCallback(async (id: string) => {
         if (!user) throw new Error("User must be logged in to delete a smart collection.");
         const { error } = await supabase.from('smart_collections').delete().eq('id', id).eq('user_id', user.id);
         if (error) throw error;
-    }, [user]);
+    }, [user, supabase]);
     
     const addTemplate = useCallback(async (title: string, content: string) => {
         if (!user) throw new Error("User must be logged in to create a template.");
         const { error } = await supabase.from('templates').insert(toSupabase({ title, content, userId: user.id }));
         if (error) throw error;
-    }, [user]);
+    }, [user, supabase]);
 
     const updateTemplate = useCallback(async (id: string, updatedFields: Partial<Omit<Template, 'id'>>) => {
         if (!user) throw new Error("User must be logged in to update a template.");
         const { error } = await supabase.from('templates').update(toSupabase(updatedFields)).eq('id', id).eq('user_id', user.id);
         if (error) throw error;
-    }, [user]);
+    }, [user, supabase]);
 
     const deleteTemplate = useCallback(async (id: string) => {
         if (!user) throw new Error("User must be logged in to delete a template.");
         const { error } = await supabase.from('templates').delete().eq('id', id).eq('user_id', user.id);
         if (error) throw error;
-    }, [user]);
+    }, [user, supabase]);
 
     const importData = useCallback(async (data: { notes: Note[], collections: Collection[], smartCollections: SmartCollection[], templates: Template[] }) => {
         if (!user) throw new Error("User must be logged in to import data.");
@@ -369,7 +370,7 @@ export const useStore = (user: User | undefined) => {
             console.error("Import failed:", error);
             throw error;
         }
-    }, [user]);
+    }, [user, supabase]);
     
     const copyNote = useCallback(async (id: string): Promise<string> => {
         if (!user) throw new Error("User must be logged in to copy a note.");
@@ -394,7 +395,7 @@ export const useStore = (user: User | undefined) => {
             throw new Error(`Failed to copy note: ${error.message}`);
         }
         return data.id;
-    }, [user, notes]);
+    }, [user, notes, supabase]);
 
     const renameNoteTitle = async (id: string, title: string) => await updateNote(id, { title });
 
@@ -412,7 +413,7 @@ export const useStore = (user: User | undefined) => {
                 console.warn('Failed to log AI suggestion event:', error);
             }
         });
-    }, [user]);
+    }, [user, supabase]);
     
     const getSuggestionAnalytics = useCallback(async () => {
         if (!user) return [];
@@ -450,7 +451,7 @@ export const useStore = (user: User | undefined) => {
                 ctr: value.impressions > 0 ? (value.clicks / value.impressions) * 100 : 0,
             };
         });
-    }, [user]);
+    }, [user, supabase]);
 
     const getTrendAnalytics = useCallback(async () => {
         if (!user) return { hotTopics: [], mostFrequentConnections: [] };
@@ -465,7 +466,7 @@ export const useStore = (user: User | undefined) => {
             hotTopics: data?.hot_topics || [],
             mostFrequentConnections: data?.most_frequent_connections || []
         };
-    }, [user]);
+    }, [user, supabase]);
 
     return { 
         loading,

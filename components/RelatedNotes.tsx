@@ -57,7 +57,8 @@ const RelatedNotes: React.FC<RelatedNotesProps> = ({ note }) => {
                 
                 if (currentSearchId === searchIdRef.current) {
                     const noteAnalytics = allAnalytics.filter(a => a.sourceNoteId === note.id);
-                    const ctrMap = new Map(noteAnalytics.map(a => [a.suggestedNoteId, a.ctr]));
+                    // FIX: Explicitly type the Map to ensure TypeScript correctly infers `ctr` as a number.
+                    const ctrMap = new Map<string, number>(noteAnalytics.map(a => [a.suggestedNoteId, a.ctr]));
 
                     const rankedIds = ids
                         .map((id, index) => {

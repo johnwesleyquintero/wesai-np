@@ -67,12 +67,14 @@ export interface SpellingError {
     length: number;
 }
 
+export type InlineAction = 'fix' | 'shorten' | 'expand' | 'simplify' | 'makeProfessional' | 'makeCasual';
+
 export interface EditorActions {
     undo: () => void;
     redo: () => void;
     canUndo: boolean;
     canRedo: boolean;
-    applyAiActionToFullNote: (action: import('./services/geminiService').InlineAction) => Promise<void>;
+    applyAiActionToFullNote: (action: InlineAction) => Promise<void>;
     suggestTagsForFullNote: () => void;
     suggestTitleForFullNote: () => void;
     summarizeAndFindActionForFullNote: () => Promise<void>;

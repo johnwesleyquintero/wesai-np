@@ -119,8 +119,7 @@ function AppContent() {
         collectionToDelete, setCollectionToDelete,
         smartCollectionToDelete, setSmartCollectionToDelete, handleDeleteCollectionConfirm,
         handleDeleteNoteConfirm, handleDeleteSmartCollectionConfirm,
-        addSmartCollection, updateSmartCollection, templates,
-        restoreNoteVersion
+        addSmartCollection, updateSmartCollection
     } = useStoreContext();
 
     const {
@@ -164,10 +163,6 @@ function AppContent() {
             setActiveNoteId(null);
         }
     }, [notes, activeNoteId, setActiveNoteId]);
-
-    const handleRestoreVersion = (noteId: string, version: NoteVersion) => {
-        restoreNoteVersion(noteId, version);
-    };
 
     const handleResizeStart = useCallback((e: React.MouseEvent) => {
         isResizing.current = true;
@@ -218,8 +213,6 @@ function AppContent() {
                         <NoteEditor
                             key={activeNote.id}
                             note={activeNote}
-                            onRestoreVersion={handleRestoreVersion}
-                            templates={templates}
                         />
                     );
                 }

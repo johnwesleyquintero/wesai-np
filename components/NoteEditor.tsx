@@ -25,8 +25,6 @@ import { useAiActions } from '../hooks/useAiActions';
 
 interface NoteEditorProps {
     note: Note;
-    onRestoreVersion: (noteId: string, version: NoteVersion) => void;
-    templates: Template[];
 }
 
 type NoteState = { title: string; content: string; tags: string[] };
@@ -38,8 +36,8 @@ const StatusBar: React.FC<{ wordCount: number; charCount: number }> = ({ wordCou
     </div>
 );
 
-const NoteEditor: React.FC<NoteEditorProps> = ({ note, onRestoreVersion, templates }) => {
-    const { updateNote, deleteNote, toggleFavorite, notes } = useStoreContext();
+const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
+    const { updateNote, deleteNote, toggleFavorite, notes, restoreNoteVersion, templates } = useStoreContext();
     const { isMobileView, onToggleSidebar, isAiRateLimited } = useUIContext();
     const { session } = useAuthContext();
     const { showToast } = useToast();
@@ -399,7 +397,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onRestoreVersion, templat
         setActiveSpellingError(null);
     };
 
-    const handleRestore = (version: NoteVersion) => { onRestoreVersion(note.id, version); dispatch({ type: 'SET_PREVIEW_VERSION', payload: null }); dispatch({ type: 'SET_HISTORY_OPEN', payload: false }); };
+    const handleRestore = (version: NoteVersion) => { restoreNoteVersion(note.id, version); dispatch({ type: 'SET_PREVIEW_VERSION', payload: null }); dispatch({ type: 'SET_HISTORY_OPEN', payload: false }); };
     const handleCloseHistory = () => { dispatch({ type: 'SET_PREVIEW_VERSION', payload: null }); dispatch({ type: 'SET_HISTORY_OPEN', payload: false }); };
     const handleApplyTemplate = (template: Template) => { if (editorState.content.trim() !== '' && !window.confirm('Applying a template will replace the current note content. Are you sure?')) { return; } setEditorState({ title: template.title, content: template.content, tags: []}); dispatch({ type: 'SET_VIEW_MODE', payload: 'edit' }); };
     const handleToggleTask = (lineNumber: number) => { const lines = editorState.content.split('\n'); if (lineNumber >= lines.length) return; const line = lines[lineNumber]; const toggledLine = line.includes('[ ]') ? line.replace('[ ]', '[x]') : line.replace(/\[(x|X)\]/, '[ ]'); lines[lineNumber] = toggledLine; const newContent = lines.join('\n'); setEditorState({ ...editorState, content: newContent }); };
@@ -411,7 +409,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onRestoreVersion, templat
 
     return (
         <div className="flex-1 flex flex-col h-full relative bg-light-background dark:bg-dark-background" onDragOver={(e) => { e.preventDefault(); if (!isEffectivelyReadOnly) dispatch({ type: 'SET_DRAG_OVER', payload: true }); }} onDragLeave={() => dispatch({ type: 'SET_DRAG_OVER', payload: false })} onDrop={handleDrop}>
-             <Toolbar note={note} onDelete={() => deleteNote(note.id)} onToggleFavorite={() => toggleFavorite(note.id)} saveStatus={saveStatus} editorTitle={editorState.title} onEnhance={handleEnhanceNote} onSummarize={summarizeAndFindActionForFullNote} onToggleHistory={() => dispatch({type: 'SET_HISTORY_OPEN', payload: !isHistoryOpen})} isHistoryOpen={isHistoryOpen} templates={templates} onApplyTemplate={handleApplyTemplate} isMobileView={isMobileView} onToggleSidebar={onToggleSidebar} onUndo={undo} onRedo={redo} canUndo={canUndo} canRedo={canRedo} viewMode={viewMode} onToggleViewMode={() => dispatch({type: 'SET_VIEW_MODE', payload: viewMode === 'edit' ? 'preview' : 'edit'})} isCheckingSpelling={isCheckingSpelling} isAiRateLimited={isAiRateLimited} wordCount={wordCount} charCount={charCount} aiActionError={aiActionError} setAiActionError={(err) => dispatch({ type: 'SET_AI_ACTION_ERROR', payload: err })} isFullAiActionLoading={isFullAiActionLoading} />
+             <Toolbar note={note} onDelete={() => deleteNote(note.id)} onToggleFavorite={() => toggleFavorite(note.id)} saveStatus={saveStatus} editorTitle={editorState.title} onEnhance={handleEnhanceNote} onSummarize={summarizeAndFindActionForFullNote} onToggleHistory={() => dispatch({type: 'SET_HISTORY_OPEN', payload: !isHistoryOpen})} isHistoryOpen={isHistoryOpen} onApplyTemplate={handleApplyTemplate} isMobileView={isMobileView} onToggleSidebar={onToggleSidebar} onUndo={undo} onRedo={redo} canUndo={canUndo} canRedo={canRedo} viewMode={viewMode} onToggleViewMode={() => dispatch({type: 'SET_VIEW_MODE', payload: viewMode === 'edit' ? 'preview' : 'edit'})} isCheckingSpelling={isCheckingSpelling} isAiRateLimited={isAiRateLimited} wordCount={wordCount} charCount={charCount} aiActionError={aiActionError} setAiActionError={(err) => dispatch({ type: 'SET_AI_ACTION_ERROR', payload: err })} isFullAiActionLoading={isFullAiActionLoading} />
              {isAiRateLimited && <div className="bg-yellow-100 dark:bg-yellow-900/30 border-b border-yellow-300 dark:border-yellow-700/50 py-2 px-4 text-center text-sm text-yellow-800 dark:text-yellow-200 flex-shrink-0">AI features are temporarily paused due to high usage. They will be available again shortly.</div>}
             
             <div ref={editorPaneRef} className="flex-1 overflow-y-auto relative">

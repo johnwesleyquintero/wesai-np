@@ -15,7 +15,6 @@ interface ToolbarProps {
     onSummarize: () => Promise<void>;
     onToggleHistory: () => void;
     isHistoryOpen: boolean;
-    templates: Template[];
     onApplyTemplate: (template: Template) => void;
     isMobileView: boolean;
     onToggleSidebar: () => void;
@@ -151,14 +150,14 @@ const AiMenu: React.FC<{
 
 const MoreActionsMenu: React.FC<{
     note: Note;
-    templates: Template[];
     onApplyTemplate: (template: Template) => void;
     onSaveAsTemplate: () => void;
     isDisabled: boolean;
-}> = ({ note, templates, onApplyTemplate, onSaveAsTemplate, isDisabled }) => {
+}> = ({ note, onApplyTemplate, onSaveAsTemplate, isDisabled }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [isTemplatesSubMenuOpen, setIsTemplatesSubMenuOpen] = useState(false);
     const { showToast } = useToast();
+    const { templates } = useStoreContext();
 
     const sanitizeFilename = (name: string) => name.replace(/[\/\\?%*:|"<>]/g, '-').trim() || 'Untitled';
     
@@ -234,7 +233,7 @@ const MoreActionsMenu: React.FC<{
 
 const Toolbar: React.FC<ToolbarProps> = ({ 
     note, onDelete, onToggleFavorite, saveStatus, editorTitle, onEnhance, onSummarize, onToggleHistory, isHistoryOpen, 
-    templates, onApplyTemplate, isMobileView, onToggleSidebar, onUndo, onRedo, canUndo, canRedo,
+    onApplyTemplate, isMobileView, onToggleSidebar, onUndo, onRedo, canUndo, canRedo,
     viewMode, onToggleViewMode, isCheckingSpelling, isAiRateLimited, wordCount, charCount,
     aiActionError, setAiActionError, isFullAiActionLoading
 }) => {
@@ -330,7 +329,6 @@ const Toolbar: React.FC<ToolbarProps> = ({
 
                     <MoreActionsMenu 
                         note={note}
-                        templates={templates}
                         onApplyTemplate={onApplyTemplate}
                         onSaveAsTemplate={handleSaveAsTemplate}
                         isDisabled={isDisabled}

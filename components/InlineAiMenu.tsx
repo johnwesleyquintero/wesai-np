@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { InlineAction } from '../services/geminiService';
+import { InlineAction } from '../types';
 import { SparklesIcon, BoldIcon, ItalicIcon, CodeIcon, LinkIcon, ChevronDownIcon } from './Icons';
 
 interface SelectionData {

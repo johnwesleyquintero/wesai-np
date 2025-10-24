@@ -6,7 +6,7 @@ import TagInput from './TagInput';
 import VersionHistorySidebar from './VersionHistorySidebar';
 import { useUndoableState } from '../hooks/useUndoableState';
 import MarkdownPreview from './MarkdownPreview';
-import { suggestTags, suggestTitle, performInlineEdit, InlineAction, findMisspelledWords, getSpellingSuggestions, summarizeAndExtractActions } from '../services/geminiService';
+import { suggestTags, suggestTitle, performInlineEdit, InlineAction, summarizeAndExtractActions } from '../services/geminiService';
 import TagSuggestions from './TagSuggestions';
 import TitleSuggestion from './TitleSuggestion';
 import InlineAiMenu from './InlineAiMenu';
@@ -18,6 +18,7 @@ import { useBacklinks } from '../hooks/useBacklinks';
 import SlashCommandMenu from './SlashCommandMenu';
 import { uploadImage, getPublicUrl } from '../lib/supabaseClient';
 import { useToast } from '../context/ToastContext';
+import { useSpellcheck } from '../hooks/useSpellcheck';
 
 interface NoteEditorProps {
     note: Note;
@@ -27,7 +28,6 @@ interface NoteEditorProps {
 
 type NoteState = { title: string; content: string; tags: string[] };
 type SelectionState = { start: number; end: number; text: string; rect: DOMRect } | null;
-type ActiveSpellingError = { error: SpellingError; rect: DOMRect };
 type NoteLinkerState = { query: string; position: { top: number; left: number } } | null;
 type SlashCommandState = { query: string; position: { top: number; left: number }, range: { start: number, end: number } } | null;
 
@@ -75,17 +75,22 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onRestoreVersion, templat
     const [isFullAiActionLoading, setIsFullAiActionLoading] = useState<string | null>(null);
     const [aiActionError, setAiActionError] = useState<string | null>(null);
     
-    const [spellingErrors, setSpellingErrors] = useState<SpellingError[]>([]);
-    const [isCheckingSpelling, setIsCheckingSpelling] = useState(false);
-    const [activeSpellingError, setActiveSpellingError] = useState<ActiveSpellingError | null>(null);
-    const [spellingSuggestions, setSpellingSuggestions] = useState<string[]>([]);
-    const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
-    const [suggestionError, setSuggestionError] = useState<string | null>(null);
-
     const [noteLinker, setNoteLinker] = useState<NoteLinkerState | null>(null);
     const [noteLinkerForSelection, setNoteLinkerForSelection] = useState<SelectionState | null>(null);
     const [slashCommand, setSlashCommand] = useState<SlashCommandState | null>(null);
     const [isDragOver, setIsDragOver] = useState(false);
+
+    const isEffectivelyReadOnly = !!previewVersion || viewMode === 'preview';
+
+    const { 
+        spellingErrors, 
+        isCheckingSpelling, 
+        activeSpellingError, 
+        setActiveSpellingError,
+        spellingSuggestions, 
+        isLoadingSuggestions, 
+        suggestionError 
+    } = useSpellcheck(editorState.content, isEffectivelyReadOnly || isAiRateLimited);
 
     const backlinks = useBacklinks(note.id, notes);
 
@@ -95,21 +100,16 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onRestoreVersion, templat
     
     const lastAnalyzedContentForTagsRef = useRef<string | null>(null);
     const lastAnalyzedContentForTitleRef = useRef<string | null>(null);
-    const lastAnalyzedContentForSpellingRef = useRef<string|null>(null);
     const tagSuggestionIdRef = useRef(0);
     const titleSuggestionIdRef = useRef(0);
-    const spellingCheckIdRef = useRef(0);
 
     const MIN_CONTENT_LENGTH_FOR_SUGGESTIONS = 50;
 
     const debouncedEditorState = useDebounce(editorState, 5000);
-    const debouncedContentForSpelling = useDebounce(editorState.content, 1500);
 
     const displayedTitle = previewVersion ? previewVersion.title : editorState.title;
     const displayedContent = previewVersion ? previewVersion.content : editorState.content;
     const displayedTags = previewVersion ? previewVersion.tags : editorState.tags;
-    const isVersionPreviewing = !!previewVersion;
-    const isEffectivelyReadOnly = isVersionPreviewing || viewMode === 'preview';
     
     const { wordCount, charCount } = useMemo(() => {
         const content = editorState.content;
@@ -149,7 +149,6 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onRestoreVersion, templat
         setTagSuggestionError(null);
         setSuggestedTitle(null);
         setTitleSuggestionError(null);
-        setSpellingErrors([]);
         setSelection(null);
         setActiveSpellingError(null);
         setNoteLinker(null);
@@ -158,12 +157,10 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onRestoreVersion, templat
         // Prevent stale background tasks from updating the new note
         tagSuggestionIdRef.current += 1;
         titleSuggestionIdRef.current += 1;
-        spellingCheckIdRef.current += 1;
         
         // Reset last analyzed content to prevent skipping analysis on the new note
         lastAnalyzedContentForTagsRef.current = null;
         lastAnalyzedContentForTitleRef.current = null;
-        lastAnalyzedContentForSpellingRef.current = null;
 
         // Auto-focus title for new, empty notes
         if (note.title === 'Untitled Note' && note.content === '') {
@@ -172,7 +169,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onRestoreVersion, templat
                 titleInputRef.current?.select();
             }, 100);
         }
-    }, [note.id, resetEditorState, note.title, note.content, note.tags]);
+    }, [note.id, resetEditorState, note.title, note.content, note.tags, setActiveSpellingError]);
 
     // Handle auto-saving
     useEffect(() => {
@@ -183,7 +180,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onRestoreVersion, templat
 
     // Debounced actions: saving and AI suggestions
     useEffect(() => {
-        if (isVersionPreviewing || isAiRateLimited) return;
+        if (!!previewVersion || isAiRateLimited) return;
         
         const isDifferentFromPersisted = JSON.stringify(debouncedEditorState) !== JSON.stringify({ title: note.title, content: note.content, tags: note.tags });
 
@@ -228,30 +225,8 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onRestoreVersion, templat
                 });
             }
         }
-    }, [debouncedEditorState, note.id, updateNote, saveStatus, isVersionPreviewing, isAiRateLimited, note.title, note.content, note.tags]);
+    }, [debouncedEditorState, note.id, updateNote, saveStatus, previewVersion, isAiRateLimited, note.title, note.content, note.tags]);
 
-    // Debounced spell check
-    useEffect(() => {
-        if (isVersionPreviewing || viewMode === 'preview' || isAiRateLimited) return;
-        
-        const contentForSpelling = debouncedContentForSpelling;
-        if (contentForSpelling && contentForSpelling !== lastAnalyzedContentForSpellingRef.current) {
-            const currentCheckId = ++spellingCheckIdRef.current;
-            setIsCheckingSpelling(true);
-            findMisspelledWords(contentForSpelling).then(errors => {
-                if (currentCheckId === spellingCheckIdRef.current) {
-                    lastAnalyzedContentForSpellingRef.current = contentForSpelling;
-                    setSpellingErrors(errors);
-                }
-            }).finally(() => {
-                if (currentCheckId === spellingCheckIdRef.current) {
-                    setIsCheckingSpelling(false);
-                }
-            });
-        } else if (!contentForSpelling) {
-             setSpellingErrors([]);
-        }
-    }, [debouncedContentForSpelling, isVersionPreviewing, viewMode, isAiRateLimited]);
     
     const applyAiActionToFullNote = useCallback(async (action: InlineAction) => {
         setIsFullAiActionLoading(`Applying: ${action}...`);
@@ -363,7 +338,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onRestoreVersion, templat
         };
         pane?.addEventListener('scroll', handleScroll);
         return () => pane?.removeEventListener('scroll', handleScroll);
-    }, []);
+    }, [setActiveSpellingError]);
 
     useEffect(() => {
         const handleGlobalKeyDown = (event: KeyboardEvent) => {
@@ -385,16 +360,6 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onRestoreVersion, templat
         document.addEventListener('keydown', handleGlobalKeyDown);
         return () => document.removeEventListener('keydown', handleGlobalKeyDown);
     }, [undo, redo, noteLinker]);
-
-    useEffect(() => {
-        if (!activeSpellingError) return;
-        setIsLoadingSuggestions(true);
-        setSuggestionError(null);
-        getSpellingSuggestions(activeSpellingError.error.word)
-            .then(setSpellingSuggestions)
-            .catch(err => setSuggestionError(err.message))
-            .finally(() => setIsLoadingSuggestions(false));
-    }, [activeSpellingError]);
     
     const handleScroll = (e: React.UIEvent<HTMLTextAreaElement>) => {
          setSelection(null);
@@ -736,7 +701,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onRestoreVersion, templat
                         <p className="text-lg font-semibold text-light-text dark:text-dark-text">{isFullAiActionLoading}</p>
                     </div>
                  )}
-                 {isVersionPreviewing && previewVersion && <div className={`bg-yellow-100 dark:bg-yellow-900/30 py-2 text-center text-sm text-yellow-800 dark:text-yellow-200 max-w-3xl mx-auto ${editorPaddingClass}`}>You are previewing a version from {new Date(previewVersion.savedAt).toLocaleString()}.</div>}
+                 {!!previewVersion && <div className={`bg-yellow-100 dark:bg-yellow-900/30 py-2 text-center text-sm text-yellow-800 dark:text-yellow-200 max-w-3xl mx-auto ${editorPaddingClass}`}>You are previewing a version from {new Date(previewVersion.savedAt).toLocaleString()}.</div>}
 
                 <div className={`max-w-3xl mx-auto py-12 ${editorPaddingClass}`}>
                     {viewMode === 'edit' ? (
@@ -747,8 +712,8 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onRestoreVersion, templat
                                 value={displayedTitle}
                                 onChange={(e) => setEditorState({ ...editorState, title: e.target.value })}
                                 placeholder="Note Title"
-                                className={`w-full bg-transparent text-3xl sm:text-4xl font-bold focus:outline-none mb-2 rounded-md ${isVersionPreviewing ? 'cursor-not-allowed opacity-70' : ''}`}
-                                readOnly={isVersionPreviewing}
+                                className={`w-full bg-transparent text-3xl sm:text-4xl font-bold focus:outline-none mb-2 rounded-md ${!!previewVersion ? 'cursor-not-allowed opacity-70' : ''}`}
+                                readOnly={!!previewVersion}
                             />
                             {!isEffectivelyReadOnly && <TitleSuggestion suggestion={suggestedTitle} onApply={handleApplyTitleSuggestion} isLoading={isSuggestingTitle} error={titleSuggestionError} />}
                             <div className="relative mt-4">
@@ -761,7 +726,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onRestoreVersion, templat
                                     onChange={handleChange}
                                     placeholder="Start writing, drop a file, or type / for commands..."
                                     className={`${sharedEditorClasses} relative z-10 caret-light-text dark:caret-dark-text bg-transparent block`}
-                                    readOnly={isVersionPreviewing}
+                                    readOnly={!!previewVersion}
                                     spellCheck={false}
                                 />
                             </div>

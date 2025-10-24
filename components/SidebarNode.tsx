@@ -43,7 +43,6 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
     const isVisible = !isSearching || (visibleIds && visibleIds.has(node.id));
     const isMatch = !!(isSearching && matchIds && matchIds.has(node.id));
     const isDimmed = isSearching && !isMatch;
-    // FIX: Add parentheses to resolve mixed operator precedence between '||' and '??'.
     const isExpanded = isSearching || (expandedFolders[node.id] ?? true);
 
     const handleDropFile = (file: File, parentId: string | null) => {

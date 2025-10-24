@@ -83,26 +83,60 @@ export const useStore = (user: User | undefined) => {
      useEffect(() => {
         if (!user) return;
 
-        const genericHandler = (payload: any) => {
-            // Refetch all data for simplicity and to ensure consistency
-            // A more optimized approach would be to update the state arrays directly.
-            fetchData();
+        const handleNoteChanges = (payload: any) => {
+            if (payload.eventType === 'INSERT') {
+                setNotes(prev => [...prev, processNote(payload.new)]);
+            } else if (payload.eventType === 'UPDATE') {
+                setNotes(prev => prev.map(n => n.id === payload.new.id ? processNote(payload.new) : n));
+            } else if (payload.eventType === 'DELETE') {
+                setNotes(prev => prev.filter(n => n.id !== payload.old.id));
+            }
+        };
+        
+        const handleCollectionChanges = (payload: any) => {
+            if (payload.eventType === 'INSERT') {
+                setCollections(prev => [...prev, fromSupabase(payload.new)]);
+            } else if (payload.eventType === 'UPDATE') {
+                setCollections(prev => prev.map(c => c.id === payload.new.id ? fromSupabase(payload.new) : c));
+            } else if (payload.eventType === 'DELETE') {
+                setCollections(prev => prev.filter(c => c.id !== payload.old.id));
+            }
+        };
+
+        const handleSmartCollectionChanges = (payload: any) => {
+            if (payload.eventType === 'INSERT') {
+                setSmartCollections(prev => [...prev, fromSupabase(payload.new)]);
+            } else if (payload.eventType === 'UPDATE') {
+                setSmartCollections(prev => prev.map(sc => sc.id === payload.new.id ? fromSupabase(payload.new) : sc));
+            } else if (payload.eventType === 'DELETE') {
+                setSmartCollections(prev => prev.filter(sc => sc.id !== payload.old.id));
+            }
+        };
+
+        const handleTemplateChanges = (payload: any) => {
+            if (payload.eventType === 'INSERT') {
+                setTemplates(prev => [...prev, fromSupabase(payload.new)]);
+            } else if (payload.eventType === 'UPDATE') {
+                setTemplates(prev => prev.map(t => t.id === payload.new.id ? fromSupabase(payload.new) : t));
+            } else if (payload.eventType === 'DELETE') {
+                setTemplates(prev => prev.filter(t => t.id !== payload.old.id));
+            }
         };
 
         const notesChannel = supabase.channel(`notes-user-${user.id}`)
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'notes', filter: `user_id=eq.${user.id}` }, genericHandler)
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'notes', filter: `user_id=eq.${user.id}` }, handleNoteChanges)
           .subscribe();
 
         const collectionsChannel = supabase.channel(`collections-user-${user.id}`)
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'collections', filter: `user_id=eq.${user.id}` }, genericHandler)
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'collections', filter: `user_id=eq.${user.id}` }, handleCollectionChanges)
           .subscribe();
 
         const smartCollectionsChannel = supabase.channel(`smart-collections-user-${user.id}`)
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'smart_collections', filter: `user_id=eq.${user.id}` }, genericHandler)
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'smart_collections', filter: `user_id=eq.${user.id}` }, handleSmartCollectionChanges)
           .subscribe();
 
         const templatesChannel = supabase.channel(`templates-user-${user.id}`)
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'templates', filter: `user_id=eq.${user.id}` }, genericHandler)
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'templates', filter: `user_id=eq.${user.id}` }, handleTemplateChanges)
           .subscribe();
 
         return () => {

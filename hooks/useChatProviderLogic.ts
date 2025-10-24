@@ -113,13 +113,15 @@ export const useChatProviderLogic = () => {
             while (response.functionCalls && response.functionCalls.length > 0) {
                 setChatStatus('using_tool');
                 const functionResponses = [];
-                const pendingToolMessages: ChatMessage[] = response.functionCalls.map(fc => ({
+                const pendingToolMessages: ChatMessage[] = response.functionCalls.map((fc, index) => ({
                     role: 'tool',
+                    id: `client-tool-${Date.now()}-${index}`,
                     content: { name: fc.name, args: fc.args, status: 'pending' }
                 }));
                 setChatHistories(prev => ({ ...prev, [chatMode]: [...prev[chatMode], ...pendingToolMessages] }));
 
-                for (const fc of response.functionCalls) {
+                for (const [index, fc] of response.functionCalls.entries()) {
+                    const toolMessageId = pendingToolMessages[index].id;
                     let result: any;
                     let status: 'complete' | 'error' = 'complete';
                     try {
@@ -212,37 +214,22 @@ export const useChatProviderLogic = () => {
                     }
 
                     setChatHistories(prev => {
-                        const newHistory = [...prev[chatMode]];
-                        let lastPendingIndex = -1;
-                        for (let i = newHistory.length - 1; i >= 0; i--) {
-                            const msg = newHistory[i];
-                            const content = msg.content;
-                            if (
-                                msg.role === 'tool' &&
-                                typeof content === 'object' &&
-                                content !== null &&
-                                'name' in content && content.name === fc.name &&
-                                'status' in content && content.status === 'pending'
-                            ) {
-                                lastPendingIndex = i;
-                                break;
+                        const newHistory = prev[chatMode].map(msg => {
+                            if (msg.id === toolMessageId) {
+                                const currentContent = msg.content;
+                                if (typeof currentContent === 'object' && currentContent !== null) {
+                                    return {
+                                        ...msg,
+                                        content: {
+                                            ...currentContent,
+                                            status,
+                                            result,
+                                        }
+                                    };
+                                }
                             }
-                        }
-                        
-                        if (lastPendingIndex !== -1) {
-                            const msgToUpdate = newHistory[lastPendingIndex];
-                            const currentContent = msgToUpdate.content;
-                            if (typeof currentContent === 'object' && currentContent !== null) {
-                                newHistory[lastPendingIndex] = {
-                                    ...msgToUpdate,
-                                    content: {
-                                        ...currentContent,
-                                        status,
-                                        result,
-                                    }
-                                };
-                            }
-                        }
+                            return msg;
+                        });
                         return { ...prev, [chatMode]: newHistory };
                     });
                     functionResponses.push({ id: fc.id, name: fc.name, response: { result }});

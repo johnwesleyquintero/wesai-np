@@ -35,6 +35,7 @@ WesAI Notepad is a secure, AI-enhanced application designed for privacy, perform
 ### Productivity and Workflow
 - **Optimized for Performance & Scale:** A highly-optimized Supabase backend with custom database indexing ensures data retrieval is instantaneous, providing a snappy experience even as your knowledge base grows to thousands of notes. The frontend is built with lazy-loading components for a fast initial load.
 - **Full Keyboard Navigation:** Navigate the entire sidebar, select notes, and expand folders using only your keyboard for maximum efficiency.
+- **Robust Editing Experience:** A reliable undo/redo system that covers all note attributes (title, content, tags) ensures you never lose an idea.
 - **Command Palette:** Press `Ctrl/Cmd + K` to access nearly every application feature, from creating notes to executing AI actions.
 - **Slash Commands:** Type `/` in the editor to quickly insert headings, lists, to-do items, and more.
 - **Collapsible Sidebar:** Maximize your writing space on desktop by collapsing the sidebar to a compact, icon-only view.

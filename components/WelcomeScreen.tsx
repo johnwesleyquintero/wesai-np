@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Bars3Icon, PlusIcon, SparklesIcon, ArrowDownTrayIcon, Cog6ToothIcon } from './Icons';
 import { useStoreContext } from '../context/AppContext';
@@ -7,15 +8,20 @@ const WelcomeScreen: React.FC<{
     onToggleSidebar?: () => void;
     isMobileView?: boolean;
     onAddNote: () => void;
-}> = ({ onToggleSidebar, isMobileView, onAddNote }) => {
+    isSidebarCollapsed?: boolean;
+    onToggleSidebarCollapsed?: () => void;
+}> = ({ onToggleSidebar, isMobileView, onAddNote, isSidebarCollapsed, onToggleSidebarCollapsed }) => {
     const { triggerNoteImport } = useStoreContext();
     const { setView, openSettings } = useUIContext();
 
+    const showHeader = isMobileView || isSidebarCollapsed;
+    const handleHeaderButtonClick = isMobileView ? onToggleSidebar : onToggleSidebarCollapsed;
+
     return (
         <div className="flex flex-col h-full">
-            {isMobileView && (
+            {showHeader && (
                 <header className="flex items-center p-4 border-b border-light-border dark:border-dark-border flex-shrink-0">
-                    <button onClick={onToggleSidebar} className="p-2 rounded-md hover:bg-light-ui dark:hover:bg-dark-ui">
+                    <button onClick={handleHeaderButtonClick} className="p-2 rounded-md hover:bg-light-ui dark:hover:bg-dark-ui">
                         <Bars3Icon />
                     </button>
                 </header>

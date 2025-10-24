@@ -1,3 +1,4 @@
+
 import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Sidebar from './components/Sidebar';
 import { useStoreContext } from './context/AppContext';
@@ -51,6 +52,8 @@ function AppContent() {
         isWelcomeModalOpen, closeWelcomeModal,
         contextMenu, setContextMenu,
         isApiKeyMissing,
+        isSidebarCollapsed,
+        toggleSidebarCollapsed,
     } = useUIContext();
 
     const isResizing = useRef(false);
@@ -140,7 +143,13 @@ function AppContent() {
                         />
                     );
                 }
-                return <WelcomeScreen isMobileView={isMobileView} onToggleSidebar={() => setIsSidebarOpen(true)} onAddNote={() => onAddNote()} />;
+                return <WelcomeScreen
+                    isMobileView={isMobileView}
+                    onToggleSidebar={() => setIsSidebarOpen(true)}
+                    onAddNote={() => onAddNote()}
+                    isSidebarCollapsed={isSidebarCollapsed}
+                    onToggleSidebarCollapsed={toggleSidebarCollapsed}
+                />;
         }
     };
     

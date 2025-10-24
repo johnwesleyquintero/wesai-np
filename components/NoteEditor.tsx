@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef, useMemo, useCallback } from 'react';
 import { Note, NoteVersion, Template } from '../types';
 import { useDebounce } from '../hooks/useDebounce';
@@ -182,7 +183,6 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
     // Global undo/redo handler
     useEffect(() => {
         const handleGlobalKeyDown = (event: KeyboardEvent) => {
-            if (event.target !== textareaRef.current && event.target !== document.body) return;
             const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
             const modKey = isMac ? event.metaKey : event.ctrlKey;
             

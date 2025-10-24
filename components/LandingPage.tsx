@@ -201,7 +201,7 @@ const LandingPage: React.FC<{ onGetStarted: () => void }> = ({ onGetStarted }) =
 
             <footer className="py-8 border-t border-light-border dark:border-dark-border">
                 <div className="container mx-auto px-4 text-center text-sm text-light-text/60 dark:text-dark-text/60">
-                    &copy; {new Date().getFullYear()} WesAI Notepad. All Rights Reserved. Version 1.1.0
+                    &copy; {new Date().getFullYear()} WesAI Notepad. All Rights Reserved. Version 1.1.1
                 </div>
             </footer>
         </div>

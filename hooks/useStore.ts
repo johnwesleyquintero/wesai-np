@@ -452,6 +452,21 @@ export const useStore = (user: User | undefined) => {
         });
     }, [user]);
 
+    const getTrendAnalytics = useCallback(async () => {
+        if (!user) return { hotTopics: [], mostFrequentConnections: [] };
+        const { data, error } = await supabase.rpc('get_trend_analytics', { p_user_id: user.id });
+
+        if (error) {
+            console.error('Error fetching trend analytics:', error);
+            return { hotTopics: [], mostFrequentConnections: [] };
+        }
+        
+        return {
+            hotTopics: data?.hot_topics || [],
+            mostFrequentConnections: data?.most_frequent_connections || []
+        };
+    }, [user]);
+
     return { 
         loading,
         notes, collections, smartCollections, templates,
@@ -462,5 +477,6 @@ export const useStore = (user: User | undefined) => {
         importData,
         logAiSuggestionEvent,
         getSuggestionAnalytics,
+        getTrendAnalytics,
     };
 };

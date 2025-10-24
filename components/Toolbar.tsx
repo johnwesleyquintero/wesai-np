@@ -31,19 +31,31 @@ interface ToolbarProps {
     charCount: number;
     aiActionError: string | null;
     setAiActionError: (error: string | null) => void;
+    isFullAiActionLoading: string | null;
 }
 
 interface StatusIndicatorProps {
     saveStatus: 'saved' | 'saving' | 'unsaved';
     isAiRateLimited: boolean;
     isCheckingSpelling: boolean;
+    isFullAiActionLoading: string | null;
 }
 
 const StatusIndicator: React.FC<StatusIndicatorProps> = ({
     saveStatus,
     isAiRateLimited,
     isCheckingSpelling,
+    isFullAiActionLoading
 }) => {
+    if (isFullAiActionLoading) {
+        return (
+            <div className="flex items-center space-x-2">
+                <div className="w-4 h-4 border-2 border-light-ui dark:border-dark-ui border-t-light-primary dark:border-t-dark-primary rounded-full animate-spin"></div>
+                <span className="text-sm text-light-text/60 dark:text-dark-text/60">{isFullAiActionLoading}</span>
+            </div>
+        );
+    }
+
     let colorClass = 'bg-yellow-500';
     let text = 'Unsaved changes';
     let pulse = false;
@@ -87,7 +99,8 @@ const AiMenu: React.FC<{
     onEnhance: (tone: string) => Promise<void>;
     onSummarize: () => Promise<void>;
     isAiRateLimited: boolean;
-}> = ({ onEnhance, onSummarize, isAiRateLimited }) => {
+    isDisabled: boolean;
+}> = ({ onEnhance, onSummarize, isAiRateLimited, isDisabled }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [customTone, setCustomTone] = useState('');
     const [isCustomTone, setIsCustomTone] = useState(false);
@@ -109,7 +122,7 @@ const AiMenu: React.FC<{
 
     return (
         <div className="relative">
-            <button onClick={() => setIsOpen(prev => !prev)} className="p-2 rounded-md hover:bg-light-ui dark:hover:bg-dark-ui transition-colors flex items-center disabled:opacity-50 disabled:cursor-not-allowed" disabled={isAiRateLimited}>
+            <button onClick={() => setIsOpen(prev => !prev)} className="p-2 rounded-md hover:bg-light-ui dark:hover:bg-dark-ui transition-colors flex items-center disabled:opacity-50 disabled:cursor-not-allowed" disabled={isAiRateLimited || isDisabled}>
                 <SparklesIcon className="mr-0 sm:mr-1 text-light-primary dark:text-dark-primary" />
                 <span className="hidden sm:inline">Enhance</span>
             </button>
@@ -141,7 +154,8 @@ const MoreActionsMenu: React.FC<{
     templates: Template[];
     onApplyTemplate: (template: Template) => void;
     onSaveAsTemplate: () => void;
-}> = ({ note, templates, onApplyTemplate, onSaveAsTemplate }) => {
+    isDisabled: boolean;
+}> = ({ note, templates, onApplyTemplate, onSaveAsTemplate, isDisabled }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [isTemplatesSubMenuOpen, setIsTemplatesSubMenuOpen] = useState(false);
     const { showToast } = useToast();
@@ -184,7 +198,7 @@ const MoreActionsMenu: React.FC<{
 
     return (
         <div className="relative">
-            <button onClick={() => setIsOpen(prev => !prev)} className="p-2 rounded-md hover:bg-light-ui dark:hover:bg-dark-ui transition-colors">
+            <button onClick={() => setIsOpen(prev => !prev)} className="p-2 rounded-md hover:bg-light-ui dark:hover:bg-dark-ui transition-colors disabled:opacity-50 disabled:cursor-not-allowed" disabled={isDisabled}>
                 <EllipsisVerticalIcon />
             </button>
             {isOpen && (
@@ -222,11 +236,13 @@ const Toolbar: React.FC<ToolbarProps> = ({
     note, onDelete, onToggleFavorite, saveStatus, editorTitle, onEnhance, onSummarize, onToggleHistory, isHistoryOpen, 
     templates, onApplyTemplate, isMobileView, onToggleSidebar, onUndo, onRedo, canUndo, canRedo,
     viewMode, onToggleViewMode, isCheckingSpelling, isAiRateLimited, wordCount, charCount,
-    aiActionError, setAiActionError,
+    aiActionError, setAiActionError, isFullAiActionLoading
 }) => {
     const { setNoteToDelete, addTemplate } = useStoreContext();
     const [isInfoOpen, setIsInfoOpen] = useState(false);
     const { showToast } = useToast();
+
+    const isDisabled = !!isFullAiActionLoading;
 
     // Clear error after a delay
     React.useEffect(() => {
@@ -270,13 +286,14 @@ const Toolbar: React.FC<ToolbarProps> = ({
                         saveStatus={saveStatus} 
                         isAiRateLimited={isAiRateLimited}
                         isCheckingSpelling={isCheckingSpelling}
+                        isFullAiActionLoading={isFullAiActionLoading}
                     />
                 </div>
                 <div className="flex items-center space-x-0.5 sm:space-x-2">
-                    <button onClick={onUndo} disabled={!canUndo} className="p-2 rounded-md hover:bg-light-ui dark:hover:bg-dark-ui transition-colors disabled:opacity-50 disabled:cursor-not-allowed" aria-label="Undo">
+                    <button onClick={onUndo} disabled={!canUndo || isDisabled} className="p-2 rounded-md hover:bg-light-ui dark:hover:bg-dark-ui transition-colors disabled:opacity-50 disabled:cursor-not-allowed" aria-label="Undo">
                         <ArrowUturnLeftIcon />
                     </button>
-                    <button onClick={onRedo} disabled={!canRedo} className="p-2 rounded-md hover:bg-light-ui dark:hover:bg-dark-ui transition-colors disabled:opacity-50 disabled:cursor-not-allowed" aria-label="Redo">
+                    <button onClick={onRedo} disabled={!canRedo || isDisabled} className="p-2 rounded-md hover:bg-light-ui dark:hover:bg-dark-ui transition-colors disabled:opacity-50 disabled:cursor-not-allowed" aria-label="Redo">
                         <ArrowUturnRightIcon />
                     </button>
                      <div className="w-px h-6 bg-light-border dark:border-dark-border mx-1"></div>
@@ -285,17 +302,18 @@ const Toolbar: React.FC<ToolbarProps> = ({
                         onEnhance={onEnhance}
                         onSummarize={onSummarize}
                         isAiRateLimited={isAiRateLimited}
+                        isDisabled={isDisabled}
                     />
                     
-                     <button onClick={onToggleHistory} className={`p-2 rounded-md transition-colors ${isHistoryOpen ? 'bg-light-ui dark:bg-dark-ui' : 'hover:bg-light-ui dark:hover:bg-dark-ui'}`} aria-label="Toggle Version History">
+                     <button onClick={onToggleHistory} disabled={isDisabled} className={`p-2 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${isHistoryOpen ? 'bg-light-ui dark:bg-dark-ui' : 'hover:bg-light-ui dark:hover:bg-dark-ui'}`} aria-label="Toggle Version History">
                         <HistoryIcon />
                     </button>
-                     <button onClick={onToggleViewMode} className={`p-2 rounded-md transition-colors ${viewMode === 'preview' ? 'bg-light-ui dark:bg-dark-ui' : 'hover:bg-light-ui dark:hover:bg-dark-ui'}`} aria-label={viewMode === 'preview' ? 'Switch to Edit Mode' : 'Switch to Preview Mode'}>
+                     <button onClick={onToggleViewMode} disabled={isDisabled} className={`p-2 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${viewMode === 'preview' ? 'bg-light-ui dark:bg-dark-ui' : 'hover:bg-light-ui dark:hover:bg-dark-ui'}`} aria-label={viewMode === 'preview' ? 'Switch to Edit Mode' : 'Switch to Preview Mode'}>
                         {viewMode === 'preview' ? <PencilSquareIcon /> : <EyeIcon />}
                     </button>
                     
                     <div className="relative">
-                        <button onClick={() => setIsInfoOpen(prev => !prev)} className={`p-2 rounded-md transition-colors ${isInfoOpen ? 'bg-light-ui dark:bg-dark-ui' : 'hover:bg-light-ui dark:hover:bg-dark-ui'}`} aria-label="Note Information">
+                        <button onClick={() => setIsInfoOpen(prev => !prev)} disabled={isDisabled} className={`p-2 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${isInfoOpen ? 'bg-light-ui dark:bg-dark-ui' : 'hover:bg-light-ui dark:hover:bg-dark-ui'}`} aria-label="Note Information">
                             <InformationCircleIcon />
                         </button>
                         {isInfoOpen && <NoteInfoPopover note={note} wordCount={wordCount} charCount={charCount} />}
@@ -303,10 +321,10 @@ const Toolbar: React.FC<ToolbarProps> = ({
 
                     <div className="w-px h-6 bg-light-border dark:border-dark-border mx-1"></div>
 
-                    <button onClick={() => onToggleFavorite(note.id)} className="p-2 rounded-md hover:bg-light-ui dark:hover:bg-dark-ui transition-colors" aria-label={note.isFavorite ? 'Remove from favorites' : 'Add to favorites'}>
+                    <button onClick={() => onToggleFavorite(note.id)} disabled={isDisabled} className="p-2 rounded-md hover:bg-light-ui dark:hover:bg-dark-ui transition-colors disabled:opacity-50 disabled:cursor-not-allowed" aria-label={note.isFavorite ? 'Remove from favorites' : 'Add to favorites'}>
                         <StarIcon className={`w-5 h-5 ${note.isFavorite ? 'text-yellow-500' : ''}`} filled={note.isFavorite} />
                     </button>
-                    <button onClick={() => setNoteToDelete(note)} className="p-2 rounded-md hover:bg-light-ui dark:hover:bg-dark-ui transition-colors text-red-500" aria-label="Delete note">
+                    <button onClick={() => setNoteToDelete(note)} disabled={isDisabled} className="p-2 rounded-md hover:bg-light-ui dark:hover:bg-dark-ui transition-colors text-red-500 disabled:opacity-50 disabled:cursor-not-allowed" aria-label="Delete note">
                         <TrashIcon />
                     </button>
 
@@ -315,6 +333,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
                         templates={templates}
                         onApplyTemplate={onApplyTemplate}
                         onSaveAsTemplate={handleSaveAsTemplate}
+                        isDisabled={isDisabled}
                     />
                 </div>
             </div>

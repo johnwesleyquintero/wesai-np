@@ -59,6 +59,8 @@ export type SearchMode = 'KEYWORD' | 'AI';
 
 export type ChatMode = 'ASSISTANT' | 'RESPONDER' | 'GENERAL';
 
+export type ViewState = 'NOTES' | 'CHAT' | 'CTR_ANALYTICS' | 'TREND_ANALYSIS';
+
 export interface SpellingError {
     word: string;
     index: number;

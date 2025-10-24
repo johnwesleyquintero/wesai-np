@@ -51,15 +51,17 @@ export const BoldIcon: React.FC<IconProps> = (props) => (
   </svg>
 );
 
-{/* FIX: Add missing BrainIcon */}
 export const BrainIcon: React.FC<IconProps> = (props) => (
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5" {...props}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M15.5 14a3.5 3.5 0 0 0 -3.5 3.5v1a3.5 3.5 0 0 0 7 0v-1.8" />
-        <path strokeLinecap="round" strokeLinejoin="round" d="M8.5 14a3.5 3.5 0 0 1 3.5 3.5v1a3.5 3.5 0 0 1 -7 0v-1.8" />
-        <path strokeLinecap="round" strokeLinejoin="round" d="M17.5 16a3.5 3.5 0 0 0 0 -7h-1.5" />
-        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9.3v-2.8a3.5 3.5 0 0 0 -7 0" />
-        <path strokeLinecap="round" strokeLinejoin="round" d="M6.5 16a3.5 3.5 0 0 1 0 -7h1.5" />
-        <path strokeLinecap="round" strokeLinejoin="round" d="M5 9.3v-2.8a3.5 3.5 0 0 1 7 0v" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9.5 12.5a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0Z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M14.5 12.5a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0Z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 12.5a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0Z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 10V8a4 4 0 0 1 4-4h.5a4 4 0 0 1 4 4v.5" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15 15.5v-1.5a.5.5 0 0 1 .5-.5h1a2 2 0 0 0 2-2v-1a2 2 0 0 1 2-2h.5" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 15.5v-1.5A.5.5 0 0 0 8.5 13H8" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M14 18.5c.53 1.28 1.47 2.5 2.5 2.5" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M10 18.5c-.53 1.28-1.47 2.5-2.5 2.5" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 11.5v-1a4 4 0 0 1 4-4h.5a4 4 0 0 1 4 4v.5" />
     </svg>
 );
 

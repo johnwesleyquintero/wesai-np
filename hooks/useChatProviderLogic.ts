@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { ChatMessage, Note, ChatMode, ChatStatus } from '../types';
 import { getStreamingChatResponse, semanticSearchNotes, generateCustomerResponse, getGeneralChatSession, resetGeneralChat } from '../services/geminiService';
 import { useStoreContext } from '../context/AppContext';
+import { useDebounce } from './useDebounce';
 
 const CHAT_HISTORIES_STORAGE_KEY = 'wesai-chat-histories';
 
@@ -30,16 +31,17 @@ export const useChatProviderLogic = () => {
         }
     });
 
+    const debouncedChatHistories = useDebounce(chatHistories, 1000);
     const [chatError, setChatError] = useState<string | null>(null);
     const [chatStatus, setChatStatus] = useState<ChatStatus>('idle');
 
     useEffect(() => {
         try {
-            localStorage.setItem(CHAT_HISTORIES_STORAGE_KEY, JSON.stringify(chatHistories));
+            localStorage.setItem(CHAT_HISTORIES_STORAGE_KEY, JSON.stringify(debouncedChatHistories));
         } catch (error) {
             console.error("Failed to save chat history to localStorage", error);
         }
-    }, [chatHistories]);
+    }, [debouncedChatHistories]);
     
     const onSendMessage = useCallback(async (query: string, image?: string) => {
         setChatError(null);

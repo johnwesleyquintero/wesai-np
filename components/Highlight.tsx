@@ -28,4 +28,4 @@ const Highlight: React.FC<HighlightProps> = ({ text, highlight }) => {
     );
 };
 
-export default Highlight;
+export default React.memo(Highlight);

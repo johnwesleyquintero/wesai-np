@@ -331,10 +331,11 @@ const Sidebar: React.FC<SidebarProps> = ({
                 <div className="relative">
                     <input
                         type="text"
-                        placeholder="Search notes..."
+                        placeholder={activeSmartCollection ? activeSmartCollection.query : "Search notes..."}
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full pl-9 pr-4 py-2 text-sm bg-light-background dark:bg-dark-background rounded-md border border-light-border dark:border-dark-border focus:ring-1 focus:ring-light-primary focus:outline-none"
+                        className="w-full pl-9 pr-4 py-2 text-sm bg-light-background dark:bg-dark-background rounded-md border border-light-border dark:border-dark-border focus:ring-1 focus:ring-light-primary focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+                        disabled={!!activeSmartCollection}
                     />
                     <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-light-text/50 dark:text-dark-text/50" />
                 </div>

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { InlineAction } from '../types';
-import { SparklesIcon, BoldIcon, ItalicIcon, CodeIcon, LinkIcon, ChevronDownIcon } from './Icons';
+import { SparklesIcon, BoldIcon, ItalicIcon, CodeBracketIcon, LinkIcon, ChevronDownIcon } from './Icons';
 
 interface SelectionData {
     rect: DOMRect;
@@ -69,7 +69,7 @@ const InlineAiMenu: React.FC<InlineAiMenuProps> = ({ selection, onAction, onForm
                 <div className="flex justify-around items-center p-1 border-b border-light-border dark:border-dark-border">
                     <FormatButton onClick={() => handleFormatClick('bold')} aria-label="Bold"><BoldIcon /></FormatButton>
                     <FormatButton onClick={() => handleFormatClick('italic')} aria-label="Italic"><ItalicIcon /></FormatButton>
-                    <FormatButton onClick={() => handleFormatClick('code')} aria-label="Code"><CodeIcon /></FormatButton>
+                    <FormatButton onClick={() => handleFormatClick('code')} aria-label="Code"><CodeBracketIcon /></FormatButton>
                     <FormatButton onClick={() => handleFormatClick('link')} aria-label="Link"><LinkIcon /></FormatButton>
                 </div>
                 <button 

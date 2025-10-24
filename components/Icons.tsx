@@ -45,17 +45,23 @@ export const Bars3Icon: React.FC<IconProps> = (props) => (
 );
 
 export const BoldIcon: React.FC<IconProps> = (props) => (
-    <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5" {...props}>
-        <path d="M13.5,15.5H10V12.5H13.5A1.5,1.5 0 0,1 15,14A1.5,1.5 0 0,1 13.5,15.5M10,6.5H13A1.5,1.5 0 0,1 14.5,8A1.5,1.5 0 0,1 13,9.5H10M15.6,10.79C16.57,10.11 17.25,9 17.25,8C17.25,5.74 15.5,4 13.25,4H7V18H14.04C16.14,18 17.75,16.3 17.75,14.21C17.75,12.69 16.89,11.39 15.6,10.79Z" />
-    </svg>
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5" {...props}>
+    <path d="M14 12a4 4 0 0 0 0-8H6v8" />
+    <path d="M15 20a4 4 0 0 0 0-8H6v8Z" />
+  </svg>
 );
 
+{/* FIX: Add missing BrainIcon */}
 export const BrainIcon: React.FC<IconProps> = (props) => (
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6" {...props}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.898 20.562L16.25 21.75l-.648-1.188a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.188-.648a2.25 2.25 0 001.423-1.423L16.25 15l.648 1.188a2.25 2.25 0 001.423 1.423L19.5 18.75l-1.188.648a2.25 2.25 0 00-1.423 1.423z" />
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5" {...props}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M15.5 14a3.5 3.5 0 0 0 -3.5 3.5v1a3.5 3.5 0 0 0 7 0v-1.8" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M8.5 14a3.5 3.5 0 0 1 3.5 3.5v1a3.5 3.5 0 0 1 -7 0v-1.8" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M17.5 16a3.5 3.5 0 0 0 0 -7h-1.5" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9.3v-2.8a3.5 3.5 0 0 0 -7 0" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M6.5 16a3.5 3.5 0 0 1 0 -7h1.5" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M5 9.3v-2.8a3.5 3.5 0 0 1 7 0v" />
     </svg>
 );
-
 
 export const CheckBadgeIcon: React.FC<IconProps> = (props) => (
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5" {...props}>
@@ -93,9 +99,9 @@ export const ClipboardDocumentIcon: React.FC<IconProps> = (props) => (
     </svg>
 );
 
-export const CodeIcon: React.FC<IconProps> = (props) => (
-    <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5" {...props}>
-        <path d="M14.6,16.6L19.2,12L14.6,7.4L16,6L22,12L16,18L14.6,16.6M9.4,16.6L4.8,12L9.4,7.4L8,6L2,12L8,18L9.4,16.6Z" />
+export const CodeBracketIcon: React.FC<IconProps> = (props) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5" {...props}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M17.25 6.75L22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25" />
     </svg>
 );
 
@@ -165,21 +171,31 @@ export const GripVerticalIcon: React.FC<IconProps> = (props) => (
 );
 
 export const Heading1Icon: React.FC<IconProps> = (props) => (
-    <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5" {...props}>
-        <path d="M12.25 19H14.25V7H16V5H8V7H9.75V11.25H4V13.25H9.75V19H12.25Z"></path>
-    </svg>
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5" {...props}>
+    <path d="M4 12h8" />
+    <path d="M4 18V6" />
+    <path d="M12 18V6" />
+    <path d="m17 12 3-2v8" />
+  </svg>
 );
 
 export const Heading2Icon: React.FC<IconProps> = (props) => (
-    <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5" {...props}>
-        <path d="M14 17H12V19H16V15C16 13.9 15.1 13 14 13H10V11H14V9H10V7H14V5H8V11C8 12.1 8.9 13 10 13H12V15H8V17H10V19H6V15H4V7H10C12.21 7 14 8.79 14 11C14 12.63 13.04 14.04 11.5 14.68V14.72C12.96 15.14 14 16.43 14 18V19H18V15H20V19H14V17Z"></path>
-    </svg>
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5" {...props}>
+    <path d="M4 12h8" />
+    <path d="M4 18V6" />
+    <path d="M12 18V6" />
+    <path d="M21 18h-4c0-4 4-3 4-6 0-1.5-2-2.5-4-1" />
+  </svg>
 );
 
 export const Heading3Icon: React.FC<IconProps> = (props) => (
-    <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5" {...props}>
-        <path d="M12 17H20V19H12V17M18.5 7A2.5 2.5 0 0 1 21 9.5A2.5 2.5 0 0 1 18.5 12H16V13H14V11H16C17.11 11 18 10.11 18 9C18 7.9 17.11 7 16 7H14V5H18.5M10 5H4V7H8V19H10V5Z"></path>
-    </svg>
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5" {...props}>
+    <path d="M4 12h8" />
+    <path d="M4 18V6" />
+    <path d="M12 18V6" />
+    <path d="M17.5 10.5c1.5-1.5 1.5-4.5 0-6" />
+    <path d="M20 6.5c-1.5 1.5-1.5 4.5 0 6" />
+  </svg>
 );
 
 export const HistoryIcon: React.FC<IconProps> = (props) => (
@@ -196,9 +212,11 @@ export const InformationCircleIcon: React.FC<IconProps> = (props) => (
 
 
 export const ItalicIcon: React.FC<IconProps> = (props) => (
-    <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5" {...props}>
-        <path d="M10,4V7H12.21L8.79,15H6V18H14V15H11.79L15.21,7H18V4H10Z" />
-    </svg>
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5" {...props}>
+    <line x1="19" x2="10" y1="4" y2="4" />
+    <line x1="14" x2="5" y1="20" y2="20" />
+    <line x1="15" x2="9" y1="4" y2="20" />
+  </svg>
 );
 
 export const LightBulbIcon: React.FC<IconProps> = (props) => (

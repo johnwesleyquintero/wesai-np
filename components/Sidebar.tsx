@@ -3,7 +3,7 @@ import { Note, SearchMode, SmartCollection, Collection, TreeNode } from '../type
 import NoteCard from './NoteCard';
 import {
     PencilSquareIcon, Cog6ToothIcon, SunIcon, MoonIcon, XMarkIcon, MagnifyingGlassIcon, SparklesIcon,
-    PlusIcon, FolderPlusIcon, BrainIcon, StarIcon, ChevronDownIcon, ChevronRightIcon,
+    PlusIcon, FolderPlusIcon, LightBulbIcon, StarIcon, ChevronDownIcon, ChevronRightIcon,
     ChevronDoubleLeftIcon, FolderIcon,
     TrashIcon,
     ChartBarIcon,
@@ -236,7 +236,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                      ])}
                 >
                      <div className="flex items-center truncate">
-                        <BrainIcon className="w-4 h-4 mr-2 flex-shrink-0 text-light-primary dark:text-dark-primary" />
+                        <LightBulbIcon className="w-4 h-4 mr-2 flex-shrink-0 text-light-primary dark:text-dark-primary" />
                         <span className="truncate">{sc.name}</span>
                     </div>
                 </div>
@@ -368,7 +368,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                         <div className="px-4 mb-2">
                             <div className="flex items-center justify-between p-2 rounded-lg bg-light-primary/10 dark:bg-dark-primary/10 text-sm">
                                 <div className="flex items-center gap-2 font-semibold truncate">
-                                    <BrainIcon className="w-4 h-4 text-light-primary dark:text-dark-primary flex-shrink-0" />
+                                    <LightBulbIcon className="w-4 h-4 text-light-primary dark:text-dark-primary flex-shrink-0" />
                                     <span className="truncate">{activeSmartCollection.name}</span>
                                 </div>
                                 <button onClick={onClearActiveSmartCollection} className="p-1 rounded-full hover:bg-light-primary/20 dark:hover:bg-dark-primary/20 flex-shrink-0">

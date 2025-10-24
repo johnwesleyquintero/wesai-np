@@ -3,7 +3,7 @@ import Sidebar from './components/Sidebar';
 import { useStoreContext } from './context/AppContext';
 import { Note, NoteVersion, Collection, SmartCollection } from './types';
 import ConfirmationModal from './components/ConfirmationModal';
-import { Bars3Icon, PlusIcon, SparklesIcon, ArrowDownTrayIcon, Cog6ToothIcon, LockClosedIcon, RocketLaunchIcon } from './components/Icons';
+import { Bars3Icon, PlusIcon, SparklesIcon, ArrowDownTrayIcon, Cog6ToothIcon, LockClosedIcon, RocketLaunchIcon, ServerStackIcon, TrendingUpIcon } from './components/Icons';
 import { AppProvider, useUIContext, useAuthContext } from './context/AppContext';
 import ContextMenu from './components/ContextMenu';
 import { ToastProvider, useToast } from './context/ToastContext';
@@ -36,7 +36,7 @@ const LandingPage: React.FC<{ onGetStarted: () => void }> = ({ onGetStarted }) =
         {
             icon: <LockClosedIcon className="w-8 h-8 text-light-primary dark:text-dark-primary" />,
             title: 'Privacy-First Architecture',
-            description: 'All data is stored in your private Supabase project. Real-time, authenticated subscriptions keep all your devices perfectly in sync without compromising privacy.',
+            description: 'All data is stored in your private Supabase project. Real-time, authenticated subscriptions keep all your devices perfectly in sync.',
         },
         {
             icon: <SparklesIcon className="w-8 h-8 text-light-primary dark:text-dark-primary" />,
@@ -48,6 +48,24 @@ const LandingPage: React.FC<{ onGetStarted: () => void }> = ({ onGetStarted }) =
             title: 'Productivity Workflow',
             description: 'A full-featured Markdown editor, bi-directional linking, command palette, and full data portability to streamline your process from idea to execution.',
         },
+    ];
+    
+    const principles = [
+        {
+            icon: <TrendingUpIcon className="w-8 h-8 text-light-primary dark:text-dark-primary" />,
+            title: 'Leverage Challenges into Opportunities',
+            description: 'Built to turn complex problems into actionable insights and strategic advantages.',
+        },
+        {
+            icon: <Cog6ToothIcon className="w-8 h-8 text-light-primary dark:text-dark-primary" />,
+            title: 'Prioritize Competence over Convention',
+            description: 'A no-nonsense tool designed for operators who value results and efficiency above all else.',
+        },
+        {
+            icon: <LockClosedIcon className="w-8 h-8 text-light-primary dark:text-dark-primary" />,
+            title: 'Build for Strategic Independence',
+            description: 'Your data, your systems. This is a sovereign, intelligent tool for turning your ideas into action.',
+        }
     ];
 
     return (
@@ -78,9 +96,23 @@ const LandingPage: React.FC<{ onGetStarted: () => void }> = ({ onGetStarted }) =
                         <p className="mt-6 max-w-2xl mx-auto text-lg text-light-text/70 dark:text-dark-text/70">
                             A secure, AI-enhanced notepad with real-time cloud sync via your private Supabase account, featuring a multi-mode Gemini assistant.
                         </p>
-                        <button onClick={onGetStarted} className="mt-8 px-8 py-3 bg-light-primary text-white dark:bg-dark-primary dark:text-zinc-900 rounded-md text-lg font-semibold hover:bg-light-primary-hover dark:hover:bg-dark-primary-hover transition-transform hover:scale-105">
-                            Get Started for Free
-                        </button>
+                        <div className="mt-8 flex justify-center gap-4">
+                            <button onClick={onGetStarted} className="px-8 py-3 bg-light-primary text-white dark:bg-dark-primary dark:text-zinc-900 rounded-md text-lg font-semibold hover:bg-light-primary-hover dark:hover:bg-dark-primary-hover transition-transform hover:scale-105">
+                                Get Started for Free
+                            </button>
+                        </div>
+                         <div className="mt-16 mx-auto max-w-4xl h-80 bg-zinc-800 rounded-xl shadow-2xl p-4 border border-zinc-700 flex gap-3 animate-fade-in-down">
+                            <div className="w-1/4 bg-zinc-900/50 rounded-lg p-2 space-y-2">
+                                <div className="h-4 w-3/4 bg-zinc-700 rounded animate-pulse"></div>
+                                <div className="h-3 w-1/2 bg-zinc-700 rounded animate-pulse [animation-delay:0.2s]"></div>
+                                <div className="h-3 w-5/6 bg-zinc-700 rounded animate-pulse [animation-delay:0.4s]"></div>
+                            </div>
+                            <div className="w-3/4 bg-zinc-900/50 rounded-lg p-4 space-y-3">
+                                <div className="h-6 w-1/2 bg-zinc-700 rounded animate-pulse [animation-delay:0.3s]"></div>
+                                <div className="h-4 w-full bg-zinc-700 rounded animate-pulse [animation-delay:0.5s]"></div>
+                                <div className="h-4 w-5/6 bg-zinc-700 rounded animate-pulse [animation-delay:0.7s]"></div>
+                            </div>
+                        </div>
                     </div>
                 </section>
 
@@ -100,17 +132,43 @@ const LandingPage: React.FC<{ onGetStarted: () => void }> = ({ onGetStarted }) =
                     </div>
                 </section>
                 
-                 <section className="py-24">
+                 <section className="py-24 bg-light-background dark:bg-dark-background">
                     <div className="container mx-auto px-4 text-center max-w-4xl">
-                        <h2 className="text-3xl font-bold mb-4">The "Why"</h2>
-                         <p className="text-lg text-light-text/70 dark:text-dark-text/70">
-                            WesAI Notepad was built on a core philosophy: to leverage challenges into opportunities, prioritize competence over conventional approaches, and build robust systems for long-term strategic independence. This isn't just another note-taking app; it's a sovereign, intelligent tool designed to turn your ideas into action.
-                        </p>
+                        <h2 className="text-3xl font-bold mb-2">Built for Sovereignty</h2>
+                        <p className="text-lg text-light-text/70 dark:text-dark-text/70 mb-12">Your data, your control. Built on a foundation of privacy and power.</p>
+                        <div className="grid md:grid-cols-2 gap-8 text-left">
+                            <div className="bg-light-ui/50 dark:bg-dark-ui/50 p-6 rounded-lg border border-light-border dark:border-dark-border">
+                                <ServerStackIcon className="w-8 h-8 mb-3 text-light-primary dark:text-dark-primary" />
+                                <h3 className="text-xl font-bold">Your Private Backend with Supabase</h3>
+                                <p className="mt-2 text-light-text/70 dark:text-dark-text/70">WesAI Notepad connects to your personal Supabase project. You are the sole owner of your data, with the full power of enterprise-grade security and real-time sync.</p>
+                            </div>
+                            <div className="bg-light-ui/50 dark:bg-dark-ui/50 p-6 rounded-lg border border-light-border dark:border-dark-border">
+                                <SparklesIcon className="w-8 h-8 mb-3 text-light-primary dark:text-dark-primary" />
+                                <h3 className="text-xl font-bold">Your Personal AI with Gemini</h3>
+                                <p className="mt-2 text-light-text/70 dark:text-dark-text/70">Connect your own Gemini API key to unlock a powerful multi-mode assistant. Your key is stored locally, ensuring your interactions with the AI remain private.</p>
+                            </div>
+                        </div>
                     </div>
                 </section>
 
+                <section className="py-24 bg-light-ui/50 dark:bg-dark-ui/50">
+                    <div className="container mx-auto px-4 text-center max-w-5xl">
+                        <h2 className="text-3xl font-bold mb-12">The Philosophy</h2>
+                        <div className="grid md:grid-cols-3 gap-10">
+                            {principles.map((principle, index) => (
+                                 <div key={index} className="text-center">
+                                    <div className="flex justify-center items-center w-16 h-16 mx-auto mb-4 bg-light-background dark:bg-dark-background rounded-full border border-light-border dark:border-dark-border">
+                                        {principle.icon}
+                                    </div>
+                                    <h3 className="text-xl font-bold">{principle.title}</h3>
+                                    <p className="mt-2 text-light-text/70 dark:text-dark-text/70">{principle.description}</p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </section>
 
-                <section className="py-20 bg-light-ui/50 dark:bg-dark-ui/50">
+                <section className="py-20">
                     <div className="container mx-auto px-4 text-center">
                         <h2 className="text-3xl font-bold">Ready to build your second brain?</h2>
                         <p className="mt-4 max-w-2xl mx-auto text-lg text-light-text/70 dark:text-dark-text/70">
@@ -125,7 +183,7 @@ const LandingPage: React.FC<{ onGetStarted: () => void }> = ({ onGetStarted }) =
 
             <footer className="py-8 border-t border-light-border dark:border-dark-border">
                 <div className="container mx-auto px-4 text-center text-sm text-light-text/60 dark:text-dark-text/60">
-                    &copy; {new Date().getFullYear()} WesAI Notepad. All Rights Reserved.
+                    &copy; {new Date().getFullYear()} WesAI Notepad. All Rights Reserved. Version 1.1.0
                 </div>
             </footer>
         </div>
@@ -221,7 +279,7 @@ function AppContent() {
         collectionToDelete, setCollectionToDelete,
         smartCollectionToDelete, setSmartCollectionToDelete, handleDeleteCollectionConfirm,
         handleDeleteNoteConfirm, handleDeleteSmartCollectionConfirm,
-        addSmartCollection, updateSmartCollection
+        addSmartCollection, updateSmartCollection, templates, restoreNoteVersion
     } = useStoreContext();
 
     const {
@@ -315,6 +373,8 @@ function AppContent() {
                         <NoteEditor
                             key={activeNote.id}
                             note={activeNote}
+                            onRestoreVersion={(version) => restoreNoteVersion(activeNote.id, version)}
+                            templates={templates}
                         />
                     );
                 }

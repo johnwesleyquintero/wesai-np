@@ -21,7 +21,6 @@ export const useAuthContext = () => {
 };
 
 // Store Context
-// FIX: Add triggerNoteImport to the context type.
 type StoreContextType = ReturnType<typeof useStoreProviderLogic> & { triggerNoteImport: () => void; };
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
 export const useStoreContext = () => {

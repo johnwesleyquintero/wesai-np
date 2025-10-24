@@ -1,4 +1,3 @@
-// FIX: Import the 'React' namespace to be used in type annotations like React.MouseEvent.
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { SmartCollection, ContextMenuItem, ViewState } from '../types';
 import { useMobileView } from './useMobileView';

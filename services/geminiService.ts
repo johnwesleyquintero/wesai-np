@@ -1,5 +1,4 @@
 import { GoogleGenAI, Type, GenerateContentResponse, Content, Chat, FunctionDeclaration } from "@google/genai";
-// FIX: Export InlineAction type to be used in other files.
 import { Note, SpellingError, ChatMessage, InlineAction } from "../types";
 
 const API_KEY_STORAGE_KEY = 'wesai-api-key';
@@ -767,6 +766,3 @@ export const {
     resetGeneralChat,
     getGeneralChatSession
 } = geminiService;
-
-// FIX: Export InlineAction type to be used in other files.
-export type { InlineAction };

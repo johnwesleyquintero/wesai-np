@@ -1,6 +1,4 @@
-// FIX: Import React to provide the 'React' namespace for types like React.Dispatch.
 import React, { useCallback } from 'react';
-// FIX: Import InlineAction from its original source in types.ts, not from geminiService.
 import { performInlineEdit, summarizeAndExtractActions, enhanceText } from '../services/geminiService';
 import { NoteEditorUIState, NoteEditorAction } from './useNoteEditorReducer';
 import type { InlineAction } from '../types';

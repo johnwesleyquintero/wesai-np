@@ -164,7 +164,6 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         return () => unregisterEditorActions();
     }, [registerEditorActions, unregisterEditorActions, editorActions]);
     
-    // FIX: Defined handleScroll with useCallback to make it available to the component, fixing the reference error and dependency array issues.
     const handleScroll = useCallback(() => {
         dispatch({ type: 'SET_SELECTION', payload: null });
         setActiveSpellingError(null);

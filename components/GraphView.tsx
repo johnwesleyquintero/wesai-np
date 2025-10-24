@@ -5,11 +5,38 @@ import { NetworkIcon } from './Icons';
 
 const noteLinkRegex = /\[\[([a-zA-Z0-9-]+)(?:\|.*?)?\]\]/g;
 
+const Legend: React.FC = () => (
+    <div className="absolute bottom-4 right-4 bg-light-ui/80 dark:bg-dark-ui/80 backdrop-blur-sm p-3 rounded-lg text-xs text-light-text dark:text-dark-text border border-light-border dark:border-dark-border shadow-lg">
+        <h4 className="font-bold mb-2">Legend</h4>
+        <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-light-primary dark:bg-dark-primary"></div>
+            <span>Note</span>
+        </div>
+        <div className="flex items-center gap-2 mt-1">
+            <div className="w-3 h-3 rounded-full bg-light-primary dark:bg-dark-primary"></div>
+            <span>"Hot Topic" Note (larger)</span>
+        </div>
+         <div className="flex items-center gap-2 mt-1">
+             <svg width="12" height="12" viewBox="0 0 12 12" className="flex-shrink-0"><path d="M0 6 L10 6" stroke="currentColor" strokeWidth="1.5"/><path d="M7 3 L10 6 L7 9" stroke="currentColor" strokeWidth="1.5" fill="none"/></svg>
+            <span>Link Direction</span>
+        </div>
+    </div>
+);
+
+
 const GraphView: React.FC = () => {
-    const { notes, setActiveNoteId } = useStoreContext();
+    const { notes, setActiveNoteId, getTrendAnalytics } = useStoreContext();
     const { setView, theme } = useUIContext();
     const containerRef = useRef<HTMLDivElement>(null);
     const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+    const [hotTopics, setHotTopics] = useState<any[]>([]);
+    const [hoveredNode, setHoveredNode] = useState<string | null>(null);
+
+    useEffect(() => {
+        getTrendAnalytics().then(data => {
+            setHotTopics(data.hotTopics || []);
+        });
+    }, [getTrendAnalytics, notes]);
 
     useEffect(() => {
         const handleResize = () => {
@@ -22,15 +49,20 @@ const GraphView: React.FC = () => {
         };
 
         handleResize();
-        window.addEventListener('resize', handleResize);
-        return () => window.removeEventListener('resize', handleResize);
+        const resizeObserver = new ResizeObserver(handleResize);
+        if (containerRef.current) {
+            resizeObserver.observe(containerRef.current);
+        }
+        return () => resizeObserver.disconnect();
     }, []);
 
     const graphData = useMemo(() => {
+        const scoreMap = new Map(hotTopics.map(t => [t.noteId, t.score]));
+        
         const nodes = notes.map(note => ({
             id: note.id,
             name: note.title || 'Untitled Note',
-            val: 1, // Default size
+            val: 4 + (scoreMap.get(note.id) || 0) * 2, // Base size 4, hot topics are larger
         }));
 
         const links: { source: string, target: string }[] = [];
@@ -47,30 +79,70 @@ const GraphView: React.FC = () => {
         });
 
         return { nodes, links };
-    }, [notes]);
+    }, [notes, hotTopics]);
+
+    const { highlightNodes, highlightLinks } = useMemo(() => {
+        const highlightNodes = new Set<string>();
+        const highlightLinks = new Set<object>();
+
+        if (hoveredNode) {
+            highlightNodes.add(hoveredNode);
+            graphData.links.forEach(link => {
+                // FIX: Handle cases where react-force-graph mutates source/target from string ID to a node object.
+                const source = link.source as any;
+                const target = link.target as any;
+                const sourceId = source.id ?? source;
+                const targetId = target.id ?? target;
+
+                if (sourceId === hoveredNode || targetId === hoveredNode) {
+                    highlightLinks.add(link);
+                    highlightNodes.add(sourceId);
+                    highlightNodes.add(targetId);
+                }
+            });
+        }
+        return { highlightNodes, highlightLinks };
+    }, [hoveredNode, graphData.links]);
 
     const handleNodeClick = useCallback((node: any) => {
         setActiveNoteId(node.id);
         setView('NOTES');
     }, [setActiveNoteId, setView]);
-
-    const nodeCanvasObject = useCallback((node: any, ctx: CanvasRenderingContext2D) => {
+    
+    const nodeCanvasObject = useCallback((node: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
         const label = node.name;
-        const fontSize = 12 / (node.k || 1); // Adjust font size on zoom
-        ctx.font = `${fontSize}px Sans-Serif`;
-        
-        // Node circle
+        const fontSize = 12 / globalScale;
+        const size = node.val;
+
+        const isHovered = node.id === hoveredNode;
+        const isHighlighted = highlightNodes.has(node.id);
+        const isDimmed = hoveredNode && !isHighlighted;
+
+        // Glow for hovered node
+        if (isHovered) {
+            ctx.shadowColor = theme === 'dark' ? '#60a5fa' : '#3b82f6';
+            ctx.shadowBlur = 20;
+        }
+
+        // Main node circle
         ctx.beginPath();
-        ctx.arc(node.x, node.y, 5, 0, 2 * Math.PI, false);
-        ctx.fillStyle = theme === 'dark' ? '#60a5fa' : '#3b82f6'; // dark-primary / light-primary
+        ctx.arc(node.x, node.y, size, 0, 2 * Math.PI, false);
+        ctx.fillStyle = isDimmed 
+            ? (theme === 'dark' ? 'rgba(63, 63, 70, 0.2)' : 'rgba(203, 213, 225, 0.4)')
+            : (theme === 'dark' ? '#60a5fa' : '#3b82f6');
         ctx.fill();
 
+        ctx.shadowColor = 'transparent'; // Reset shadow
+
         // Node label
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillStyle = theme === 'dark' ? 'rgba(245, 245, 244, 0.8)' : 'rgba(24, 24, 27, 0.8)'; // dark-text / light-text
-        ctx.fillText(label, node.x, node.y + 10);
-    }, [theme]);
+        if (isHighlighted && fontSize > 4) {
+            ctx.font = `${fontSize}px Sans-Serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = theme === 'dark' ? 'rgba(245, 245, 244, 0.9)' : 'rgba(24, 24, 27, 0.9)';
+            ctx.fillText(label, node.x, node.y + size + fontSize);
+        }
+    }, [hoveredNode, highlightNodes, theme]);
 
     if (notes.length === 0) {
         return (
@@ -89,15 +161,21 @@ const GraphView: React.FC = () => {
                     width={dimensions.width}
                     height={dimensions.height}
                     graphData={graphData}
-                    nodeLabel="name"
                     nodeCanvasObject={nodeCanvasObject}
-                    linkColor={() => theme === 'dark' ? 'rgba(63, 63, 70, 0.5)' : 'rgba(212, 212, 216, 0.7)'}
-                    linkWidth={1}
+                    linkColor={link => (highlightLinks.has(link) || !hoveredNode) 
+                        ? (theme === 'dark' ? 'rgba(96, 165, 250, 0.6)' : 'rgba(59, 130, 246, 0.6)') 
+                        : (theme === 'dark' ? 'rgba(63, 63, 70, 0.15)' : 'rgba(212, 212, 216, 0.25)')
+                    }
+                    linkWidth={link => (highlightLinks.has(link) || !hoveredNode) ? 1.5 : 0.5}
+                    linkDirectionalArrowLength={3.5}
+                    linkDirectionalArrowRelPos={1}
                     onNodeClick={handleNodeClick}
+                    onNodeHover={node => setHoveredNode(node ? (node.id as string) : null)}
                     cooldownTicks={100}
                     onEngineStop={(fg) => fg.zoomToFit(400, 100)}
                 />
             )}
+            <Legend />
         </div>
     );
 };

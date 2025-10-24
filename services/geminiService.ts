@@ -47,7 +47,7 @@ const handleGeminiError = (error: unknown, context: string): Error => {
 
     // Fallback for other errors from the Error object, if available.
     if (error instanceof Error) {
-        return new Error(`An AI error occurred. Please try again later.`);
+        return new Error(`An AI error occurred in ${context}: ${error.message}. Please try again later.`);
     }
 
     return new Error(`An unknown error occurred during ${context}.`);
@@ -619,11 +619,9 @@ TEXT: """${text}"""`;
             const result = safeJsonParse(responseText, { errors: [] });
             return result.errors || [];
         } catch (error) {
-            if (error instanceof Error && (error.message.includes('429') || error.message.toLowerCase().includes('quota'))) {
-                console.warn("Spell check skipped due to rate limiting.");
-            } else {
-                console.error("Error finding misspelled words:", error);
-            }
+            // Let the centralized handler manage the error message and side effects.
+            // We can still log a warning here for debugging purposes if needed.
+            console.warn("Spell check failed:", error);
             return [];
         }
     };

@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Note, Template } from '../types';
-import { enhanceText, summarizeAndExtractActions } from '../services/geminiService';
 import { StarIcon, TrashIcon, SparklesIcon, HistoryIcon, ArrowDownTrayIcon, DocumentDuplicateIcon, Bars3Icon, ArrowUturnLeftIcon, ArrowUturnRightIcon, EyeIcon, PencilSquareIcon, CheckBadgeIcon, ClipboardDocumentIcon, InformationCircleIcon, EllipsisVerticalIcon, DocumentPlusIcon } from './Icons';
 import { useToast } from '../context/ToastContext';
 import NoteInfoPopover from './NoteInfoPopover';
@@ -12,8 +11,8 @@ interface ToolbarProps {
     onToggleFavorite: (id: string) => void;
     saveStatus: 'saved' | 'saving' | 'unsaved';
     editorTitle: string;
-    contentToEnhance: string;
-    onContentUpdate: (newContent: string) => void;
+    onEnhance: (tone: string) => Promise<void>;
+    onSummarize: () => Promise<void>;
     onToggleHistory: () => void;
     isHistoryOpen: boolean;
     templates: Template[];
@@ -30,20 +29,20 @@ interface ToolbarProps {
     isAiRateLimited: boolean;
     wordCount: number;
     charCount: number;
+    aiActionError: string | null;
+    setAiActionError: (error: string | null) => void;
 }
 
 interface StatusIndicatorProps {
     saveStatus: 'saved' | 'saving' | 'unsaved';
     isAiRateLimited: boolean;
     isCheckingSpelling: boolean;
-    aiActionInProgress: 'enhancing' | 'summarizing' | null;
 }
 
 const StatusIndicator: React.FC<StatusIndicatorProps> = ({
     saveStatus,
     isAiRateLimited,
     isCheckingSpelling,
-    aiActionInProgress,
 }) => {
     let colorClass = 'bg-yellow-500';
     let text = 'Unsaved changes';
@@ -55,10 +54,6 @@ const StatusIndicator: React.FC<StatusIndicatorProps> = ({
     } else if (isCheckingSpelling) {
         colorClass = 'bg-blue-500';
         text = 'Checking...';
-        pulse = true;
-    } else if (aiActionInProgress) {
-        colorClass = 'bg-blue-500';
-        text = aiActionInProgress === 'enhancing' ? 'Enhancing...' : 'Summarizing...';
         pulse = true;
     } else {
         switch (saveStatus) {
@@ -88,58 +83,33 @@ const ErrorIcon = () => (
     </svg>
 );
 
-const AiMenu: React.FC<Pick<ToolbarProps, 'contentToEnhance' | 'onContentUpdate' | 'isAiRateLimited'> & {
-    aiActionInProgress: 'enhancing' | 'summarizing' | null;
-    setAiActionInProgress: (status: 'enhancing' | 'summarizing' | null) => void;
-    setAiActionError: (error: string | null) => void;
-}> = ({ contentToEnhance, onContentUpdate, isAiRateLimited, aiActionInProgress, setAiActionInProgress, setAiActionError }) => {
+const AiMenu: React.FC<{
+    onEnhance: (tone: string) => Promise<void>;
+    onSummarize: () => Promise<void>;
+    isAiRateLimited: boolean;
+}> = ({ onEnhance, onSummarize, isAiRateLimited }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [customTone, setCustomTone] = useState('');
     const [isCustomTone, setIsCustomTone] = useState(false);
 
-    const handleEnhance = async (tone: string) => {
+    const handleEnhanceClick = async (tone: string) => {
         setIsOpen(false);
         if (!tone.trim()) return;
-        setAiActionInProgress('enhancing');
-        setAiActionError(null);
-        try {
-            const enhancedContent = await enhanceText(contentToEnhance, tone);
-            onContentUpdate(enhancedContent);
-        } catch (error) {
-            if (error instanceof Error) setAiActionError(error.message);
-        } finally {
-            setAiActionInProgress(null);
-            setCustomTone('');
-            setIsCustomTone(false);
-        }
+        await onEnhance(tone);
+        setCustomTone('');
+        setIsCustomTone(false);
     };
 
-    const handleSummarize = async () => {
+    const handleSummarizeClick = async () => {
         setIsOpen(false);
-        setAiActionInProgress('summarizing');
-        setAiActionError(null);
-        try {
-            const { summary, actionItems } = await summarizeAndExtractActions(contentToEnhance);
-            let formattedSummary = '';
-            if (summary) formattedSummary += `### ✨ AI Summary\n\n${summary}\n\n`;
-            if (actionItems && actionItems.length > 0) formattedSummary += `### ✅ Action Items\n\n${actionItems.map(item => `- [ ] ${item}`).join('\n')}\n\n`;
-            if (formattedSummary) {
-                onContentUpdate(`---\n\n${formattedSummary}---\n\n${contentToEnhance}`);
-            } else {
-                setAiActionError("The AI couldn't find anything to summarize or any action items.");
-            }
-        } catch (error) {
-            if (error instanceof Error) setAiActionError(error.message);
-        } finally {
-            setAiActionInProgress(null);
-        }
+        await onSummarize();
     };
 
     const tones = ["Professional", "Casual", "Poetic", "Concise", "Expanded"];
 
     return (
         <div className="relative">
-            <button onClick={() => setIsOpen(prev => !prev)} className="p-2 rounded-md hover:bg-light-ui dark:hover:bg-dark-ui transition-colors flex items-center disabled:opacity-50 disabled:cursor-not-allowed" disabled={!!aiActionInProgress || isAiRateLimited}>
+            <button onClick={() => setIsOpen(prev => !prev)} className="p-2 rounded-md hover:bg-light-ui dark:hover:bg-dark-ui transition-colors flex items-center disabled:opacity-50 disabled:cursor-not-allowed" disabled={isAiRateLimited}>
                 <SparklesIcon className="mr-0 sm:mr-1 text-light-primary dark:text-dark-primary" />
                 <span className="hidden sm:inline">Enhance</span>
             </button>
@@ -148,16 +118,16 @@ const AiMenu: React.FC<Pick<ToolbarProps, 'contentToEnhance' | 'onContentUpdate'
                     {isCustomTone ? (
                         <div className="p-2">
                             <input type="text" placeholder="Enter custom tone..." value={customTone} onChange={(e) => setCustomTone(e.target.value)} className="w-full text-sm p-2 bg-light-ui dark:bg-dark-ui rounded-md border border-light-border dark:border-dark-border focus:ring-1 focus:ring-light-primary" />
-                            <button onClick={() => handleEnhance(customTone)} className="w-full text-left p-2 text-sm mt-1 rounded-md bg-light-primary text-white text-center">Enhance</button>
+                            <button onClick={() => handleEnhanceClick(customTone)} className="w-full text-left p-2 text-sm mt-1 rounded-md bg-light-primary text-white text-center">Enhance</button>
                             <button onClick={() => { setIsCustomTone(false); setCustomTone(''); }} className="w-full text-left p-2 text-sm mt-1 rounded-md hover:bg-light-ui dark:hover:bg-dark-ui text-center">Back</button>
                         </div>
                     ) : (
                         <>
-                            {tones.map(tone => <button key={tone} onClick={() => handleEnhance(tone)} className="w-full text-left block px-4 py-2 text-sm hover:bg-light-ui dark:hover:bg-dark-ui">Rewrite as {tone}</button>)}
+                            {tones.map(tone => <button key={tone} onClick={() => handleEnhanceClick(tone)} className="w-full text-left block px-4 py-2 text-sm hover:bg-light-ui dark:hover:bg-dark-ui">Rewrite as {tone}</button>)}
                             <div className="border-t border-light-border dark:border-dark-border my-1"></div>
                             <button onClick={() => setIsCustomTone(true)} className="w-full text-left block px-4 py-2 text-sm hover:bg-light-ui dark:hover:bg-dark-ui">Custom Rewrite...</button>
                             <div className="border-t border-light-border dark:border-dark-border my-1"></div>
-                            <button onClick={handleSummarize} className="w-full text-left block px-4 py-2 text-sm hover:bg-light-ui dark:hover:bg-dark-ui">Summarize & Find Actions</button>
+                            <button onClick={handleSummarizeClick} className="w-full text-left block px-4 py-2 text-sm hover:bg-light-ui dark:hover:bg-dark-ui">Summarize & Find Actions</button>
                         </>
                     )}
                 </div>
@@ -249,13 +219,12 @@ const MoreActionsMenu: React.FC<{
 };
 
 const Toolbar: React.FC<ToolbarProps> = ({ 
-    note, onDelete, onToggleFavorite, saveStatus, editorTitle, contentToEnhance, onContentUpdate, onToggleHistory, isHistoryOpen, 
+    note, onDelete, onToggleFavorite, saveStatus, editorTitle, onEnhance, onSummarize, onToggleHistory, isHistoryOpen, 
     templates, onApplyTemplate, isMobileView, onToggleSidebar, onUndo, onRedo, canUndo, canRedo,
-    viewMode, onToggleViewMode, isCheckingSpelling, isAiRateLimited, wordCount, charCount
+    viewMode, onToggleViewMode, isCheckingSpelling, isAiRateLimited, wordCount, charCount,
+    aiActionError, setAiActionError,
 }) => {
     const { setNoteToDelete, addTemplate } = useStoreContext();
-    const [aiActionInProgress, setAiActionInProgress] = useState<'enhancing' | 'summarizing' | null>(null);
-    const [aiActionError, setAiActionError] = useState<string | null>(null);
     const [isInfoOpen, setIsInfoOpen] = useState(false);
     const { showToast } = useToast();
 
@@ -265,10 +234,10 @@ const Toolbar: React.FC<ToolbarProps> = ({
             const timer = setTimeout(() => setAiActionError(null), 5000);
             return () => clearTimeout(timer);
         }
-    }, [aiActionError]);
+    }, [aiActionError, setAiActionError]);
 
     const handleSaveAsTemplate = () => {
-        addTemplate(editorTitle, contentToEnhance)
+        addTemplate(editorTitle, note.content)
             .then(() => {
                 showToast({ message: `Template "${editorTitle}" saved!`, type: 'success' });
             })
@@ -301,7 +270,6 @@ const Toolbar: React.FC<ToolbarProps> = ({
                         saveStatus={saveStatus} 
                         isAiRateLimited={isAiRateLimited}
                         isCheckingSpelling={isCheckingSpelling}
-                        aiActionInProgress={aiActionInProgress}
                     />
                 </div>
                 <div className="flex items-center space-x-0.5 sm:space-x-2">
@@ -314,12 +282,9 @@ const Toolbar: React.FC<ToolbarProps> = ({
                      <div className="w-px h-6 bg-light-border dark:border-dark-border mx-1"></div>
                     
                     <AiMenu 
-                        contentToEnhance={contentToEnhance} 
-                        onContentUpdate={onContentUpdate}
+                        onEnhance={onEnhance}
+                        onSummarize={onSummarize}
                         isAiRateLimited={isAiRateLimited}
-                        aiActionInProgress={aiActionInProgress}
-                        setAiActionInProgress={setAiActionInProgress}
-                        setAiActionError={setAiActionError}
                     />
                     
                      <button onClick={onToggleHistory} className={`p-2 rounded-md transition-colors ${isHistoryOpen ? 'bg-light-ui dark:bg-dark-ui' : 'hover:bg-light-ui dark:hover:bg-dark-ui'}`} aria-label="Toggle Version History">

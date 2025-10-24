@@ -6,7 +6,7 @@ import TagInput from './TagInput';
 import VersionHistorySidebar from './VersionHistorySidebar';
 import { useUndoableState } from '../hooks/useUndoableState';
 import MarkdownPreview from './MarkdownPreview';
-import { suggestTags, suggestTitle, performInlineEdit, InlineAction, summarizeAndExtractActions } from '../services/geminiService';
+import { suggestTags, suggestTitle, performInlineEdit, InlineAction, summarizeAndExtractActions, enhanceText } from '../services/geminiService';
 import TagSuggestions from './TagSuggestions';
 import TitleSuggestion from './TitleSuggestion';
 import InlineAiMenu from './InlineAiMenu';
@@ -19,6 +19,7 @@ import SlashCommandMenu from './SlashCommandMenu';
 import { uploadImage, getPublicUrl } from '../lib/supabaseClient';
 import { useToast } from '../context/ToastContext';
 import { useSpellcheck } from '../hooks/useSpellcheck';
+import RelatedNotes from './RelatedNotes';
 
 interface NoteEditorProps {
     note: Note;
@@ -255,6 +256,20 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onRestoreVersion, templat
             }
         } catch (error) {
              setAiActionError(error instanceof Error ? error.message : 'An unknown error occurred.');
+        } finally {
+            setIsFullAiActionLoading(null);
+        }
+    }, [editorState, setEditorState]);
+
+    const handleEnhanceNote = useCallback(async (tone: string) => {
+        if (!tone.trim()) return;
+        setIsFullAiActionLoading(`Enhancing text with ${tone} tone...`);
+        setAiActionError(null);
+        try {
+            const enhancedContent = await enhanceText(editorState.content, tone);
+            setEditorState({ ...editorState, content: enhancedContent });
+        } catch (error) {
+            setAiActionError(error instanceof Error ? error.message : 'An unknown error occurred.');
         } finally {
             setIsFullAiActionLoading(null);
         }
@@ -691,7 +706,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onRestoreVersion, templat
 
     return (
         <div className="flex-1 flex flex-col h-full relative bg-light-background dark:bg-dark-background" onDragOver={(e) => { e.preventDefault(); if (!isEffectivelyReadOnly) setIsDragOver(true); }} onDragLeave={() => setIsDragOver(false)} onDrop={handleDrop}>
-             <Toolbar note={note} onDelete={() => deleteNote(note.id)} onToggleFavorite={() => toggleFavorite(note.id)} saveStatus={saveStatus} editorTitle={editorState.title} contentToEnhance={editorState.content} onContentUpdate={(content) => setEditorState({...editorState, content})} onToggleHistory={() => setIsHistoryOpen(!isHistoryOpen)} isHistoryOpen={isHistoryOpen} templates={templates} onApplyTemplate={handleApplyTemplate} isMobileView={isMobileView} onToggleSidebar={onToggleSidebar} onUndo={undo} onRedo={redo} canUndo={canUndo} canRedo={canRedo} viewMode={viewMode} onToggleViewMode={() => setViewMode(prev => prev === 'edit' ? 'preview' : 'edit')} isCheckingSpelling={isCheckingSpelling} isAiRateLimited={isAiRateLimited} wordCount={wordCount} charCount={charCount} />
+             <Toolbar note={note} onDelete={() => deleteNote(note.id)} onToggleFavorite={() => toggleFavorite(note.id)} saveStatus={saveStatus} editorTitle={editorState.title} onEnhance={handleEnhanceNote} onSummarize={summarizeAndFindActionForFullNote} onToggleHistory={() => setIsHistoryOpen(!isHistoryOpen)} isHistoryOpen={isHistoryOpen} templates={templates} onApplyTemplate={handleApplyTemplate} isMobileView={isMobileView} onToggleSidebar={onToggleSidebar} onUndo={undo} onRedo={redo} canUndo={canUndo} canRedo={canRedo} viewMode={viewMode} onToggleViewMode={() => setViewMode(prev => prev === 'edit' ? 'preview' : 'edit')} isCheckingSpelling={isCheckingSpelling} isAiRateLimited={isAiRateLimited} wordCount={wordCount} charCount={charCount} aiActionError={aiActionError} setAiActionError={setAiActionError} />
              {isAiRateLimited && <div className="bg-yellow-100 dark:bg-yellow-900/30 border-b border-yellow-300 dark:border-yellow-700/50 py-2 px-4 text-center text-sm text-yellow-800 dark:text-yellow-200 flex-shrink-0">AI features are temporarily paused due to high usage. They will be available again shortly.</div>}
             
             <div ref={editorPaneRef} className="flex-1 overflow-y-auto relative">
@@ -735,6 +750,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onRestoreVersion, templat
 
                     <div className="mt-12 space-y-8">
                         <BacklinksDisplay backlinks={backlinks} />
+                        <RelatedNotes note={note} />
                          <div className={`pt-6 border-t border-light-border dark:border-dark-border ${isEffectivelyReadOnly ? 'opacity-60' : ''}`}>
                             <TagInput tags={displayedTags} setTags={(tags) => setEditorState({ ...editorState, tags })} readOnly={isEffectivelyReadOnly} />
                             {!isEffectivelyReadOnly && <TagSuggestions suggestions={suggestedTags} onAddTag={handleAddTag} isLoading={isSuggestingTags} error={tagSuggestionError} />}

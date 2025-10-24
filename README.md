@@ -21,13 +21,14 @@ WesAI Notepad is a secure, AI-enhanced application designed for privacy, perform
 - **Multi-Mode AI Assistant:** A versatile AI assistant with three distinct modes for different tasks:
     - **Knowledge Assistant:** Engage in a conversation with your notes. Ask complex questions and receive synthesized answers with direct links to the source notes.
     - **Service Responder:** Transform your notes into an operational playbook. Paste a customer inquiry, and the AI will use your knowledge base to draft a professional, compliant response.
-    - **General Assistant:** Your creative partner for brainstorming, drafting content, and asking general questions, with full access to your knowledge base.
+    - **General Assistant:** Your operational co-pilot. The General Assistant understands natural language commands to create, find, read, update, delete, and organize notes and folders using integrated tools.
 - **Proactive Related Notes (AI Co-Pilot):** As you write, the AI analyzes your content in real-time to proactively surface semantically related notes from your knowledge base, helping you discover hidden connections and build a richer web of ideas without breaking your flow.
 - **Self-Improving Intelligence:** A foundational feedback loop makes the AI smarter over time. The system logs every suggestion "impression" and user "click," creating an invaluable dataset to measure relevance and continuously refine the AI's performance.
 - **Trend Analysis Dashboard:** Visualize conceptual clusters, "hot topics," and the most frequent connections between your ideas, giving you a strategic overview of your knowledge base.
-- **AI-Powered Consolidation Suggestions:** Receive intelligent suggestions to merge related notes, helping you synthesize information and strengthen your knowledge base.
+- **AI-Powered Consolidation:** From the Trend Analysis dashboard, generate an AI-powered consolidated note from any frequently linked pair of notes, helping you synthesize ideas and reduce redundancy.
 - **Semantic Search:** Go beyond keyword matching to find notes based on their conceptual meaning.
 - **Inline AI Assistant:** Select any text to fix spelling, adjust tone, expand or shorten, and simplify language.
+- **Real-time AI Spell Check:** Highlights potential spelling errors as you type and offers AI-powered suggestions for corrections.
 - **Content Generation:** Automatically suggest descriptive titles and relevant tags based on your note's content.
 - **Summarization & Action Items:** Generate a concise summary and extract a checklist of action items from your note with a single command.
 
@@ -36,6 +37,7 @@ WesAI Notepad is a secure, AI-enhanced application designed for privacy, perform
 - **Full Keyboard Navigation:** Navigate the entire sidebar, select notes, and expand folders using only your keyboard for maximum efficiency.
 - **Command Palette:** Press `Ctrl/Cmd + K` to access nearly every application feature, from creating notes to executing AI actions.
 - **Slash Commands:** Type `/` in the editor to quickly insert headings, lists, to-do items, and more.
+- **Collapsible Sidebar:** Maximize your writing space on desktop by collapsing the sidebar to a compact, icon-only view.
 - **Drag & Drop Import:** Drag text or markdown files directly into the editor or onto a folder in the sidebar to instantly create new notes.
 - **Full Data Portability:** Export your entire notepad—including all notes, folders, and templates—to a single JSON file for backup. Import a backup file to restore your data.
 - **Note Templates:** Create and save reusable templates for frequently created documents.
@@ -69,6 +71,8 @@ WesAI Notepad is a secure, AI-enhanced application designed for privacy, perform
     - Create a new project on [Supabase](https://supabase.com/).
     - In your Supabase project, navigate to the **SQL Editor** and run the `schema.sql` script from this repository to set up your database tables and policies.
     - Go to **Settings** > **API**. Find your Project URL and your `public` anonymous key.
+    - Go to **Authentication** > **Providers** and enable the **Google** provider. You will need to provide your own Google OAuth credentials.
+    - Go to **Authentication** > **URL Configuration** and add your local development URL (e.g., `http://localhost:5173/`) to the "Site URL" and "Redirect URLs" fields.
     - **Note on Supabase Storage:** The application will automatically attempt to create a public storage bucket named `note_images` for image uploads. Ensure your Supabase project has Storage enabled.
 3.  **Configure the Client:**
     - Open the file: `lib/supabaseClient.ts`.
@@ -84,4 +88,4 @@ WesAI Notepad is a secure, AI-enhanced application designed for privacy, perform
 - **Frontend:** React, TypeScript, Tailwind CSS
 - **Backend & Database:** Supabase (Authentication, PostgreSQL, Realtime Subscriptions, Storage)
 - **AI Integration:** Google Gemini API (`@google/genai`)
-- **State Management:** React Hooks and Context API
+- **State Management:** React Hooks and Context API. The application features a clean, maintainable architecture built on custom hooks for logic encapsulation and reducers for predictable state management.

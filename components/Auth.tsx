@@ -4,7 +4,7 @@ import { GoogleIcon } from './Icons';
 
 type AuthView = 'login' | 'signup' | 'resend_confirmation';
 
-const Auth: React.FC = () => {
+const Auth: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
     const [view, setView] = useState<AuthView>('login');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -95,8 +95,13 @@ const Auth: React.FC = () => {
 
     return (
         <div className="flex items-center justify-center h-screen w-screen bg-light-background dark:bg-dark-background">
-            <div className="w-full max-w-sm p-8 space-y-6 bg-light-ui dark:bg-dark-ui rounded-xl shadow-lg">
-                <div className="flex justify-center">
+            <div className="w-full max-w-sm p-8 space-y-6 bg-light-ui dark:bg-dark-ui rounded-xl shadow-lg relative">
+                 {onBack && (
+                    <button onClick={onBack} className="absolute top-4 left-4 text-sm text-light-text/60 dark:text-dark-text/60 hover:underline flex items-center gap-1">
+                        &larr; Back
+                    </button>
+                )}
+                <div className="flex justify-center pt-4">
                     <svg width="48" height="48" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
                       <rect width="64" height="64" rx="12" fill="#60a5fa"/>
                       <path d="M20 18C20 15.7909 21.7909 14 24 14H44C46.2091 14 48 15.7909 48 18V46C48 48.2091 46.2091 50 44 50H24C21.7909 50 20 48.2091 20 46V18Z" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>

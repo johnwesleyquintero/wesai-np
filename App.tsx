@@ -3,7 +3,7 @@ import Sidebar from './components/Sidebar';
 import { useStoreContext } from './context/AppContext';
 import { Note, NoteVersion, Collection, SmartCollection } from './types';
 import ConfirmationModal from './components/ConfirmationModal';
-import { Bars3Icon, PlusIcon, SparklesIcon, ArrowDownTrayIcon, Cog6ToothIcon } from './components/Icons';
+import { Bars3Icon, PlusIcon, SparklesIcon, ArrowDownTrayIcon, Cog6ToothIcon, LockClosedIcon, RocketLaunchIcon } from './components/Icons';
 import { AppProvider, useUIContext, useAuthContext } from './context/AppContext';
 import ContextMenu from './components/ContextMenu';
 import { ToastProvider, useToast } from './context/ToastContext';
@@ -30,6 +30,108 @@ const TrendAnalysisDashboard = React.lazy(() => import('./components/TrendAnalys
 const WELCOME_SCREEN_SIDEBAR_WIDTH_KEY = 'wesai-sidebar-width';
 const MIN_SIDEBAR_WIDTH = 280;
 const MAX_SIDEBAR_WIDTH = 500;
+
+const LandingPage: React.FC<{ onGetStarted: () => void }> = ({ onGetStarted }) => {
+    const features = [
+        {
+            icon: <LockClosedIcon className="w-8 h-8 text-light-primary dark:text-dark-primary" />,
+            title: 'Privacy-First Architecture',
+            description: 'All data is stored in your private Supabase project. Real-time, authenticated subscriptions keep all your devices perfectly in sync without compromising privacy.',
+        },
+        {
+            icon: <SparklesIcon className="w-8 h-8 text-light-primary dark:text-dark-primary" />,
+            title: 'AI-Powered Intelligence',
+            description: 'Leverage a multi-mode assistant, semantic search, and proactive suggestions. Turn your knowledge base into an operational co-pilot.',
+        },
+        {
+            icon: <RocketLaunchIcon className="w-8 h-8 text-light-primary dark:text-dark-primary" />,
+            title: 'Productivity Workflow',
+            description: 'A full-featured Markdown editor, bi-directional linking, command palette, and full data portability to streamline your process from idea to execution.',
+        },
+    ];
+
+    return (
+        <div className="w-full min-h-screen bg-light-background dark:bg-dark-background text-light-text dark:text-dark-text">
+            <header className="absolute top-0 left-0 right-0 p-4 z-10">
+                <div className="container mx-auto flex justify-between items-center">
+                    <div className="flex items-center gap-3">
+                        <svg width="32" height="32" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <rect width="64" height="64" rx="12" fill="#60a5fa" />
+                            <path d="M20 18C20 15.7909 21.7909 14 24 14H44C46.2091 14 48 15.7909 48 18V46C48 48.2091 46.2091 50 44 50H24C21.7909 50 20 48.2091 20 46V18Z" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+                            <path d="M24 14V50" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                        <span className="font-bold text-lg">WesAI Notepad</span>
+                    </div>
+                    <button onClick={onGetStarted} className="px-4 py-2 text-sm font-semibold rounded-md border border-light-border dark:border-dark-border hover:bg-light-ui dark:hover:bg-dark-ui transition-colors">
+                        Launch App
+                    </button>
+                </div>
+            </header>
+
+            <main>
+                <section className="pt-32 pb-20 text-center relative overflow-hidden">
+                    <div className="absolute inset-0 -z-10 bg-light-ui/30 dark:bg-dark-ui/30 [mask-image:radial-gradient(ellipse_at_center,black,transparent_70%)]"></div>
+                    <div className="container mx-auto px-4">
+                        <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight text-light-text dark:text-dark-text">
+                            Your personal knowledge system,<br /> transformed into a powerful operational tool.
+                        </h1>
+                        <p className="mt-6 max-w-2xl mx-auto text-lg text-light-text/70 dark:text-dark-text/70">
+                            A secure, AI-enhanced notepad with real-time cloud sync via your private Supabase account, featuring a multi-mode Gemini assistant.
+                        </p>
+                        <button onClick={onGetStarted} className="mt-8 px-8 py-3 bg-light-primary text-white dark:bg-dark-primary dark:text-zinc-900 rounded-md text-lg font-semibold hover:bg-light-primary-hover dark:hover:bg-dark-primary-hover transition-transform hover:scale-105">
+                            Get Started for Free
+                        </button>
+                    </div>
+                </section>
+
+                <section className="py-20 bg-light-ui/50 dark:bg-dark-ui/50">
+                    <div className="container mx-auto px-4">
+                        <div className="grid md:grid-cols-3 gap-10">
+                            {features.map((feature, index) => (
+                                <div key={index} className="text-center">
+                                    <div className="flex justify-center items-center w-16 h-16 mx-auto mb-4 bg-light-background dark:bg-dark-background rounded-full border border-light-border dark:border-dark-border">
+                                        {feature.icon}
+                                    </div>
+                                    <h3 className="text-xl font-bold">{feature.title}</h3>
+                                    <p className="mt-2 text-light-text/70 dark:text-dark-text/70">{feature.description}</p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </section>
+                
+                 <section className="py-24">
+                    <div className="container mx-auto px-4 text-center max-w-4xl">
+                        <h2 className="text-3xl font-bold mb-4">The "Why"</h2>
+                         <p className="text-lg text-light-text/70 dark:text-dark-text/70">
+                            WesAI Notepad was built on a core philosophy: to leverage challenges into opportunities, prioritize competence over conventional approaches, and build robust systems for long-term strategic independence. This isn't just another note-taking app; it's a sovereign, intelligent tool designed to turn your ideas into action.
+                        </p>
+                    </div>
+                </section>
+
+
+                <section className="py-20 bg-light-ui/50 dark:bg-dark-ui/50">
+                    <div className="container mx-auto px-4 text-center">
+                        <h2 className="text-3xl font-bold">Ready to build your second brain?</h2>
+                        <p className="mt-4 max-w-2xl mx-auto text-lg text-light-text/70 dark:text-dark-text/70">
+                            Take control of your data and unlock the power of AI in your personal knowledge base.
+                        </p>
+                        <button onClick={onGetStarted} className="mt-8 px-8 py-3 bg-light-primary text-white dark:bg-dark-primary dark:text-zinc-900 rounded-md text-lg font-semibold hover:bg-light-primary-hover dark:hover:bg-dark-primary-hover transition-transform hover:scale-105">
+                            Launch WesAI Notepad
+                        </button>
+                    </div>
+                </section>
+            </main>
+
+            <footer className="py-8 border-t border-light-border dark:border-dark-border">
+                <div className="container mx-auto px-4 text-center text-sm text-light-text/60 dark:text-dark-text/60">
+                    &copy; {new Date().getFullYear()} WesAI Notepad. All Rights Reserved.
+                </div>
+            </footer>
+        </div>
+    );
+};
+
 
 const WelcomeScreen: React.FC<{
     onToggleSidebar?: () => void;
@@ -305,6 +407,7 @@ function AppContent() {
 
 function AppContainer() {
     const { session, isSessionLoading } = useAuthContext();
+    const [showAuth, setShowAuth] = useState(false);
 
     useEffect(() => {
         if (session) {
@@ -317,7 +420,10 @@ function AppContainer() {
     }
 
     if (!session) {
-        return <Auth />;
+        if (showAuth) {
+            return <Auth onBack={() => setShowAuth(false)} />;
+        }
+        return <LandingPage onGetStarted={() => setShowAuth(true)} />;
     }
 
     return <AppContent />;

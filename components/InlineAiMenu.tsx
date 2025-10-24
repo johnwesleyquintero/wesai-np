@@ -1,6 +1,7 @@
-import React, { useState, useRef, useLayoutEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { InlineAction } from '../types';
 import { SparklesIcon, BoldIcon, ItalicIcon, CodeBracketIcon, LinkIcon, ChevronDownIcon } from './Icons';
+import { useDynamicPosition } from '../hooks/useDynamicPosition';
 
 interface SelectionData {
     rect: DOMRect;
@@ -33,40 +34,12 @@ const FormatButton: React.FC<{ onClick: () => void, 'aria-label': string, childr
 const InlineAiMenu: React.FC<InlineAiMenuProps> = ({ selection, onAction, onFormat, isLoading, onClose }) => {
     const [isAiMenuOpen, setIsAiMenuOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
-    const [style, setStyle] = useState<React.CSSProperties>({ opacity: 0, position: 'fixed' });
 
-    useLayoutEffect(() => {
-        if (selection && menuRef.current) {
-            const menuWidth = menuRef.current.offsetWidth;
-            const menuHeight = menuRef.current.offsetHeight;
-            const { innerWidth, innerHeight } = window;
-            const { top, bottom, left } = selection.rect;
-            
-            let newTop = bottom + 8;
-            let newLeft = left;
-
-            // Adjust if it goes off-screen vertically
-            if (newTop + menuHeight > innerHeight) {
-                newTop = top - menuHeight - 8; // Position above the selection
-            }
-
-            // Adjust if it goes off-screen horizontally
-            if (newLeft + menuWidth > innerWidth) {
-                newLeft = innerWidth - menuWidth - 10;
-            }
-            if (newLeft < 10) newLeft = 10;
-
-            setStyle({
-                position: 'fixed',
-                top: `${newTop}px`,
-                left: `${newLeft}px`,
-                opacity: 1,
-                zIndex: 50,
-                transition: 'opacity 0.1s ease-in-out',
-            });
-        }
-    }, [selection, isAiMenuOpen]); // Recalculate if AI menu opens/closes, as height changes
-
+    const style = useDynamicPosition({
+        anchorRect: selection?.rect || null,
+        isOpen: !!selection && !isLoading,
+        menuRef,
+    });
 
     if (!selection) return null;
 
@@ -80,15 +53,10 @@ const InlineAiMenu: React.FC<InlineAiMenuProps> = ({ selection, onAction, onForm
     };
     
     if (isLoading) {
-        const { top, bottom, left } = selection.rect;
-        const { innerHeight } = window;
-        const spinnerHeight = 40; // Approx height of spinner
-        const loadingTop = bottom + 8 + spinnerHeight > innerHeight ? top - spinnerHeight - 8 : bottom + 8;
-
         const loadingStyle: React.CSSProperties = {
             position: 'fixed',
-            top: `${loadingTop}px`,
-            left: `${left}px`,
+            top: `${selection.rect.bottom + 8}px`,
+            left: `${selection.rect.left}px`,
             zIndex: 50,
         };
         return (

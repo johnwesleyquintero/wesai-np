@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Note } from '../types';
 import { DocumentTextIcon } from './Icons';
 import { useStoreContext } from '../context/AppContext';
+import { useDynamicPosition } from '../hooks/useDynamicPosition';
 
 interface NoteLinkerProps {
     query: string;
@@ -13,11 +14,23 @@ interface NoteLinkerProps {
 const NoteLinker: React.FC<NoteLinkerProps> = ({ query, onSelect, onClose, position }) => {
     const { notes } = useStoreContext();
     const [selectedIndex, setSelectedIndex] = useState(0);
+    const menuRef = useRef<HTMLDivElement>(null);
     const resultsRef = useRef<HTMLDivElement>(null);
 
     const filteredNotes = query
         ? notes.filter(note => note.title.toLowerCase().includes(query.toLowerCase()))
         : notes;
+        
+    const anchorRect = useMemo(() => {
+        if (!position) return null;
+        return new DOMRect(position.left, position.top, 0, 0);
+    }, [position]);
+
+    const style = useDynamicPosition({
+        anchorRect,
+        isOpen: !!position,
+        menuRef
+    });
 
     useEffect(() => {
         setSelectedIndex(0);
@@ -51,17 +64,11 @@ const NoteLinker: React.FC<NoteLinkerProps> = ({ query, onSelect, onClose, posit
         const activeItem = resultsRef.current?.querySelector('[data-selected="true"]');
         activeItem?.scrollIntoView({ block: 'nearest' });
     }, [selectedIndex]);
-
-    const menuStyle: React.CSSProperties = {
-        position: 'fixed',
-        top: position.top,
-        left: position.left,
-        zIndex: 50,
-    };
     
     return (
         <div
-            style={menuStyle}
+            ref={menuRef}
+            style={style}
             className="bg-light-background dark:bg-dark-background rounded-lg shadow-xl border border-light-border dark:border-dark-border w-80 animate-fade-in-down"
             onMouseDown={(e) => e.preventDefault()}
         >

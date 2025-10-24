@@ -37,4 +37,16 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isActive, onClick, searchTerm
     );
 };
 
-export default React.memo(NoteCard);
+const noteCardPropsAreEqual = (prevProps: NoteCardProps, nextProps: NoteCardProps) => {
+    return (
+        prevProps.isActive === nextProps.isActive &&
+        prevProps.searchTerm === nextProps.searchTerm &&
+        prevProps.note.id === nextProps.note.id &&
+        prevProps.note.title === nextProps.note.title &&
+        prevProps.note.isFavorite === nextProps.note.isFavorite &&
+        prevProps.note.updatedAt === nextProps.note.updatedAt &&
+        prevProps.note.content.substring(0, 80) === nextProps.note.content.substring(0, 80)
+    );
+};
+
+export default React.memo(NoteCard, noteCardPropsAreEqual);

@@ -35,6 +35,11 @@ export const useChatProviderLogic = () => {
     const [chatError, setChatError] = useState<string | null>(null);
     const [chatStatus, setChatStatus] = useState<ChatStatus>('idle');
     const streamSessionIdRef = useRef(0);
+    const chatHistoriesRef = useRef(chatHistories);
+
+    useEffect(() => {
+        chatHistoriesRef.current = chatHistories;
+    }, [chatHistories]);
 
     useEffect(() => {
         try {
@@ -43,6 +48,22 @@ export const useChatProviderLogic = () => {
             console.error("Failed to save chat history to localStorage", error);
         }
     }, [debouncedChatHistories]);
+
+    useEffect(() => {
+        const handleBeforeUnload = () => {
+            try {
+                // Use synchronous save on unload to prevent data loss
+                localStorage.setItem(CHAT_HISTORIES_STORAGE_KEY, JSON.stringify(chatHistoriesRef.current));
+            } catch (error) {
+                console.error("Failed to save chat history on unload", error);
+            }
+        };
+
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        return () => {
+            window.removeEventListener('beforeunload', handleBeforeUnload);
+        };
+    }, []);
     
     const onSendMessage = useCallback(async (query: string, image?: string) => {
         const currentSessionId = ++streamSessionIdRef.current;

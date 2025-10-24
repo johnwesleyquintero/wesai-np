@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { SlashCommand } from '../types';
 import { slashCommands } from './slashCommands';
+import { useDynamicPosition } from '../hooks/useDynamicPosition';
 
 interface SlashCommandMenuProps {
     query: string;
@@ -13,6 +14,17 @@ interface SlashCommandMenuProps {
 const SlashCommandMenu: React.FC<SlashCommandMenuProps> = ({ query, onSelect, onClose, position, textareaRef }) => {
     const [selectedIndex, setSelectedIndex] = useState(0);
     const menuRef = useRef<HTMLDivElement>(null);
+
+    const anchorRect = useMemo(() => {
+        if (!position) return null;
+        return new DOMRect(position.left, position.top, 0, 0);
+    }, [position]);
+
+    const style = useDynamicPosition({
+        anchorRect,
+        isOpen: !!position,
+        menuRef
+    });
     
     const filteredCommands = useMemo(() => {
         if (!query) return slashCommands;
@@ -66,7 +78,8 @@ const SlashCommandMenu: React.FC<SlashCommandMenuProps> = ({ query, onSelect, on
     if (filteredCommands.length === 0) {
         return (
              <div
-                style={{ top: position.top, left: position.left }}
+                ref={menuRef}
+                style={style}
                 className="fixed bg-light-background dark:bg-dark-background rounded-lg shadow-xl border border-light-border dark:border-dark-border w-80 z-50 p-4 text-center text-sm text-light-text/60 dark:text-dark-text/60"
             >
                 No commands found.
@@ -77,7 +90,7 @@ const SlashCommandMenu: React.FC<SlashCommandMenuProps> = ({ query, onSelect, on
     return (
         <div
             ref={menuRef}
-            style={{ top: position.top, left: position.left }}
+            style={style}
             className="fixed bg-light-background dark:bg-dark-background rounded-lg shadow-xl border border-light-border dark:border-dark-border w-80 max-h-80 overflow-y-auto z-50 p-2 animate-fade-in-down"
             onMouseDown={(e) => e.preventDefault()} // Prevent textarea from losing focus
         >

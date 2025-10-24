@@ -1,5 +1,6 @@
 
 
+
 import React, { useEffect, useRef, useMemo, useCallback } from 'react';
 import { Note, NoteVersion, Template } from '../types';
 import Toolbar from './Toolbar';
@@ -58,6 +59,11 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         tags: note.tags,
     });
     
+    const latestEditorStateRef = useRef(editorState);
+    useEffect(() => {
+        latestEditorStateRef.current = editorState;
+    }, [editorState]);
+
     const [uiState, dispatch] = useNoteEditorReducer();
     const {
         saveStatus, isHistoryOpen, previewVersion, viewMode, selection, noteLinker, noteLinkerForSelection,
@@ -137,32 +143,25 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
 
     // Robust saving on navigation/unmount
     useEffect(() => {
-        // Capture the state and note associated with this render
         const noteAtMount = note;
-        const stateAtMount = editorState;
 
-        // The cleanup function will run when the component unmounts OR before this effect runs again
-        // due to a dependency change (i.e., when switching to a new note).
         return () => {
-            // Use the state captured at the time the effect was set up
-            const latestStateForNote = editorState;
+            // Use the state from the ref, which is always up-to-date
+            const latestStateForNote = latestEditorStateRef.current;
+            
             const isDirty = JSON.stringify(latestStateForNote) !== JSON.stringify({
                 title: noteAtMount.title,
                 content: noteAtMount.content,
                 tags: noteAtMount.tags,
             });
 
-            // If the content has changed, perform an immediate save.
             if (isDirty) {
-                // Do not await this, as it should not block navigation
                 updateNote(noteAtMount.id, latestStateForNote).catch(error => {
                      console.error("Failed to save note on unmount/change:", error);
-                     // Optionally show a toast to the user about the failed background save
                      showToast({ message: `Failed to save "${noteAtMount.title}".`, type: 'error' });
                 });
             }
         };
-    // Re-run this effect only when the note ID changes, which signals a navigation to a new note.
     }, [note.id, updateNote, showToast]);
 
 

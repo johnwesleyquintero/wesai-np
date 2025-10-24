@@ -17,6 +17,13 @@ export const useSpellcheck = (content: string, isDisabled: boolean) => {
     const spellingCheckIdRef = useRef(0);
     const lastAnalyzedContentForSpellingRef = useRef<string|null>(null);
 
+    useEffect(() => {
+        // When content changes, invalidate old errors immediately
+        // to prevent highlights on incorrect positions.
+        setSpellingErrors([]);
+        setActiveSpellingError(null);
+    }, [content]);
+
     // Debounced spell check
     useEffect(() => {
         if (isDisabled) {

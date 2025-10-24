@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useLayoutEffect } from 'react';
 import { InlineAction } from '../types';
 import { SparklesIcon, BoldIcon, ItalicIcon, CodeBracketIcon, LinkIcon, ChevronDownIcon } from './Icons';
 
@@ -32,6 +32,41 @@ const FormatButton: React.FC<{ onClick: () => void, 'aria-label': string, childr
 
 const InlineAiMenu: React.FC<InlineAiMenuProps> = ({ selection, onAction, onFormat, isLoading, onClose }) => {
     const [isAiMenuOpen, setIsAiMenuOpen] = useState(false);
+    const menuRef = useRef<HTMLDivElement>(null);
+    const [style, setStyle] = useState<React.CSSProperties>({ opacity: 0, position: 'fixed' });
+
+    useLayoutEffect(() => {
+        if (selection && menuRef.current) {
+            const menuWidth = menuRef.current.offsetWidth;
+            const menuHeight = menuRef.current.offsetHeight;
+            const { innerWidth, innerHeight } = window;
+            const { top, bottom, left } = selection.rect;
+            
+            let newTop = bottom + 8;
+            let newLeft = left;
+
+            // Adjust if it goes off-screen vertically
+            if (newTop + menuHeight > innerHeight) {
+                newTop = top - menuHeight - 8; // Position above the selection
+            }
+
+            // Adjust if it goes off-screen horizontally
+            if (newLeft + menuWidth > innerWidth) {
+                newLeft = innerWidth - menuWidth - 10;
+            }
+            if (newLeft < 10) newLeft = 10;
+
+            setStyle({
+                position: 'fixed',
+                top: `${newTop}px`,
+                left: `${newLeft}px`,
+                opacity: 1,
+                zIndex: 50,
+                transition: 'opacity 0.1s ease-in-out',
+            });
+        }
+    }, [selection, isAiMenuOpen]); // Recalculate if AI menu opens/closes, as height changes
+
 
     if (!selection) return null;
 
@@ -44,28 +79,28 @@ const InlineAiMenu: React.FC<InlineAiMenuProps> = ({ selection, onAction, onForm
         onFormat(format);
     };
     
-    // Position the menu below the selection. Adjust left position to not go off-screen.
-    const menuWidth = 240;
-    const leftPosition = Math.max(5, Math.min(selection.rect.left + window.scrollX, window.innerWidth - (menuWidth + 10)));
-    const menuStyle: React.CSSProperties = {
-        position: 'fixed',
-        top: `${selection.rect.bottom + 8}px`,
-        left: `${leftPosition}px`,
-        zIndex: 50,
-        width: `${menuWidth}px`,
-    };
-
     if (isLoading) {
+        const { top, bottom, left } = selection.rect;
+        const { innerHeight } = window;
+        const spinnerHeight = 40; // Approx height of spinner
+        const loadingTop = bottom + 8 + spinnerHeight > innerHeight ? top - spinnerHeight - 8 : bottom + 8;
+
+        const loadingStyle: React.CSSProperties = {
+            position: 'fixed',
+            top: `${loadingTop}px`,
+            left: `${left}px`,
+            zIndex: 50,
+        };
         return (
-            <div style={{...menuStyle, width: 'auto'}} className="bg-light-ui dark:bg-dark-ui p-2 rounded-full shadow-xl flex items-center animate-pulse">
+            <div style={loadingStyle} className="bg-light-ui dark:bg-dark-ui p-2 rounded-full shadow-xl flex items-center animate-pulse">
                  <SparklesIcon className="w-5 h-5 text-light-primary dark:text-dark-primary"/>
             </div>
         )
     }
 
     return (
-        <div style={menuStyle} onMouseDown={(e) => e.preventDefault()}>
-            <div className="bg-light-background dark:bg-dark-background rounded-lg shadow-xl border border-light-border dark:border-dark-border animate-fade-in-down">
+        <div ref={menuRef} style={style} onMouseDown={(e) => e.preventDefault()}>
+            <div className="bg-light-background dark:bg-dark-background rounded-lg shadow-xl border border-light-border dark:border-dark-border animate-fade-in-down w-[240px]">
                 <div className="flex justify-around items-center p-1 border-b border-light-border dark:border-dark-border">
                     <FormatButton onClick={() => handleFormatClick('bold')} aria-label="Bold"><BoldIcon /></FormatButton>
                     <FormatButton onClick={() => handleFormatClick('italic')} aria-label="Italic"><ItalicIcon /></FormatButton>

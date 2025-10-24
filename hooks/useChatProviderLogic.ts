@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { ChatMessage, Note, ChatMode, ChatStatus } from '../types';
 import { getStreamingChatResponse, semanticSearchNotes, generateCustomerResponse, getGeneralChatSession, resetGeneralChat } from '../services/geminiService';
 import { useStoreContext } from '../context/AppContext';
@@ -34,6 +34,7 @@ export const useChatProviderLogic = () => {
     const debouncedChatHistories = useDebounce(chatHistories, 1000);
     const [chatError, setChatError] = useState<string | null>(null);
     const [chatStatus, setChatStatus] = useState<ChatStatus>('idle');
+    const streamSessionIdRef = useRef(0);
 
     useEffect(() => {
         try {
@@ -44,6 +45,7 @@ export const useChatProviderLogic = () => {
     }, [debouncedChatHistories]);
     
     const onSendMessage = useCallback(async (query: string, image?: string) => {
+        const currentSessionId = ++streamSessionIdRef.current;
         setChatError(null);
         const newUserMessage: ChatMessage = { role: 'user', content: query, image };
         setChatHistories(prev => ({ ...prev, [chatMode]: [...prev[chatMode], newUserMessage] }));
@@ -51,13 +53,19 @@ export const useChatProviderLogic = () => {
         try {
             const sourceNoteIds = await semanticSearchNotes(query, notes);
             const sourceNotes = sourceNoteIds.map(id => getNoteById(id)).filter((n): n is Note => !!n);
+            
+            if (currentSessionId !== streamSessionIdRef.current) return;
+            
             setChatStatus('replying');
             const stream = await getStreamingChatResponse(query, sourceNotes, image);
             const newAiMessage: ChatMessage = { role: 'ai', content: '', sources: sourceNotes };
+            
+            if (currentSessionId !== streamSessionIdRef.current) return;
             setChatHistories(prev => ({ ...prev, [chatMode]: [...prev[chatMode], newAiMessage] }));
 
             let fullResponse = '';
             for await (const chunk of stream) {
+                if (currentSessionId !== streamSessionIdRef.current) break; // Invalidate stream if chat is cleared
                 fullResponse += chunk.text;
                 setChatHistories(prev => {
                     const currentModeHistory = [...prev[chatMode]];
@@ -71,12 +79,15 @@ export const useChatProviderLogic = () => {
                 });
             }
         } catch (error) {
+            if (currentSessionId !== streamSessionIdRef.current) return;
             const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
             setChatError(errorMessage);
             const errorAiMessage: ChatMessage = { role: 'ai', content: `Sorry, I ran into an error: ${errorMessage}` };
             setChatHistories(prev => ({ ...prev, [chatMode]: [...prev[chatMode], errorAiMessage] }));
         } finally {
-            setChatStatus('idle');
+            if (currentSessionId === streamSessionIdRef.current) {
+                setChatStatus('idle');
+            }
         }
     }, [chatMode, getNoteById, notes]);
 
@@ -259,6 +270,7 @@ export const useChatProviderLogic = () => {
     }, [chatMode, onAddNote, notes, getNoteById, updateNoteInStore, deleteNote, activeNoteId, store, collections, setActiveNoteId]);
 
     const clearChat = useCallback(() => {
+        streamSessionIdRef.current++; // Invalidate any in-flight streaming sessions
         setChatHistories(prev => ({ ...prev, [chatMode]: [] }));
         setChatError(null);
         setChatStatus('idle');

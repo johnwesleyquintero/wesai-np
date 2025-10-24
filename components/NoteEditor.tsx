@@ -1,7 +1,7 @@
 
+
 import React, { useEffect, useRef, useMemo, useCallback } from 'react';
 import { Note, NoteVersion, Template } from '../types';
-import { useDebounce } from '../hooks/useDebounce';
 import Toolbar from './Toolbar';
 import TagInput from './TagInput';
 import VersionHistorySidebar from './VersionHistorySidebar';
@@ -91,8 +91,6 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
     const titleInputRef = useRef<HTMLInputElement>(null);
     const editorPaneRef = useRef<HTMLDivElement>(null);
 
-    const debouncedEditorState = useDebounce(editorState, 5000);
-
     const displayedTitle = previewVersion ? previewVersion.title : editorState.title;
     const displayedContent = previewVersion ? previewVersion.content : editorState.content;
     const displayedTags = previewVersion ? previewVersion.tags : editorState.tags;
@@ -137,16 +135,36 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         dispatch({ type: 'SET_SAVE_STATUS', payload: isDirty ? 'unsaved' : 'saved' });
     }, [editorState, note.title, note.content, note.tags, previewVersion]);
 
-    // Debounced saving action
+    // Robust saving on navigation/unmount
     useEffect(() => {
-        if (!!previewVersion) return;
-        const isDifferentFromPersisted = JSON.stringify(debouncedEditorState) !== JSON.stringify({ title: note.title, content: note.content, tags: note.tags });
-        if (saveStatus === 'unsaved' && isDifferentFromPersisted) {
-            dispatch({ type: 'SET_SAVE_STATUS', payload: 'saving' });
-            updateNote(note.id, debouncedEditorState);
-            setTimeout(() => dispatch({ type: 'SET_SAVE_STATUS', payload: 'saved' }), 1000);
-        }
-    }, [debouncedEditorState, note.id, updateNote, saveStatus, previewVersion, note.title, note.content, note.tags]);
+        // Capture the state and note associated with this render
+        const noteAtMount = note;
+        const stateAtMount = editorState;
+
+        // The cleanup function will run when the component unmounts OR before this effect runs again
+        // due to a dependency change (i.e., when switching to a new note).
+        return () => {
+            // Use the state captured at the time the effect was set up
+            const latestStateForNote = editorState;
+            const isDirty = JSON.stringify(latestStateForNote) !== JSON.stringify({
+                title: noteAtMount.title,
+                content: noteAtMount.content,
+                tags: noteAtMount.tags,
+            });
+
+            // If the content has changed, perform an immediate save.
+            if (isDirty) {
+                // Do not await this, as it should not block navigation
+                updateNote(noteAtMount.id, latestStateForNote).catch(error => {
+                     console.error("Failed to save note on unmount/change:", error);
+                     // Optionally show a toast to the user about the failed background save
+                     showToast({ message: `Failed to save "${noteAtMount.title}".`, type: 'error' });
+                });
+            }
+        };
+    // Re-run this effect only when the note ID changes, which signals a navigation to a new note.
+    }, [note.id, updateNote, showToast]);
+
 
     // Register editor actions with the App context
     const editorActions = useMemo(() => ({ 

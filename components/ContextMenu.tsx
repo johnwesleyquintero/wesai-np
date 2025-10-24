@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState, useLayoutEffect } from 'react';
 import { ContextMenuItem } from '../types';
 
 interface ContextMenuProps {
@@ -10,6 +10,41 @@ interface ContextMenuProps {
 
 const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, items, onClose }) => {
     const menuRef = useRef<HTMLDivElement>(null);
+    const [style, setStyle] = useState<React.CSSProperties>({
+        opacity: 0,
+        position: 'fixed',
+        top: `${y}px`,
+        left: `${x}px`,
+    });
+
+    useLayoutEffect(() => {
+        if (menuRef.current) {
+            const menuWidth = menuRef.current.offsetWidth;
+            const menuHeight = menuRef.current.offsetHeight;
+            const { innerWidth, innerHeight } = window;
+
+            let newTop = y;
+            let newLeft = x;
+
+            if (y + menuHeight > innerHeight) {
+                newTop = innerHeight - menuHeight - 10;
+            }
+            if (x + menuWidth > innerWidth) {
+                newLeft = innerWidth - menuWidth - 10;
+            }
+
+            if (newTop < 10) newTop = 10;
+            if (newLeft < 10) newLeft = 10;
+            
+            setStyle({
+                opacity: 1,
+                position: 'fixed',
+                top: `${newTop}px`,
+                left: `${newLeft}px`,
+                transition: 'opacity 0.1s ease-in-out',
+            });
+        }
+    }, [x, y]);
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -23,27 +58,13 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, items, onClose }) => {
             document.removeEventListener('mousedown', handleClickOutside);
         };
     }, [onClose]);
-    
-    // Adjust position if menu would go off-screen
-    const menuStyle: React.CSSProperties = {
-        top: y,
-        left: x,
-        position: 'fixed',
-        transform: 'translate(0, 0)',
-    };
-    if (y + (menuRef.current?.offsetHeight || 0) > window.innerHeight) {
-        menuStyle.top = window.innerHeight - (menuRef.current?.offsetHeight || 0) - 10;
-    }
-    if (x + (menuRef.current?.offsetWidth || 0) > window.innerWidth) {
-        menuStyle.left = window.innerWidth - (menuRef.current?.offsetWidth || 0) - 10;
-    }
 
 
     return (
         <div
             ref={menuRef}
-            style={menuStyle}
-            className="z-50 bg-light-background dark:bg-dark-background rounded-lg shadow-xl border border-light-border dark:border-dark-border w-56 animate-fade-in-down py-1"
+            style={{ ...style, zIndex: 50 }}
+            className="bg-light-background dark:bg-dark-background rounded-lg shadow-xl border border-light-border dark:border-dark-border w-56 animate-fade-in-down py-1"
         >
             {items.map((item, index) => (
                 <button

@@ -49,7 +49,7 @@ const Auth: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
                     email,
                     password,
                     options: {
-                        emailRedirectTo: 'https://wesai-np.vercel.app/',
+                        emailRedirectTo: window.location.origin,
                     },
                 });
                 if (error) throw error;

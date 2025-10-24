@@ -1,6 +1,7 @@
 import React from 'react';
 import { NoteVersion } from '../types';
 import { XMarkIcon } from './Icons';
+import { formatDate } from '../lib/dateUtils';
 
 interface VersionHistorySidebarProps {
     history: NoteVersion[];
@@ -11,14 +12,6 @@ interface VersionHistorySidebarProps {
 }
 
 const VersionHistorySidebar: React.FC<VersionHistorySidebarProps> = ({ history, onClose, onPreview, onRestore, activeVersionTimestamp }) => {
-    
-    const formatDateTime = (dateString: string) => {
-        const date = new Date(dateString);
-        return date.toLocaleString(undefined, {
-            dateStyle: 'medium',
-            timeStyle: 'short',
-        });
-    };
     
     return (
         <aside className="w-80 bg-light-ui dark:bg-dark-ui border-l border-light-border dark:border-dark-border flex flex-col h-full flex-shrink-0">
@@ -39,7 +32,7 @@ const VersionHistorySidebar: React.FC<VersionHistorySidebarProps> = ({ history, 
                         >
                             <div onClick={() => activeVersionTimestamp === version.savedAt ? onPreview(null) : onPreview(version)}>
                                 <p className="font-semibold text-sm">
-                                    {formatDateTime(version.savedAt)}
+                                    {formatDate(version.savedAt, 'medium')}
                                 </p>
                                 <p className="text-xs text-light-text/70 dark:text-dark-text/70 truncate">
                                     {version.content.substring(0, 50) || "No content"}...

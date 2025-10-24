@@ -2,6 +2,7 @@ import React from 'react';
 import { Note } from '../types';
 import { StarIcon } from './Icons';
 import Highlight from './Highlight';
+import { formatDate } from '../lib/dateUtils';
 
 interface NoteCardProps {
     note: Note;
@@ -13,13 +14,6 @@ interface NoteCardProps {
 
 const NoteCard: React.FC<NoteCardProps> = ({ note, isActive, onClick, searchTerm, onContextMenu }) => {
     const preview = note.content.substring(0, 80) + (note.content.length > 80 ? '...' : '');
-
-    const formatDate = (dateString: string) => {
-        const date = new Date(dateString);
-        return date.toLocaleDateString(undefined, {
-            year: 'numeric', month: 'short', day: 'numeric'
-        });
-    }
 
     return (
         <div
@@ -43,4 +37,4 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isActive, onClick, searchTerm
     );
 };
 
-export default NoteCard;
+export default React.memo(NoteCard);

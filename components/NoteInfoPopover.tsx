@@ -1,5 +1,6 @@
 import React from 'react';
 import { Note } from '../types';
+import { formatDate } from '../lib/dateUtils';
 
 interface NoteInfoPopoverProps {
     note: Note;
@@ -8,13 +9,6 @@ interface NoteInfoPopoverProps {
 }
 
 const NoteInfoPopover: React.FC<NoteInfoPopoverProps> = ({ note, wordCount, charCount }) => {
-
-    const formatDate = (dateString: string) => {
-        return new Date(dateString).toLocaleString(undefined, {
-            dateStyle: 'long',
-            timeStyle: 'short'
-        });
-    };
     
     // Simple reading time calculation
     const readingTime = Math.ceil(wordCount / 200);
@@ -25,11 +19,11 @@ const NoteInfoPopover: React.FC<NoteInfoPopoverProps> = ({ note, wordCount, char
             <div className="space-y-2 text-light-text/80 dark:text-dark-text/80">
                 <div className="flex justify-between">
                     <span className="font-semibold">Created:</span>
-                    <span>{formatDate(note.createdAt)}</span>
+                    <span>{formatDate(note.createdAt, 'long')}</span>
                 </div>
                 <div className="flex justify-between">
                     <span className="font-semibold">Last Modified:</span>
-                    <span>{formatDate(note.updatedAt)}</span>
+                    <span>{formatDate(note.updatedAt, 'long')}</span>
                 </div>
                 <div className="border-t border-light-border dark:border-dark-border my-2"></div>
                 <div className="flex justify-between">

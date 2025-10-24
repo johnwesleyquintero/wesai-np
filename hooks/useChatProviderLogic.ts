@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { ChatMessage, Note, ChatMode } from '../types';
+import { ChatMessage, Note, ChatMode, ChatStatus } from '../types';
 import { getStreamingChatResponse, semanticSearchNotes, generateCustomerResponse, getGeneralChatSession, resetGeneralChat } from '../services/geminiService';
 import { useStoreContext } from '../context/AppContext';
 
@@ -31,7 +31,7 @@ export const useChatProviderLogic = () => {
     });
 
     const [chatError, setChatError] = useState<string | null>(null);
-    const [chatStatus, setChatStatus] = useState<'idle' | 'searching' | 'replying' | 'using_tool'>('idle');
+    const [chatStatus, setChatStatus] = useState<ChatStatus>('idle');
 
     useEffect(() => {
         try {

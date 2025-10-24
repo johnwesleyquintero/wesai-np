@@ -3,7 +3,7 @@ import Sidebar from './components/Sidebar';
 import { useStoreContext } from './context/AppContext';
 import { Note, NoteVersion, Collection, SmartCollection } from './types';
 import ConfirmationModal from './components/ConfirmationModal';
-import { Bars3Icon, PlusIcon, SparklesIcon, ArrowDownTrayIcon, Cog6ToothIcon, LockClosedIcon, RocketLaunchIcon, ServerStackIcon, TrendingUpIcon } from './components/Icons';
+import { Bars3Icon, PlusIcon, SparklesIcon, ArrowDownTrayIcon, Cog6ToothIcon, LockClosedIcon, RocketLaunchIcon, ServerStackIcon, TrendingUpIcon, PencilSquareIcon } from './components/Icons';
 import { AppProvider, useUIContext, useAuthContext } from './context/AppContext';
 import ContextMenu from './components/ContextMenu';
 import { ToastProvider, useToast } from './context/ToastContext';
@@ -68,6 +68,25 @@ const LandingPage: React.FC<{ onGetStarted: () => void }> = ({ onGetStarted }) =
         }
     ];
 
+    const useCases = [
+        {
+            icon: <RocketLaunchIcon className="w-8 h-8 text-light-primary dark:text-dark-primary" />,
+            title: 'For Founders & Strategists',
+            description: 'Connect market research, meeting notes, and roadmaps. Use the AI to synthesize information and find the signal in the noise.',
+        },
+        {
+            icon: <Cog6ToothIcon className="w-8 h-8 text-light-primary dark:text-dark-primary" />,
+            title: 'For Operators & Managers',
+            description: 'Build your operational playbook. Document processes, draft customer responses, and ensure team consistency with an AI-powered knowledge base.',
+        },
+        {
+            icon: <PencilSquareIcon className="w-8 h-8 text-light-primary dark:text-dark-primary" />,
+            title: 'For Creators & Writers',
+            description: 'Organize research, conquer writer\'s block, and refine your drafts. Let the AI assistant help you expand on ideas and structure your masterpiece.',
+        },
+    ];
+
+
     return (
         <div className="w-full min-h-screen bg-light-background dark:bg-dark-background text-light-text dark:text-dark-text">
             <header className="absolute top-0 left-0 right-0 p-4 z-10">
@@ -101,16 +120,23 @@ const LandingPage: React.FC<{ onGetStarted: () => void }> = ({ onGetStarted }) =
                                 Get Started for Free
                             </button>
                         </div>
-                         <div className="mt-16 mx-auto max-w-4xl h-80 bg-zinc-800 rounded-xl shadow-2xl p-4 border border-zinc-700 flex gap-3 animate-fade-in-down">
-                            <div className="w-1/4 bg-zinc-900/50 rounded-lg p-2 space-y-2">
-                                <div className="h-4 w-3/4 bg-zinc-700 rounded animate-pulse"></div>
-                                <div className="h-3 w-1/2 bg-zinc-700 rounded animate-pulse [animation-delay:0.2s]"></div>
-                                <div className="h-3 w-5/6 bg-zinc-700 rounded animate-pulse [animation-delay:0.4s]"></div>
+                         <div className="mt-16 mx-auto max-w-4xl h-80 bg-zinc-900 rounded-xl shadow-2xl p-4 border border-zinc-700 flex flex-col font-mono text-sm text-zinc-400 overflow-hidden relative">
+                            <div className="animate-step1">
+                                <p className="text-zinc-500">// Messy meeting notes...</p>
+                                <p><span className="text-zinc-500">&gt;</span> Discuss Q3 launch</p>
+                                <p><span className="text-zinc-500">&gt;</span> John: need to finalize marketing copy</p>
+                                <p><span className="text-zinc-500">&gt;</span> Jane: budget is tight, focus on organic</p>
+                                <p><span className="text-zinc-500">&gt;</span> Action: JW to draft blog post</p>
                             </div>
-                            <div className="w-3/4 bg-zinc-900/50 rounded-lg p-4 space-y-3">
-                                <div className="h-6 w-1/2 bg-zinc-700 rounded animate-pulse [animation-delay:0.3s]"></div>
-                                <div className="h-4 w-full bg-zinc-700 rounded animate-pulse [animation-delay:0.5s]"></div>
-                                <div className="h-4 w-5/6 bg-zinc-700 rounded animate-pulse [animation-delay:0.7s]"></div>
+                            <div className="animate-step2">
+                                <p className="text-green-400">/summarize<span className="inline-block w-px h-4 bg-green-400 animate-pulse ml-0.5"></span></p>
+                            </div>
+                            <div className="animate-step3">
+                                <p className="text-zinc-300 font-bold">[✨ AI Summary]</p>
+                                <p className="text-zinc-300">The team discussed the Q3 launch, noting a tight budget requires a focus on organic marketing. John will draft a blog post to support this.</p>
+                                <p className="text-zinc-300 font-bold mt-2">[✅ Action Items]</p>
+                                <p className="text-zinc-300">- [ ] Finalize Q3 marketing copy</p>
+                                <p className="text-zinc-300">- [ ] Draft blog post for organic marketing</p>
                             </div>
                         </div>
                     </div>
@@ -151,13 +177,35 @@ const LandingPage: React.FC<{ onGetStarted: () => void }> = ({ onGetStarted }) =
                     </div>
                 </section>
 
-                <section className="py-24 bg-light-ui/50 dark:bg-dark-ui/50">
+                <section className="py-20 bg-light-ui/50 dark:bg-dark-ui/50">
+                    <div className="container mx-auto px-4">
+                        <div className="text-center max-w-3xl mx-auto">
+                            <h2 className="text-3xl font-bold">A Power Tool for Every Thinker</h2>
+                            <p className="mt-4 text-lg text-light-text/70 dark:text-dark-text/70">
+                                Whether you're building a company, running a team, or creating content, WesAI Notepad adapts to your workflow.
+                            </p>
+                        </div>
+                        <div className="mt-16 grid md:grid-cols-3 gap-10">
+                            {useCases.map((useCase, index) => (
+                                <div key={index}>
+                                    <div className="flex justify-center items-center w-16 h-16 mx-auto mb-6 bg-light-background dark:bg-dark-background rounded-full border border-light-border dark:border-dark-border">
+                                        {useCase.icon}
+                                    </div>
+                                    <h3 className="text-xl font-bold text-center">{useCase.title}</h3>
+                                    <p className="mt-2 text-light-text/70 dark:text-dark-text/70 text-center">{useCase.description}</p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </section>
+
+                <section className="py-24 bg-light-background dark:bg-dark-background">
                     <div className="container mx-auto px-4 text-center max-w-5xl">
                         <h2 className="text-3xl font-bold mb-12">The Philosophy</h2>
                         <div className="grid md:grid-cols-3 gap-10">
                             {principles.map((principle, index) => (
                                  <div key={index} className="text-center">
-                                    <div className="flex justify-center items-center w-16 h-16 mx-auto mb-4 bg-light-background dark:bg-dark-background rounded-full border border-light-border dark:border-dark-border">
+                                    <div className="flex justify-center items-center w-16 h-16 mx-auto mb-4 bg-light-ui/50 dark:bg-dark-ui/50 rounded-full border border-light-border dark:border-dark-border">
                                         {principle.icon}
                                     </div>
                                     <h3 className="text-xl font-bold">{principle.title}</h3>
@@ -345,7 +393,6 @@ function AppContent() {
                         <NoteEditor
                             key={activeNote.id}
                             note={activeNote}
-                            templates={templates}
                         />
                     );
                 }

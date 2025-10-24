@@ -51,6 +51,32 @@
         color: #f5f5f4; /* stone-100 */
         border-color: #3f3f46; /* zinc-700 */
     }
+    .animate-step1, .animate-step2, .animate-step3 {
+        opacity: 0;
+        animation-fill-mode: forwards;
+        position: absolute;
+        top: 1rem;
+        left: 1rem;
+        right: 1rem;
+    }
+    @keyframes demo-flow {
+        0%, 100% { opacity: 0; }
+        5%, 35% { opacity: 1; } /* Step 1 visible */
+        40%, 100% { opacity: 0; }
+    }
+    @keyframes demo-flow-2 {
+        0%, 40% { opacity: 0; }
+        45%, 60% { opacity: 1; } /* Step 2 visible */
+        65%, 100% { opacity: 0; }
+    }
+    @keyframes demo-flow-3 {
+        0%, 65% { opacity: 0; }
+        70%, 95% { opacity: 1; } /* Step 3 visible */
+    }
+
+    .animate-step1 { animation: demo-flow 10s infinite; }
+    .animate-step2 { animation: demo-flow-2 10s infinite; }
+    .animate-step3 { animation: demo-flow-3 10s infinite; }
   </style>
   <script type="importmap">
 {

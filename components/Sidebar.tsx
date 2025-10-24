@@ -5,7 +5,9 @@ import {
     PencilSquareIcon, Cog6ToothIcon, SunIcon, MoonIcon, XMarkIcon, MagnifyingGlassIcon, SparklesIcon,
     PlusIcon, FolderPlusIcon, BrainIcon, StarIcon, ChevronDownIcon, ChevronRightIcon,
     ChevronDoubleLeftIcon, FolderIcon,
-    TrashIcon
+    TrashIcon,
+    ChartBarIcon,
+    TrendingUpIcon
 } from './Icons';
 import SidebarNode from './SidebarNode';
 import Highlight from './Highlight';
@@ -382,6 +384,22 @@ const Sidebar: React.FC<SidebarProps> = ({
             <div className="p-2 flex-shrink-0 border-t border-light-border dark:border-dark-border">
                 <div className="flex justify-end items-center space-x-1">
                     <FooterButton
+                        onClick={() => setView('TREND_ANALYSIS')}
+                        tooltip="Trend Analysis"
+                        isActive={view === 'TREND_ANALYSIS'}
+                    >
+                        <TrendingUpIcon />
+                    </FooterButton>
+
+                    <FooterButton
+                        onClick={() => setView('CTR_ANALYTICS')}
+                        tooltip="CTR Analytics"
+                        isActive={view === 'CTR_ANALYTICS'}
+                    >
+                        <ChartBarIcon />
+                    </FooterButton>
+
+                    <FooterButton
                         onClick={() => setView('CHAT')}
                         tooltip="Ask AI"
                         isActive={view === 'CHAT'}
@@ -440,15 +458,21 @@ const Sidebar: React.FC<SidebarProps> = ({
 
         {/* Footer actions */}
         <div className="flex flex-col space-y-1 flex-shrink-0">
-          <FooterButton onClick={() => setView('CHAT')} tooltip="Ask AI" isActive={view === 'CHAT'}>
-            <SparklesIcon />
-          </FooterButton>
-          <FooterButton onClick={toggleTheme} tooltip={`Switch to ${theme === 'light' ? 'Dark' : 'Light'} Mode`}>
-            {theme === 'light' ? <MoonIcon /> : <SunIcon />}
-          </FooterButton>
-          <FooterButton onClick={openSettings} tooltip="Settings" hasIndicator={isApiKeyMissing}>
-            <Cog6ToothIcon />
-          </FooterButton>
+            <FooterButton onClick={() => setView('TREND_ANALYSIS')} tooltip="Trend Analysis" isActive={view === 'TREND_ANALYSIS'}>
+                <TrendingUpIcon />
+            </FooterButton>
+            <FooterButton onClick={() => setView('CTR_ANALYTICS')} tooltip="CTR Analytics" isActive={view === 'CTR_ANALYTICS'}>
+                <ChartBarIcon />
+            </FooterButton>
+            <FooterButton onClick={() => setView('CHAT')} tooltip="Ask AI" isActive={view === 'CHAT'}>
+                <SparklesIcon />
+            </FooterButton>
+            <FooterButton onClick={toggleTheme} tooltip={`Switch to ${theme === 'light' ? 'Dark' : 'Light'} Mode`}>
+                {theme === 'light' ? <MoonIcon /> : <SunIcon />}
+            </FooterButton>
+            <FooterButton onClick={openSettings} tooltip="Settings" hasIndicator={isApiKeyMissing}>
+                <Cog6ToothIcon />
+            </FooterButton>
         </div>
       </div>
     );

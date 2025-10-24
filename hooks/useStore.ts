@@ -414,6 +414,44 @@ export const useStore = (user: User | undefined) => {
         });
     }, [user]);
     
+    const getSuggestionAnalytics = useCallback(async () => {
+        if (!user) return [];
+        const { data, error } = await supabase
+            .from('ai_suggestion_feedback')
+            .select('source_note_id, suggested_note_id, was_clicked');
+        
+        if (error) {
+            console.error('Error fetching suggestion analytics:', error);
+            return [];
+        }
+
+        if (!data) return [];
+        
+        const aggregation: Record<string, { impressions: number; clicks: number }> = {};
+
+        data.forEach(row => {
+            const key = `${row.source_note_id}|${row.suggested_note_id}`;
+            if (!aggregation[key]) {
+                aggregation[key] = { impressions: 0, clicks: 0 };
+            }
+            aggregation[key].impressions += 1;
+            if (row.was_clicked) {
+                aggregation[key].clicks += 1;
+            }
+        });
+
+        return Object.entries(aggregation).map(([key, value]) => {
+            const [sourceNoteId, suggestedNoteId] = key.split('|');
+            return {
+                sourceNoteId,
+                suggestedNoteId,
+                impressions: value.impressions,
+                clicks: value.clicks,
+                ctr: value.impressions > 0 ? (value.clicks / value.impressions) * 100 : 0,
+            };
+        });
+    }, [user]);
+
     return { 
         loading,
         notes, collections, smartCollections, templates,
@@ -423,5 +461,6 @@ export const useStore = (user: User | undefined) => {
         addTemplate, updateTemplate, deleteTemplate,
         importData,
         logAiSuggestionEvent,
+        getSuggestionAnalytics,
     };
 };

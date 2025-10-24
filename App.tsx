@@ -14,6 +14,8 @@ import { isSupabaseConfigured, setupStorageBucket } from './lib/supabaseClient';
 import NoteEditorSkeleton from './components/NoteEditorSkeleton';
 import ChatViewSkeleton from './components/ChatViewSkeleton';
 import ApiKeyIndicator from './components/ApiKeyIndicator';
+import AnalyticsDashboardSkeleton from './components/AnalyticsDashboardSkeleton';
+import TrendAnalysisDashboardSkeleton from './components/TrendAnalysisDashboardSkeleton';
 
 const NoteEditor = React.lazy(() => import('./components/NoteEditor'));
 const ChatView = React.lazy(() => import('./components/ChatView'));
@@ -21,6 +23,8 @@ const CommandPalette = React.lazy(() => import('./components/CommandPalette'));
 const SettingsModal = React.lazy(() => import('./components/SettingsModal'));
 const SmartFolderModal = React.lazy(() => import('./components/SmartFolderModal'));
 const WelcomeModal = React.lazy(() => import('./components/WelcomeModal'));
+const AnalyticsDashboard = React.lazy(() => import('./components/AnalyticsDashboard'));
+const TrendAnalysisDashboard = React.lazy(() => import('./components/TrendAnalysisDashboard'));
 
 
 const WELCOME_SCREEN_SIDEBAR_WIDTH_KEY = 'wesai-sidebar-width';
@@ -200,25 +204,42 @@ function AppContent() {
 
 
     const renderMainView = () => {
-        if (view === 'CHAT') {
-            return <ChatView />;
+        switch (view) {
+            case 'CHAT':
+                return <ChatView />;
+            case 'CTR_ANALYTICS':
+                return <AnalyticsDashboard />;
+            case 'TREND_ANALYSIS':
+                return <TrendAnalysisDashboard />;
+            case 'NOTES':
+            default:
+                if (activeNote) {
+                    return (
+                        <NoteEditor
+                            key={activeNote.id}
+                            note={activeNote}
+                            onRestoreVersion={handleRestoreVersion}
+                            templates={templates}
+                        />
+                    );
+                }
+                return <WelcomeScreen isMobileView={isMobileView} onToggleSidebar={() => setIsSidebarOpen(true)} onAddNote={() => onAddNote()} />;
         }
-
-        if (activeNote) {
-            return (
-                <NoteEditor
-                    key={activeNote.id}
-                    note={activeNote}
-                    onRestoreVersion={handleRestoreVersion}
-                    templates={templates}
-                />
-            );
-        }
-
-        return <WelcomeScreen isMobileView={isMobileView} onToggleSidebar={() => setIsSidebarOpen(true)} onAddNote={() => onAddNote()} />;
     };
     
-    const suspenseFallback = view === 'CHAT' ? <ChatViewSkeleton /> : <NoteEditorSkeleton />;
+    const suspenseFallback = useMemo(() => {
+        switch (view) {
+            case 'CHAT':
+                return <ChatViewSkeleton />;
+            case 'CTR_ANALYTICS':
+                return <AnalyticsDashboardSkeleton />;
+            case 'TREND_ANALYSIS':
+                return <TrendAnalysisDashboardSkeleton />;
+            case 'NOTES':
+            default:
+                return <NoteEditorSkeleton />;
+        }
+    }, [view]);
 
     return (
         <div className="flex h-screen w-screen font-sans text-light-text dark:text-dark-text bg-light-background dark:bg-dark-background overflow-hidden">

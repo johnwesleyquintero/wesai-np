@@ -661,6 +661,54 @@ TEXT: """${text}"""`;
             throw handleGeminiError(error, "spelling suggestions");
         }
     };
+
+    public suggestNoteConsolidation = async (note1: Note, note2: Note): Promise<{ title: string; content: string }> => {
+        try {
+            const ai = this.getAi();
+            const schema = {
+                type: Type.OBJECT,
+                properties: {
+                    title: {
+                        type: Type.STRING,
+                        description: 'A new, concise title for the consolidated note.',
+                    },
+                    content: {
+                        type: Type.STRING,
+                        description: 'A comprehensive, well-structured body for the new note in Markdown format that merges the key ideas from both source notes.',
+                    },
+                },
+                required: ['title', 'content'],
+            };
+            
+            const prompt = `You are an expert at knowledge synthesis. Analyze the following two notes and create a single, consolidated note that merges their key ideas. Provide a new, concise title and a comprehensive body in Markdown format. The goal is to create a unified, well-structured note that preserves important information from both.
+
+**Note 1 Title:** "${note1.title}"
+**Note 1 Content:**
+"""
+${note1.content}
+"""
+
+**Note 2 Title:** "${note2.title}"
+**Note 2 Content:**
+"""
+${note2.content}
+"""`;
+
+            const response = await ai.models.generateContent({
+                model: 'gemini-2.5-flash',
+                contents: [{ parts: [{ text: prompt }] }],
+                config: {
+                    responseMimeType: "application/json",
+                    responseSchema: schema,
+                }
+            });
+
+            const responseText = response.text.trim();
+            return safeJsonParse(responseText, { title: '', content: '' });
+        } catch (error) {
+            throw handleGeminiError(error, "note consolidation");
+        }
+    };
     
     public resetGeneralChat = () => {
         this.generalChatSession = null;
@@ -716,6 +764,7 @@ export const {
     generateCustomerResponse,
     findMisspelledWords,
     getSpellingSuggestions,
+    suggestNoteConsolidation,
     resetGeneralChat,
     getGeneralChatSession
 } = geminiService;

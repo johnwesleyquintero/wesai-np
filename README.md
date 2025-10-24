@@ -24,6 +24,8 @@ WesAI Notepad is a secure, AI-enhanced application designed for privacy, perform
     - **General Assistant:** Your creative partner for brainstorming, drafting content, and asking general questions, with full access to your knowledge base.
 - **Proactive Related Notes (AI Co-Pilot):** As you write, the AI analyzes your content in real-time to proactively surface semantically related notes from your knowledge base, helping you discover hidden connections and build a richer web of ideas without breaking your flow.
 - **Self-Improving Intelligence:** A foundational feedback loop makes the AI smarter over time. The system logs every suggestion "impression" and user "click," creating an invaluable dataset to measure relevance and continuously refine the AI's performance.
+- **Trend Analysis Dashboard:** Visualize conceptual clusters, "hot topics," and the most frequent connections between your ideas, giving you a strategic overview of your knowledge base.
+- **AI-Powered Consolidation Suggestions:** Receive intelligent suggestions to merge related notes, helping you synthesize information and strengthen your knowledge base.
 - **Semantic Search:** Go beyond keyword matching to find notes based on their conceptual meaning.
 - **Inline AI Assistant:** Select any text to fix spelling, adjust tone, expand or shorten, and simplify language.
 - **Content Generation:** Automatically suggest descriptive titles and relevant tags based on your note's content.
@@ -86,19 +88,11 @@ WesAI Notepad is a secure, AI-enhanced application designed for privacy, perform
 
 ## WesAI Notepad v2.5 Roadmap
 
-| Phase                               | Feature / Enhancement        | Description                                                                 | Impact | Effort | Notes                                                                                      |
-|-------------------------------------|------------------------------|-----------------------------------------------------------------------------|--------|--------|--------------------------------------------------------------------------------------------|
-| Phase 1 (Quick Wins / Core Loop)    | Inline Previews on Hover     | Show first ~150 chars or snippet of suggested notes on hover. Reduces context switching. | High   | Low    | Lazy-load snippets for performance. Lives in `RelatedNotes.tsx`.                           |
-| Phase 1                             | CTR Analytics Dashboard      | Display click-through rates for AI suggestions. Quick visual insight on relevance. | High   | Medium | Use `ai_suggestion_feedback` table. Could be a simple table or chart in WNP.               |
-| Phase 2 (Feedback-Driven Intelligence) | Dynamic Semantic Ranking     | Adjust suggestion ranking based on CTR data. Self-improving model.                  | High   | Medium | Starts simple: boost high-CTR suggestions. Later could use weighted ranking algorithm.      |
-| Phase 2                             | Suggestion Quality Alerts    | Highlight notes with consistently low CTRs for review or pruning.             | Medium | Low    | Helps maintain knowledge base hygiene.                                                     |
-| Phase 3 (Strategic Insights / Trend Analysis) | Trend Analysis Dashboard     | Aggregate patterns across notes to surface hot topics, frequent links, and emerging clusters. | High   | High   | Medium-term goal; leverages feedback + semantic connections.                               |
-| Phase 3                             | Idea Consolidation / Merge   | Suggest related notes to merge or connect, building knowledge clusters.       | High   | Medium | Manual first, AI-assisted later. Strengthens long-term knowledge structure.                |
-
-### Strategic Execution Order
-
-1.  **Phase 1:** Polish the UX & collect actionable feedback (inline previews + CTR dashboard). Fast, visible wins.
-2.  **Phase 2:** Let the system learn from its users (dynamic ranking + quality alerts). Boost intelligence with minimal UI disruption.
-3.  **Phase 3:** Strategic insights & knowledge clustering. Big-picture leverage, higher effort, but fully grounded in the data we’ve already collected.
-
-This roadmap ensures continuous user impact while progressively scaling intelligence, keeping our foundation stable and expanding the Notepad into a truly intelligent system.
+| Phase                               | Feature / Enhancement        | Description                                                                 | Status           |
+|-------------------------------------|------------------------------|-----------------------------------------------------------------------------|------------------|
+| Phase 1 (Quick Wins / Core Loop)    | Inline Previews on Hover     | Show first ~150 chars or snippet of suggested notes on hover. Reduces context switching. | ✅ Implemented   |
+| Phase 1                             | CTR Analytics Dashboard      | Display click-through rates for AI suggestions. Quick visual insight on relevance. | ✅ Implemented   |
+| Phase 2 (Feedback-Driven Intelligence) | Dynamic Semantic Ranking     | Adjust suggestion ranking based on CTR data. Self-improving model.                  | ✅ Implemented   |
+| Phase 2                             | Suggestion Quality Alerts    | Highlight notes with consistently low CTRs for review or pruning.             | ✅ Implemented   |
+| Phase 3 (Strategic Insights / Trend Analysis) | Trend Analysis Dashboard     | Aggregate patterns across notes to surface hot topics, frequent links, and emerging clusters. | ✅ Implemented   |
+| Phase 3                             | Idea Consolidation / Merge   | Suggest related notes to merge or connect, building knowledge clusters.       | ✅ Implemented   |

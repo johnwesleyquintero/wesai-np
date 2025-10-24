@@ -102,6 +102,8 @@ interface StoreContextType extends Omit<ReturnType<typeof useSupabaseStore>, 'de
     triggerNoteImport: () => void;
     fileTree: TreeNode[];
     logAiSuggestionEvent: (sourceNoteId: string, suggestedNoteId: string, wasClicked: boolean) => Promise<void>;
+    getSuggestionAnalytics: () => Promise<{ sourceNoteId: string; suggestedNoteId: string; impressions: number; clicks: number; ctr: number; }[]>;
+    getTrendAnalytics: () => Promise<{ hotTopics: any[]; mostFrequentConnections: any[]; }>;
 }
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
 export const useStoreContext = () => {
@@ -129,11 +131,12 @@ export const useChatContext = () => {
 };
 
 // UI Context
+type ViewState = 'NOTES' | 'CHAT' | 'CTR_ANALYTICS' | 'TREND_ANALYSIS';
 interface UIContextType {
     theme: 'light' | 'dark';
     toggleTheme: () => void;
-    view: 'NOTES' | 'CHAT';
-    setView: React.Dispatch<React.SetStateAction<'NOTES' | 'CHAT'>>;
+    view: ViewState;
+    setView: React.Dispatch<React.SetStateAction<ViewState>>;
     isMobileView: boolean;
     isSidebarOpen: boolean;
     setIsSidebarOpen: React.Dispatch<React.SetStateAction<boolean>>;
@@ -202,7 +205,7 @@ const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
 
 const UIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const [theme, setTheme] = useState<'light' | 'dark'>(() => (localStorage.getItem('theme') as 'light' | 'dark') || 'light');
-    const [view, setView] = useState<'NOTES' | 'CHAT'>('NOTES');
+    const [view, setView] = useState<ViewState>('NOTES');
     const isMobileView = useMobileView();
     const [isSidebarOpen, setIsSidebarOpen] = useState(!isMobileView);
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(() => {

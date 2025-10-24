@@ -22,6 +22,8 @@ WesAI Notepad is a secure, AI-enhanced application designed for privacy, perform
     - **Knowledge Assistant:** Engage in a conversation with your notes. Ask complex questions and receive synthesized answers with direct links to the source notes.
     - **Service Responder:** Transform your notes into an operational playbook. Paste a customer inquiry, and the AI will use your knowledge base to draft a professional, compliant response.
     - **General Assistant:** Your creative partner for brainstorming, drafting content, and asking general questions, with full access to your knowledge base.
+- **Proactive Related Notes (AI Co-Pilot):** While you write, the AI silently works in the background to find and suggest semantically related notes from your knowledge base, helping you discover connections and build a richer web of ideas.
+- **Self-Improving Intelligence:** The application features a built-in feedback loop. User interactions with AI suggestions are logged to anonymously refine the relevance models over time, making the assistant smarter and more attuned to your workflow with every use.
 - **Semantic Search:** Go beyond keyword matching to find notes based on their conceptual meaning.
 - **Inline AI Assistant:** Select any text to fix spelling, adjust tone, expand or shorten, and simplify language.
 - **Content Generation:** Automatically suggest descriptive titles and relevant tags based on your note's content.

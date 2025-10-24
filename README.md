@@ -2,16 +2,16 @@
 
 **Your personal knowledge system, transformed into a powerful operational tool.**
 
-WesAI Notepad is a secure, AI-enhanced application designed for privacy, performance, and productivity. It combines a fast, responsive notepad with a multi-mode AI assistant powered by the Google Gemini API. All your data is securely stored in your personal Supabase account, making it accessible across all your devices while ensuring you are the sole owner of your data.
+WesAI Notepad is a secure, AI-enhanced application designed for privacy, performance, and productivity. It combines a fast, responsive notepad with a multi-mode AI assistant powered by the Google Gemini API. All your data is securely stored in our cloud backend, making it accessible across all your devices.
 
 ## Key Features
 
 ### Note-Taking and Organization
-- **Secure & Private Cloud Sync:** All data is stored in your private Supabase project and protected by granular row-level security policies, ensuring only you can access your notes. Real-time, authenticated subscriptions keep all your devices perfectly in sync without compromising privacy.
+- **Secure & Private Cloud Sync:** All data is stored securely in our cloud backend and protected by granular security policies, ensuring only you can access your notes. Real-time, authenticated subscriptions keep all your devices perfectly in sync without compromising privacy.
 - **Flexible Authentication:** Sign up quickly with an email and password or use the convenient one-click Google Sign-In option.
 - **Drag & Drop Organization:** Intuitively organize your workspace by dragging notes and folders to reorder them or nest them within each other.
 - **Rich Markdown Editor:** A full-featured Markdown editor with syntax highlighting and a live preview mode that supports tables, images, embedded videos, and more.
-- **Cloud Image Storage:** Images are uploaded to secure Supabase Storage, keeping your note content clean and your database lean.
+- **Cloud Image Storage:** Images are uploaded to secure cloud storage, keeping your note content clean and your database lean.
 - **Smart Folders:** Create dynamic, saved searches that automatically display notes matching a specific AI-powered query.
 - **Bi-Directional Linking:** Connect ideas by linking notes using `[[note-id|display text]]` syntax. A "Linked Mentions" section automatically displays all backlinks to the current note.
 - **Tagging System:** Assign multiple tags to notes for flexible, cross-folder organization.
@@ -67,22 +67,12 @@ WesAI Notepad is a secure, AI-enhanced application designed for privacy, perform
     git clone <repository-url>
     cd <repository-directory>
     ```
-2.  **Set Up Supabase:**
-    - Create a new project on [Supabase](https://supabase.com/).
-    - In your Supabase project, navigate to the **SQL Editor** and run the `schema.sql` script from this repository to set up your database tables and policies.
-    - Go to **Settings** > **API**. Find your Project URL and your `public` anonymous key.
-    - Go to **Authentication** > **Providers** and enable the **Google** provider. You will need to provide your own Google OAuth credentials.
-    - Go to **Authentication** > **URL Configuration** and add your local development URL (e.g., `http://localhost:5173/`) to the "Site URL" and "Redirect URLs" fields.
-    - **Note on Supabase Storage:** The application will automatically attempt to create a public storage bucket named `note_images` for image uploads. Ensure your Supabase project has Storage enabled.
-3.  **Configure the Client:**
-    - Open the file: `lib/supabaseClient.ts`.
-    - Replace the placeholder values for `supabaseUrl` and `supabaseAnonKey` with the keys from your Supabase project.
-4.  **Install Dependencies & Run:**
+2.  **Install Dependencies & Run:**
     ```bash
     npm install
     npm run dev
     ```
-5.  Follow the "For Users" guide above to sign up and add your Gemini API key within the running application.
+3.  Follow the "For Users" guide above to sign up and add your Gemini API key within the running application. The app is pre-configured to connect to a development Supabase instance.
 
 ## Technology Stack
 - **Frontend:** React, TypeScript, Tailwind CSS

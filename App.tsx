@@ -10,7 +10,7 @@ import { ToastProvider, useToast } from './context/ToastContext';
 import SidebarResizer from './components/SidebarResizer';
 import SuspenseLoader from './components/SuspenseLoader';
 import Auth from './components/Auth';
-import { isSupabaseConfigured, setupStorageBucket } from './lib/supabaseClient';
+import { setupStorageBucket } from './lib/supabaseClient';
 import NoteEditorSkeleton from './components/NoteEditorSkeleton';
 import ChatViewSkeleton from './components/ChatViewSkeleton';
 import ApiKeyIndicator from './components/ApiKeyIndicator';
@@ -36,7 +36,7 @@ const LandingPage: React.FC<{ onGetStarted: () => void }> = ({ onGetStarted }) =
         {
             icon: <LockClosedIcon className="w-8 h-8 text-light-primary dark:text-dark-primary" />,
             title: 'Privacy-First Architecture',
-            description: 'All data is stored in your private Supabase project. Real-time, authenticated subscriptions keep all your devices perfectly in sync.',
+            description: 'All data is securely stored and encrypted. Real-time, authenticated subscriptions keep all your devices perfectly in sync.',
         },
         {
             icon: <SparklesIcon className="w-8 h-8 text-light-primary dark:text-dark-primary" />,
@@ -94,7 +94,7 @@ const LandingPage: React.FC<{ onGetStarted: () => void }> = ({ onGetStarted }) =
                             Your personal knowledge system,<br /> transformed into a powerful operational tool.
                         </h1>
                         <p className="mt-6 max-w-2xl mx-auto text-lg text-light-text/70 dark:text-dark-text/70">
-                            A secure, AI-enhanced notepad with real-time cloud sync via your private Supabase account, featuring a multi-mode Gemini assistant.
+                            A secure, AI-enhanced notepad with real-time cloud sync, featuring a multi-mode Gemini assistant.
                         </p>
                         <div className="mt-8 flex justify-center gap-4">
                             <button onClick={onGetStarted} className="px-8 py-3 bg-light-primary text-white dark:bg-dark-primary dark:text-zinc-900 rounded-md text-lg font-semibold hover:bg-light-primary-hover dark:hover:bg-dark-primary-hover transition-transform hover:scale-105">
@@ -134,13 +134,13 @@ const LandingPage: React.FC<{ onGetStarted: () => void }> = ({ onGetStarted }) =
                 
                  <section className="py-24 bg-light-background dark:bg-dark-background">
                     <div className="container mx-auto px-4 text-center max-w-4xl">
-                        <h2 className="text-3xl font-bold mb-2">Built for Sovereignty</h2>
-                        <p className="text-lg text-light-text/70 dark:text-dark-text/70 mb-12">Your data, your control. Built on a foundation of privacy and power.</p>
+                        <h2 className="text-3xl font-bold mb-2">Built for Security and Performance</h2>
+                        <p className="text-lg text-light-text/70 dark:text-dark-text/70 mb-12">A robust backend for a seamless experience. Built on a foundation of privacy and power.</p>
                         <div className="grid md:grid-cols-2 gap-8 text-left">
                             <div className="bg-light-ui/50 dark:bg-dark-ui/50 p-6 rounded-lg border border-light-border dark:border-dark-border">
                                 <ServerStackIcon className="w-8 h-8 mb-3 text-light-primary dark:text-dark-primary" />
-                                <h3 className="text-xl font-bold">Your Private Backend with Supabase</h3>
-                                <p className="mt-2 text-light-text/70 dark:text-dark-text/70">WesAI Notepad connects to your personal Supabase project. You are the sole owner of your data, with the full power of enterprise-grade security and real-time sync.</p>
+                                <h3 className="text-xl font-bold">Secure Cloud Backend</h3>
+                                <p className="mt-2 text-light-text/70 dark:text-dark-text/70">Your data is protected with enterprise-grade security and real-time sync, all managed for you. No setup required.</p>
                             </div>
                             <div className="bg-light-ui/50 dark:bg-dark-ui/50 p-6 rounded-lg border border-light-border dark:border-dark-border">
                                 <SparklesIcon className="w-8 h-8 mb-3 text-light-primary dark:text-dark-primary" />
@@ -244,34 +244,6 @@ const WelcomeScreen: React.FC<{
     );
 };
 
-const ConfigurationError: React.FC = () => (
-    <div className="flex items-center justify-center h-screen w-screen bg-light-background dark:bg-dark-background text-light-text dark:text-dark-text">
-        <div className="w-full max-w-lg p-8 text-center bg-light-ui dark:bg-dark-ui rounded-xl shadow-lg">
-             <h2 className="text-2xl font-bold text-red-500 mb-4">Configuration Required</h2>
-             <p className="mb-2">
-                 Welcome to WesAI Notepad! To get started, you need to connect to your Supabase project.
-             </p>
-             <p className="mb-4">
-                 Please open the file:
-                 <br />
-                 <code className="bg-light-background dark:bg-dark-background px-2 py-1 rounded-md my-2 inline-block font-mono">
-                    lib/supabaseClient.ts
-                 </code>
-                 <br />
-                 and replace the placeholder values with your project's URL and public anonymous key.
-             </p>
-             <a 
-                href="https://supabase.com/dashboard/project/_/settings/api" 
-                target="_blank" 
-                rel="noopener noreferrer" 
-                className="text-sm text-light-primary dark:text-dark-primary underline"
-             >
-                 Find your keys in Supabase Settings &rarr; API
-             </a>
-        </div>
-    </div>
-);
-
 function AppContent() {
     const {
         notes, collections, activeNoteId, setActiveNoteId, onAddNote,
@@ -373,7 +345,6 @@ function AppContent() {
                         <NoteEditor
                             key={activeNote.id}
                             note={activeNote}
-                            onRestoreVersion={(version) => restoreNoteVersion(activeNote.id, version)}
                             templates={templates}
                         />
                     );
@@ -490,10 +461,6 @@ function AppContainer() {
 }
 
 export default function App() {
-    if (!isSupabaseConfigured) {
-        return <ConfigurationError />;
-    }
-    
     return (
         <ToastProvider>
             <AppProvider>

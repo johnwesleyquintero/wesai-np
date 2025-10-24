@@ -10,7 +10,7 @@ import TagSuggestions from './TagSuggestions';
 import TitleSuggestion from './TitleSuggestion';
 import InlineAiMenu from './InlineAiMenu';
 import SpellcheckMenu from './SpellcheckMenu';
-import { useEditorContext, useStoreContext, useUIContext, useAuthContext, useSupabase } from '../context/AppContext';
+import { useEditorContext, useStoreContext, useUIContext, useAuthContext } from '../context/AppContext';
 import NoteLinker from './NoteLinker';
 import BacklinksDisplay from './BacklinksDisplay';
 import { useBacklinks } from '../hooks/useBacklinks';
@@ -37,10 +37,9 @@ const StatusBar: React.FC<{ wordCount: number; charCount: number }> = ({ wordCou
 );
 
 const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
-    const { updateNote, deleteNote, toggleFavorite, notes, restoreNoteVersion } = useStoreContext();
+    const { updateNote, deleteNote, toggleFavorite, notes, restoreNoteVersion, templates } = useStoreContext();
     const { isMobileView, onToggleSidebar, isAiRateLimited } = useUIContext();
     const { session } = useAuthContext();
-    const { supabase } = useSupabase();
     const { showToast } = useToast();
     const { registerEditorActions, unregisterEditorActions } = useEditorContext();
 
@@ -309,8 +308,8 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         if (file) {
             if (file.type.startsWith('image/')) {
                 showToast({ message: 'Uploading image...', type: 'info' });
-                uploadImage(supabase, session.user.id, note.id, file).then(path => {
-                    const publicUrl = getPublicUrl(supabase, path);
+                uploadImage(session.user.id, note.id, file).then(path => {
+                    const publicUrl = getPublicUrl(path);
                     const markdownImage = `\n![${file.name}](${publicUrl})\n`;
                     const { selectionStart } = textareaRef.current!;
                     const newContent = editorState.content.slice(0, selectionStart) + markdownImage + editorState.content.slice(selectionStart);

@@ -1,21 +1,26 @@
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseUrl: string = 'https://kdohgvaoefxkfbcsjnmw.supabase.co';
+// CRITICAL: The key below was corrupted. I have fixed the structural damage, 
+// but please double-check and ensure this is your correct and valid Supabase anonymous key.
+const supabaseAnonKey: string = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtkb2hndmFvZWZ4a2ZiY3Nqbm13Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA5MDgzNzYsImV4cCI6MjA3NjQ4NDM3Nn0.jQoaYIVUVTG6Kqmh2Fe3OadsHwRRSMZV2qIIBpPrh9A';
+
+// This flag checks if you have updated the placeholder values.
+// The app will show a configuration screen until these are changed.
+export const isSupabaseConfigured = 
+    supabaseUrl !== 'YOUR_SUPABASE_URL_PLACEHOLDER' && 
+    supabaseAnonKey !== 'YOUR_SUPABASE_ANON_KEY_PLACEHOLDER';
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // --- Supabase Storage Helpers ---
 export const IMAGE_BUCKET = 'note_images';
-
-// This function now creates and returns a Supabase client instance dynamically.
-export const createSupabaseClient = (supabaseUrl: string, supabaseAnonKey: string): SupabaseClient => {
-    if (!supabaseUrl || !supabaseAnonKey) {
-        throw new Error("Supabase URL and Anon Key are required.");
-    }
-    return createClient(supabaseUrl, supabaseAnonKey);
-};
 
 /**
  * Checks if the storage bucket exists, and creates it if it doesn't.
  * This is set to run once on app load for an authenticated user.
  */
-export const setupStorageBucket = async (supabase: SupabaseClient) => {
+export const setupStorageBucket = async () => {
     try {
         const { data: buckets, error } = await supabase.storage.listBuckets();
         if (error) throw error;
@@ -40,13 +45,12 @@ export const setupStorageBucket = async (supabase: SupabaseClient) => {
 
 /**
  * Uploads an image file to the dedicated Supabase Storage bucket.
- * @param supabase - The dynamic Supabase client instance.
  * @param userId - The ID of the user uploading the file.
  * @param noteId - The ID of the note the image is associated with.
  * @param file - The image file to upload.
  * @returns The storage path of the uploaded file.
  */
-export const uploadImage = async (supabase: SupabaseClient, userId: string, noteId: string, file: File) => {
+export const uploadImage = async (userId: string, noteId: string, file: File) => {
     if (!userId || !noteId || !file) {
         throw new Error('User ID, Note ID, and file are required for upload.');
     }
@@ -67,11 +71,10 @@ export const uploadImage = async (supabase: SupabaseClient, userId: string, note
 
 /**
  * Retrieves the public URL for a file from Supabase Storage.
- * @param supabase - The dynamic Supabase client instance.
  * @param path - The storage path of the file.
  * @returns The public URL of the file.
  */
-export const getPublicUrl = (supabase: SupabaseClient, path: string) => {
+export const getPublicUrl = (path: string) => {
     const { data } = supabase.storage
         .from(IMAGE_BUCKET)
         .getPublicUrl(path);

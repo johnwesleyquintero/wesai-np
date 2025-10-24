@@ -3,10 +3,11 @@ import { PlusIcon } from './Icons';
 import TemplateEditorModal from './TemplateEditorModal';
 import { Template } from '../types';
 import { useApiKey } from '../hooks/useApiKey';
-import { useStoreContext, useSupabase } from '../context/AppContext';
+import { useStoreContext } from '../context/AppContext';
 import ConfirmationModal from './ConfirmationModal';
 import { useToast } from '../context/ToastContext';
 import { useModalAccessibility } from '../hooks/useModalAccessibility';
+import { supabase } from '../lib/supabaseClient';
 
 interface SettingsModalProps {
     isOpen: boolean;
@@ -16,7 +17,6 @@ interface SettingsModalProps {
 const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
     const { templates, addTemplate, updateTemplate, deleteTemplate, notes, collections, smartCollections, importData } = useStoreContext();
     const { apiKey, saveApiKey } = useApiKey();
-    const { supabase, onReset: onResetSupabase } = useSupabase();
     const { showToast } = useToast();
     
     const [isTemplateEditorOpen, setIsTemplateEditorOpen] = useState(false);
@@ -65,7 +65,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
     const handleSignOut = async () => {
         await supabase.auth.signOut();
         onClose();
-        // The onAuthStateChange listener will handle the UI update
+        // Clear local non-Supabase state if necessary
+        // e.g. localStorage.clear();
+        // window.location.reload(); // To ensure clean state
     };
     
     const handleExport = () => {
@@ -161,11 +163,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                             </div>
 
                              <div>
-                                <h3 className="text-lg font-semibold mb-3">Account & Connection</h3>
-                                 <div className="flex space-x-4">
-                                    <button onClick={handleSignOut} className="flex-1 text-center px-4 py-2 rounded-md bg-light-ui dark:bg-dark-ui hover:bg-light-ui-hover dark:hover:bg-dark-ui-hover">Sign Out</button>
-                                     <button onClick={onResetSupabase} className="flex-1 text-center px-4 py-2 rounded-md border border-red-500/50 text-red-500 hover:bg-red-500/10">Reset Supabase Connection</button>
-                                </div>
+                                <h3 className="text-lg font-semibold mb-3">Account</h3>
+                                 <button onClick={handleSignOut} className="w-full text-center px-4 py-2 rounded-md bg-light-ui dark:bg-dark-ui hover:bg-light-ui-hover dark:hover:bg-dark-ui-hover">Sign Out</button>
                             </div>
 
                             <div>

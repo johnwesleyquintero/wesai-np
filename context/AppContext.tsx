@@ -1,24 +1,12 @@
 import React, { createContext, useContext, useState, useMemo, useEffect, useRef, useCallback, ReactNode } from 'react';
 import { AuthSession, EditorActions, ContextMenuItem } from '../types';
+import { supabase } from '../lib/supabaseClient';
 import { useStoreProviderLogic } from '../hooks/useStoreProviderLogic';
 import { useUIProviderLogic } from '../hooks/useUIProviderLogic';
 import { useChatProviderLogic } from '../hooks/useChatProviderLogic';
 import { useEditorProviderLogic } from '../hooks/useEditorProviderLogic';
-import { SupabaseClient } from '@supabase/supabase-js';
 
 // --- Context Definitions ---
-
-// Supabase Context
-interface SupabaseContextType {
-    supabase: SupabaseClient;
-    onReset: () => void;
-}
-const SupabaseContext = createContext<SupabaseContextType | undefined>(undefined);
-export const useSupabase = () => {
-    const context = useContext(SupabaseContext);
-    if (!context) throw new Error('useSupabase must be used within a SupabaseProvider');
-    return context;
-};
 
 // Auth Context
 interface AuthContextType {
@@ -69,15 +57,9 @@ export const useEditorContext = () => {
     return context;
 };
 
-export const SupabaseProvider: React.FC<{ children: ReactNode, supabase: SupabaseClient, onReset: () => void }> = ({ children, supabase, onReset }) => {
-    const value = useMemo(() => ({ supabase, onReset }), [supabase, onReset]);
-    return <SupabaseContext.Provider value={value}>{children}</SupabaseContext.Provider>
-}
-
 const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const [session, setSession] = useState<AuthSession | null>(null);
     const [isSessionLoading, setIsSessionLoading] = useState(true);
-    const { supabase } = useSupabase();
 
     useEffect(() => {
         supabase.auth.getSession().then(({ data: { session } }) => {
@@ -90,15 +72,14 @@ const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
         });
 
         return () => subscription.unsubscribe();
-    }, [supabase]);
+    }, []);
 
     const authValue = useMemo(() => ({ session, isSessionLoading }), [session, isSessionLoading]);
     return <AuthContext.Provider value={authValue}>{children}</AuthContext.Provider>;
 }
 
 const UIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-    const { supabase } = useSupabase();
-    const uiValue = useUIProviderLogic(supabase);
+    const uiValue = useUIProviderLogic();
     return <UIContext.Provider value={uiValue}>{children}</UIContext.Provider>;
 }
 

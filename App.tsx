@@ -4,19 +4,18 @@ import { useStoreContext } from './context/AppContext';
 import { Note, NoteVersion, Collection, SmartCollection } from './types';
 import ConfirmationModal from './components/ConfirmationModal';
 import { Bars3Icon, PlusIcon, SparklesIcon, ArrowDownTrayIcon, Cog6ToothIcon, LockClosedIcon, RocketLaunchIcon, ServerStackIcon, TrendingUpIcon } from './components/Icons';
-import { AppProvider, useUIContext, useAuthContext, SupabaseProvider } from './context/AppContext';
+import { AppProvider, useUIContext, useAuthContext } from './context/AppContext';
 import ContextMenu from './components/ContextMenu';
 import { ToastProvider, useToast } from './context/ToastContext';
 import SidebarResizer from './components/SidebarResizer';
 import SuspenseLoader from './components/SuspenseLoader';
 import Auth from './components/Auth';
-import { createSupabaseClient, setupStorageBucket } from './lib/supabaseClient';
+import { isSupabaseConfigured, setupStorageBucket } from './lib/supabaseClient';
 import NoteEditorSkeleton from './components/NoteEditorSkeleton';
 import ChatViewSkeleton from './components/ChatViewSkeleton';
 import ApiKeyIndicator from './components/ApiKeyIndicator';
 import AnalyticsDashboardSkeleton from './components/AnalyticsDashboardSkeleton';
 import TrendAnalysisDashboardSkeleton from './components/TrendAnalysisDashboardSkeleton';
-import { SupabaseClient } from '@supabase/supabase-js';
 
 const NoteEditor = React.lazy(() => import('./components/NoteEditor'));
 const ChatView = React.lazy(() => import('./components/ChatView'));
@@ -31,7 +30,6 @@ const TrendAnalysisDashboard = React.lazy(() => import('./components/TrendAnalys
 const WELCOME_SCREEN_SIDEBAR_WIDTH_KEY = 'wesai-sidebar-width';
 const MIN_SIDEBAR_WIDTH = 280;
 const MAX_SIDEBAR_WIDTH = 500;
-const SUPABASE_CREDS_KEY = 'wesai-supabase-creds';
 
 const LandingPage: React.FC<{ onGetStarted: () => void }> = ({ onGetStarted }) => {
     const features = [
@@ -246,74 +244,33 @@ const WelcomeScreen: React.FC<{
     );
 };
 
-const SupabaseConfig: React.FC<{ onConfigured: (client: SupabaseClient) => void }> = ({ onConfigured }) => {
-    const [url, setUrl] = useState('');
-    const [anonKey, setAnonKey] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-
-    const handleConnect = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setIsLoading(true);
-        setError(null);
-        try {
-            const tempClient = createSupabaseClient(url, anonKey);
-            // Test the connection by trying to get the session (a lightweight check)
-            await tempClient.auth.getSession();
-            
-            localStorage.setItem(SUPABASE_CREDS_KEY, JSON.stringify({ url, anonKey }));
-            onConfigured(tempClient);
-        } catch (err) {
-            setError('Could not connect to Supabase. Please check your URL and Anon Key.');
-            console.error(err);
-        } finally {
-            setIsLoading(false);
-        }
-    };
-    
-    return (
-        <div className="flex items-center justify-center h-screen w-screen bg-light-background dark:bg-dark-background">
-            <div className="w-full max-w-lg p-8 space-y-6 bg-light-ui dark:bg-dark-ui rounded-xl shadow-lg">
-                <div className="text-center">
-                     <h1 className="text-3xl font-bold text-light-text dark:text-dark-text">Connect to Supabase</h1>
-                     <p className="mt-2 text-sm text-light-text/60 dark:text-dark-text/60">
-                         Enter your Supabase project credentials to get started.
-                     </p>
-                </div>
-
-                {error && <div className="p-3 text-center text-sm text-red-700 bg-red-100 rounded-md dark:bg-red-900/30 dark:text-red-200">{error}</div>}
-
-                <form className="space-y-4" onSubmit={handleConnect}>
-                    <div>
-                        <label htmlFor="supabaseUrl" className="block text-sm font-medium mb-1">Project URL</label>
-                        <input
-                            id="supabaseUrl" type="url" required
-                            className="w-full px-4 py-2 text-sm bg-light-background dark:bg-dark-background rounded-md border border-light-border dark:border-dark-border focus:ring-1 focus:ring-light-primary focus:outline-none"
-                            placeholder="https://your-project-ref.supabase.co"
-                            value={url} onChange={(e) => setUrl(e.target.value)}
-                        />
-                    </div>
-                     <div>
-                        <label htmlFor="supabaseAnonKey" className="block text-sm font-medium mb-1">Public Anonymous Key</label>
-                        <input
-                            id="supabaseAnonKey" type="text" required
-                            className="w-full px-4 py-2 text-sm bg-light-background dark:bg-dark-background rounded-md border border-light-border dark:border-dark-border focus:ring-1 focus:ring-light-primary focus:outline-none"
-                            placeholder="ey..."
-                            value={anonKey} onChange={(e) => setAnonKey(e.target.value)}
-                        />
-                    </div>
-                     <p className="text-xs text-center text-light-text/60 dark:text-dark-text/60">
-                         Find these in your Supabase project under <a href="https://supabase.com/dashboard" target="_blank" rel="noopener noreferrer" className="underline text-light-primary dark:text-dark-primary">Settings &rarr; API</a>.
-                    </p>
-                    <button type="submit" disabled={isLoading} className="w-full flex items-center justify-center bg-light-primary text-white dark:bg-dark-primary dark:text-zinc-900 rounded-md py-2 text-sm font-semibold hover:bg-light-primary-hover dark:hover:bg-dark-primary-hover disabled:opacity-50">
-                        {isLoading ? 'Connecting...' : 'Connect'}
-                    </button>
-                </form>
-            </div>
+const ConfigurationError: React.FC = () => (
+    <div className="flex items-center justify-center h-screen w-screen bg-light-background dark:bg-dark-background text-light-text dark:text-dark-text">
+        <div className="w-full max-w-lg p-8 text-center bg-light-ui dark:bg-dark-ui rounded-xl shadow-lg">
+             <h2 className="text-2xl font-bold text-red-500 mb-4">Configuration Required</h2>
+             <p className="mb-2">
+                 Welcome to WesAI Notepad! To get started, you need to connect to your Supabase project.
+             </p>
+             <p className="mb-4">
+                 Please open the file:
+                 <br />
+                 <code className="bg-light-background dark:bg-dark-background px-2 py-1 rounded-md my-2 inline-block font-mono">
+                    lib/supabaseClient.ts
+                 </code>
+                 <br />
+                 and replace the placeholder values with your project's URL and public anonymous key.
+             </p>
+             <a 
+                href="https://supabase.com/dashboard/project/_/settings/api" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="text-sm text-light-primary dark:text-dark-primary underline"
+             >
+                 Find your keys in Supabase Settings &rarr; API
+             </a>
         </div>
-    );
-};
-
+    </div>
+);
 
 function AppContent() {
     const {
@@ -416,6 +373,8 @@ function AppContent() {
                         <NoteEditor
                             key={activeNote.id}
                             note={activeNote}
+                            onRestoreVersion={(version) => restoreNoteVersion(activeNote.id, version)}
+                            templates={templates}
                         />
                     );
                 }
@@ -509,80 +468,37 @@ function AppContent() {
 function AppContainer() {
     const { session, isSessionLoading } = useAuthContext();
     const [showAuth, setShowAuth] = useState(false);
-    const { supabase } = useUIContext();
 
     useEffect(() => {
-        if (session && supabase) {
-            setupStorageBucket(supabase);
+        if (session) {
+            setupStorageBucket();
         }
-    }, [session, supabase]);
-
-    if (!supabase) {
-        return <LandingPage onGetStarted={() => { /* This path will be handled by the main App component now */ }} />;
-    }
+    }, [session]);
 
     if (isSessionLoading) {
         return <SuspenseLoader />;
     }
 
     if (!session) {
-        return <Auth />;
+        if (showAuth) {
+            return <Auth onBack={() => setShowAuth(false)} />;
+        }
+        return <LandingPage onGetStarted={() => setShowAuth(true)} />;
     }
 
     return <AppContent />;
 }
 
 export default function App() {
-    const [supabaseClient, setSupabaseClient] = useState<SupabaseClient | null>(null);
-    const [isLoadingClient, setIsLoadingClient] = useState(true);
-    const [showLanding, setShowLanding] = useState(true);
-
-    useEffect(() => {
-        try {
-            const creds = localStorage.getItem(SUPABASE_CREDS_KEY);
-            if (creds) {
-                const { url, anonKey } = JSON.parse(creds);
-                if (url && anonKey) {
-                    setSupabaseClient(createSupabaseClient(url, anonKey));
-                    setShowLanding(false); // Credentials exist, go straight to config/auth
-                }
-            }
-        } catch (error) {
-            console.error("Failed to parse Supabase credentials from localStorage", error);
-        } finally {
-            setIsLoadingClient(false);
-        }
-    }, []);
-    
-    const handleConfigured = (client: SupabaseClient) => {
-        setSupabaseClient(client);
-        setShowLanding(false);
-    };
-    
-    const handleResetConfig = () => {
-        localStorage.removeItem(SUPABASE_CREDS_KEY);
-        setSupabaseClient(null);
-        setShowLanding(true); 
-    };
-    
-    if (isLoadingClient) {
-        return <SuspenseLoader />;
-    }
-
-    if (!supabaseClient) {
-        if (showLanding) {
-            return <LandingPage onGetStarted={() => setShowLanding(false)} />;
-        }
-        return <SupabaseConfig onConfigured={handleConfigured} />;
+    if (!isSupabaseConfigured) {
+        return <ConfigurationError />;
     }
     
     return (
         <ToastProvider>
-            <SupabaseProvider supabase={supabaseClient} onReset={handleResetConfig}>
-                <AppProvider>
-                    <AppContainer />
-                </AppProvider>
-            </SupabaseProvider>
+            <AppProvider>
+                <AppContainer />
+            </AppProvider>
         </ToastProvider>
     );
 }

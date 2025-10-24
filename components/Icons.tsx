@@ -243,6 +243,12 @@ export const MoonIcon: React.FC<IconProps> = (props) => (
     </svg>
 );
 
+export const NetworkIcon: React.FC<IconProps> = (props) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5" {...props}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12.75 19.5v-5.25m0 0a3.375 3.375 0 00-3.375-3.375h-1.5a3.375 3.375 0 00-3.375 3.375v5.25m3.375-3.375h1.5a3.375 3.375 0 013.375 3.375M9 6.75v-5.25a3.375 3.375 0 013.375-3.375h1.5A3.375 3.375 0 0118.75 3v5.25m-6.375 3.375v-5.25a3.375 3.375 0 013.375-3.375h1.5a3.375 3.375 0 013.375 3.375v5.25m0 3.375h-1.5a3.375 3.375 0 01-3.375-3.375v-5.25a3.375 3.375 0 013.375-3.375h1.5" />
+    </svg>
+);
+
 export const PaperAirplaneIcon: React.FC<IconProps> = (props) => (
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5" {...props}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />

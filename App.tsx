@@ -16,6 +16,7 @@ import ChatViewSkeleton from './components/ChatViewSkeleton';
 import ApiKeyIndicator from './components/ApiKeyIndicator';
 import AnalyticsDashboardSkeleton from './components/AnalyticsDashboardSkeleton';
 import TrendAnalysisDashboardSkeleton from './components/TrendAnalysisDashboardSkeleton';
+import GraphViewSkeleton from './components/GraphViewSkeleton';
 
 const NoteEditor = React.lazy(() => import('./components/NoteEditor'));
 const ChatView = React.lazy(() => import('./components/ChatView'));
@@ -25,6 +26,7 @@ const SmartFolderModal = React.lazy(() => import('./components/SmartFolderModal'
 const WelcomeModal = React.lazy(() => import('./components/WelcomeModal'));
 const AnalyticsDashboard = React.lazy(() => import('./components/AnalyticsDashboard'));
 const TrendAnalysisDashboard = React.lazy(() => import('./components/TrendAnalysisDashboard'));
+const GraphView = React.lazy(() => import('./components/GraphView'));
 
 
 const WELCOME_SCREEN_SIDEBAR_WIDTH_KEY = 'wesai-sidebar-width';
@@ -386,6 +388,8 @@ function AppContent() {
                 return <AnalyticsDashboard />;
             case 'TREND_ANALYSIS':
                 return <TrendAnalysisDashboard />;
+            case 'GRAPH':
+                return <GraphView />;
             case 'NOTES':
             default:
                 if (activeNote) {
@@ -408,6 +412,8 @@ function AppContent() {
                 return <AnalyticsDashboardSkeleton />;
             case 'TREND_ANALYSIS':
                 return <TrendAnalysisDashboardSkeleton />;
+            case 'GRAPH':
+                return <GraphViewSkeleton />;
             case 'NOTES':
             default:
                 return <NoteEditorSkeleton />;

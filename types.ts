@@ -59,7 +59,7 @@ export type SearchMode = 'KEYWORD' | 'AI';
 
 export type ChatMode = 'ASSISTANT' | 'RESPONDER' | 'GENERAL';
 
-export type ViewState = 'NOTES' | 'CHAT' | 'CTR_ANALYTICS' | 'TREND_ANALYSIS';
+export type ViewState = 'NOTES' | 'CHAT' | 'CTR_ANALYTICS' | 'TREND_ANALYSIS' | 'GRAPH';
 
 export interface SpellingError {
     word: string;

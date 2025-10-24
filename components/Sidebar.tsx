@@ -7,7 +7,8 @@ import {
     ChevronDoubleLeftIcon, FolderIcon,
     TrashIcon,
     ChartBarIcon,
-    TrendingUpIcon
+    TrendingUpIcon,
+    NetworkIcon
 } from './Icons';
 import SidebarNode from './SidebarNode';
 import Highlight from './Highlight';
@@ -384,6 +385,14 @@ const Sidebar: React.FC<SidebarProps> = ({
             <div className="p-2 flex-shrink-0 border-t border-light-border dark:border-dark-border">
                 <div className="flex justify-end items-center space-x-1">
                     <FooterButton
+                        onClick={() => setView('GRAPH')}
+                        tooltip="Graph View"
+                        isActive={view === 'GRAPH'}
+                    >
+                        <NetworkIcon />
+                    </FooterButton>
+
+                    <FooterButton
                         onClick={() => setView('TREND_ANALYSIS')}
                         tooltip="Trend Analysis"
                         isActive={view === 'TREND_ANALYSIS'}
@@ -458,6 +467,9 @@ const Sidebar: React.FC<SidebarProps> = ({
 
         {/* Footer actions */}
         <div className="flex flex-col space-y-1 flex-shrink-0">
+            <FooterButton onClick={() => setView('GRAPH')} tooltip="Graph View" isActive={view === 'GRAPH'}>
+                <NetworkIcon />
+            </FooterButton>
             <FooterButton onClick={() => setView('TREND_ANALYSIS')} tooltip="Trend Analysis" isActive={view === 'TREND_ANALYSIS'}>
                 <TrendingUpIcon />
             </FooterButton>

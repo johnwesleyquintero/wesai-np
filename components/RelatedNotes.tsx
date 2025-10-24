@@ -12,7 +12,7 @@ interface RelatedNotesProps {
 const MIN_CONTENT_LENGTH_FOR_SUGGESTIONS = 100;
 
 const RelatedNotes: React.FC<RelatedNotesProps> = ({ note }) => {
-    const { notes: allNotes, setActiveNoteId } = useStoreContext();
+    const { notes: allNotes, setActiveNoteId, logAiSuggestionEvent } = useStoreContext();
     const { setView, isAiRateLimited } = useUIContext();
 
     const [relatedNoteIds, setRelatedNoteIds] = useState<string[] | null>(null);
@@ -22,6 +22,12 @@ const RelatedNotes: React.FC<RelatedNotesProps> = ({ note }) => {
     const debouncedContent = useDebounce(note.content, 2000);
     const searchIdRef = useRef(0);
     const lastSearchedContentRef = useRef<string | null>(null);
+    const loggedImpressionsRef = useRef<string[] | null>(null);
+
+    useEffect(() => {
+        // Reset logged impressions when the note changes
+        loggedImpressionsRef.current = null;
+    }, [note.id]);
 
     useEffect(() => {
         if (isAiRateLimited) {
@@ -70,7 +76,18 @@ const RelatedNotes: React.FC<RelatedNotesProps> = ({ note }) => {
         return relatedNoteIds.map(id => noteMap.get(id)).filter((n): n is Note => !!n);
     }, [relatedNoteIds, allNotes]);
 
+    useEffect(() => {
+        // Log impressions only when the list of suggestions actually changes.
+        if (relatedNoteIds && relatedNoteIds.length > 0 && JSON.stringify(relatedNoteIds) !== JSON.stringify(loggedImpressionsRef.current)) {
+            relatedNoteIds.forEach(suggestedId => {
+                logAiSuggestionEvent(note.id, suggestedId, false);
+            });
+            loggedImpressionsRef.current = relatedNoteIds;
+        }
+    }, [relatedNoteIds, note.id, logAiSuggestionEvent]);
+
     const handleSelectNote = (noteId: string) => {
+        logAiSuggestionEvent(note.id, noteId, true);
         setActiveNoteId(noteId);
         setView('NOTES');
     };

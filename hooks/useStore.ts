@@ -397,6 +397,22 @@ export const useStore = (user: User | undefined) => {
     }, [user, notes]);
 
     const renameNoteTitle = async (id: string, title: string) => await updateNote(id, { title });
+
+    const logAiSuggestionEvent = useCallback(async (sourceNoteId: string, suggestedNoteId: string, wasClicked: boolean) => {
+        if (!user) return;
+        // This is a fire-and-forget call; we don't await it or handle errors in the UI
+        // to prevent blocking user interaction. Errors are logged to the console for debugging.
+        supabase.from('ai_suggestion_feedback').insert({
+            user_id: user.id,
+            source_note_id: sourceNoteId,
+            suggested_note_id: suggestedNoteId,
+            was_clicked: wasClicked,
+        }).then(({ error }) => {
+            if (error) {
+                console.warn('Failed to log AI suggestion event:', error);
+            }
+        });
+    }, [user]);
     
     return { 
         loading,
@@ -406,5 +422,6 @@ export const useStore = (user: User | undefined) => {
         addSmartCollection, updateSmartCollection, deleteSmartCollection,
         addTemplate, updateTemplate, deleteTemplate,
         importData,
+        logAiSuggestionEvent,
     };
 };

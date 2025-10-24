@@ -101,6 +101,7 @@ interface StoreContextType extends Omit<ReturnType<typeof useSupabaseStore>, 'de
     onAddNoteFromFile: (title: string, content: string, parentId: string | null) => Promise<string>;
     triggerNoteImport: () => void;
     fileTree: TreeNode[];
+    logAiSuggestionEvent: (sourceNoteId: string, suggestedNoteId: string, wasClicked: boolean) => Promise<void>;
 }
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
 export const useStoreContext = () => {
@@ -518,7 +519,7 @@ const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     ]);
 
     return (
-        <StoreContext.Provider value={storeValue}>
+        <StoreContext.Provider value={storeValue as StoreContextType}>
             <input
                 type="file"
                 ref={fileInputRef}

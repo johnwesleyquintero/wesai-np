@@ -427,7 +427,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     );
     
     const CollapsedView = () => (
-      <div className="flex flex-col h-full items-center p-2 overflow-hidden">
+      <div className="flex flex-col h-full items-center p-2">
         {/* Logo at top */}
         <div className="relative group mb-4 flex-shrink-0 pt-2">
             <button onClick={onToggleCollapsed} className="p-1 rounded-md transition-colors hover:bg-light-ui-hover dark:hover:bg-dark-ui-hover" aria-label="Expand sidebar">

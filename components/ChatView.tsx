@@ -1,7 +1,3 @@
-
-
-
-
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useChatContext, useStoreContext, useUIContext } from '../context/AppContext';
 import { ChatMessage, ChatMode, ChatStatus, Note } from '../types';
@@ -201,7 +197,10 @@ const Message: React.FC<{ message: ChatMessage; onDelete: () => void }> = ({ mes
 const ChatInput: React.FC = () => {
     const [input, setInput] = useState('');
     const [image, setImage] = useState<string | null>(null);
-    const { chatMode, chatStatus, onSendMessage, onGenerateServiceResponse, onSendGeneralMessage, onGenerateAmazonCopy } = useChatContext();
+    const { 
+        chatMode, chatStatus, onSendMessage, onGenerateServiceResponse, onSendGeneralMessage, onGenerateAmazonCopy,
+        chatMessages, deleteMessage,
+    } = useChatContext();
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -241,6 +240,14 @@ const ChatInput: React.FC = () => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
             handleSend();
+        } else if (e.key === 'ArrowUp' && input === '') {
+            e.preventDefault();
+            const lastUserMessage = [...chatMessages].reverse().find(m => m.role === 'user');
+            if (lastUserMessage && typeof lastUserMessage.content === 'string') {
+                deleteMessage(lastUserMessage.id);
+                setInput(lastUserMessage.content);
+                // Note: Restoring image from last message is not implemented for simplicity.
+            }
         }
     };
 

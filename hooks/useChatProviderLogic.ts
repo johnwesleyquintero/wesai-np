@@ -137,10 +137,13 @@ export const useChatProviderLogic = () => {
         setChatError(null);
         const newUserMessage: ChatMessage = { role: 'user', content: productInfo, image };
         setChatHistories(prev => ({ ...prev, [chatMode]: [...prev[chatMode], newUserMessage] }));
-        setChatStatus('replying'); // No search phase for this mode
+        setChatStatus('searching');
         try {
-            const responseText = await generateAmazonListingCopy(productInfo, image);
-            setChatHistories(prev => ({ ...prev, [chatMode]: [...prev[chatMode], { role: 'ai', content: responseText }] }));
+            const sourceNoteIds = await semanticSearchNotes(productInfo, notes);
+            const sourceNotes = sourceNoteIds.map(id => getNoteById(id)).filter((n): n is Note => !!n);
+            setChatStatus('replying');
+            const responseText = await generateAmazonListingCopy(productInfo, sourceNotes, image);
+            setChatHistories(prev => ({ ...prev, [chatMode]: [...prev[chatMode], { role: 'ai', content: responseText, sources: sourceNotes }] }));
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
             setChatError(errorMessage);
@@ -148,7 +151,7 @@ export const useChatProviderLogic = () => {
         } finally {
             setChatStatus('idle');
         }
-    }, [chatMode]);
+    }, [chatMode, getNoteById, notes]);
 
     const onSendGeneralMessage = useCallback(async (query: string, image?: string) => {
         setChatError(null);

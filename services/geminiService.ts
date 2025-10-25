@@ -572,20 +572,36 @@ Customer message: "${customerQuery}"`;
     
     public generateAmazonListingCopy = async (
         productInfo: string,
+        contextNotes: Note[],
         image?: string | null
     ): Promise<string> => {
         try {
             const ai = this.getAi();
+             const simplifiedNotes = contextNotes.map(({ title, content, tags }) => ({
+                title,
+                content: content.substring(0, 2000),
+                tags
+            }));
 
-            const systemInstruction = `You are an expert Amazon e-commerce copywriter. Your goal is to create highly optimized and persuasive product listings that convert. Adhere to Amazon's style guidelines. Based on the user's provided product information, generate the following components in well-structured Markdown:
+            const systemInstruction = `You are an expert Amazon e-commerce copywriter. Your goal is to create highly optimized and persuasive product listings that convert. Adhere to Amazon's style guidelines.
 
+You will be given a user's prompt with product information and a set of knowledge base notes. Use the knowledge base notes as the primary source of truth for features, benefits, and tone. Use the user's prompt for supplementary details and keywords.
+
+Based on all the provided information, generate the following components in well-structured Markdown:
 1.  **Title:** A concise, keyword-rich title under 200 characters.
 2.  **Bullet Points:** 5 compelling bullet points, each starting with a capitalized keyword and highlighting a key feature or benefit. Each bullet should be under 500 characters.
 3.  **Product Description:** A detailed, HTML-formatted (using simple tags like <p>, <b>, <ul>, <li>) product description that elaborates on the product's value.
 
 Begin the response immediately with the Markdown, without any introductory phrases.`;
 
-            const userParts: any[] = [{ text: productInfo }];
+            const prompt = `Here is the relevant knowledge base information to use as the source of truth:
+${JSON.stringify(simplifiedNotes)}
+
+Here is the user's prompt with additional product details.
+User prompt: "${productInfo}"`;
+
+
+            const userParts: any[] = [{ text: prompt }];
             if (image) {
                 const { mimeType, data } = parseDataUrl(image);
                 userParts.push({ inlineData: { mimeType, data } });

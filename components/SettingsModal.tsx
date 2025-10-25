@@ -238,7 +238,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                 onClose={() => setIsImportConfirmOpen(false)}
                 onConfirm={handleImportConfirm}
                 title="Overwrite All Data?"
-                message="Importing a backup file will permanently replace all your current notes, folders, and templates. This cannot be undone."/>
+                message='Importing a backup file will permanently replace all your current notes, folders, and templates. This action cannot be undone. To confirm, please type "OVERWRITE" below.'
+                confirmText="Overwrite"
+                confirmClass="bg-red-600 hover:bg-red-700"
+                confirmationRequiredText="OVERWRITE"
+            />
         </>
     );
 };

@@ -2,6 +2,8 @@
 
 
 
+
+
 import React, { useEffect, useRef, useMemo, useCallback } from 'react';
 import { Note, NoteVersion, Template } from '../types';
 import Toolbar from './Toolbar';
@@ -26,6 +28,7 @@ import { useNoteEditorReducer, initialNoteEditorUIState } from '../hooks/useNote
 import { useAiSuggestions } from '../hooks/useAiSuggestions';
 import { useAiActions } from '../hooks/useAiActions';
 import { useDebounce } from '../hooks/useDebounce';
+import { useEditorHotkeys } from '../hooks/useEditorHotkeys';
 
 interface NoteEditorProps {
     note: Note;
@@ -240,37 +243,12 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         return () => pane?.removeEventListener('scroll', handleScroll);
     }, [handleScroll]);
 
-    // Global undo/redo handler
-    useEffect(() => {
-        const handleGlobalKeyDown = (event: KeyboardEvent) => {
-            // 1. If any major modal is visibly managed by our context, bail.
-            if (isSettingsOpen || isCommandPaletteOpen || isSmartFolderModalOpen || isWelcomeModalOpen || noteLinker || noteLinkerForSelection) {
-                return;
-            }
-            
-            // 2. Check the event target. If it's an input-like element that is NOT our main editor, bail.
-            const target = event.target as HTMLElement;
-            const isGenericInput = ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName) || target.isContentEditable;
-            const isOurEditorField = target === titleInputRef.current || target === textareaRef.current;
-            if (isGenericInput && !isOurEditorField) {
-                return;
-            }
-    
-            const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
-            const modKey = isMac ? event.metaKey : event.ctrlKey;
-            
-            if (modKey && event.key.toLowerCase() === 'z') {
-                event.preventDefault(); 
-                undo();
-            } else if (modKey && (event.key.toLowerCase() === 'y' || (event.shiftKey && event.key.toLowerCase() === 'z'))) {
-                event.preventDefault();
-                redo();
-            }
-        };
-        
-        document.addEventListener('keydown', handleGlobalKeyDown);
-        return () => document.removeEventListener('keydown', handleGlobalKeyDown);
-    }, [undo, redo, isSettingsOpen, isCommandPaletteOpen, isSmartFolderModalOpen, isWelcomeModalOpen, noteLinker, noteLinkerForSelection]);
+    useEditorHotkeys({
+        undo,
+        redo,
+        isModalOpen: isSettingsOpen || isCommandPaletteOpen || isSmartFolderModalOpen || isWelcomeModalOpen || !!noteLinker || !!noteLinkerForSelection,
+        editorElements: [titleInputRef, textareaRef],
+    });
 
     const getCursorPositionRect = (textarea: HTMLTextAreaElement, position: number): DOMRect => {
         const pre = document.createElement('pre');

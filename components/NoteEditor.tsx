@@ -1,9 +1,3 @@
-
-
-
-
-
-
 import React, { useEffect, useRef, useMemo, useCallback } from 'react';
 import { Note, NoteVersion, Template } from '../types';
 import Toolbar from './Toolbar';
@@ -467,7 +461,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
             <div ref={editorPaneRef} className="flex-1 overflow-y-auto relative">
                  {!!previewVersion && <div className={`bg-yellow-100 dark:bg-yellow-900/30 py-2 text-center text-sm text-yellow-800 dark:text-yellow-200 max-w-3xl mx-auto ${editorPaddingClass}`}>You are previewing a version from {new Date(previewVersion.savedAt).toLocaleString()}.</div>}
 
-                <div className={`max-w-3xl mx-auto py-12 ${editorPaddingClass}`}>
+                <div className={`max-w-3xl mx-auto py-12 ${editorPaddingClass} transition-opacity duration-300 ${isFullAiActionLoading ? 'opacity-50 pointer-events-none' : ''}`}>
                     {viewMode === 'edit' ? (
                         <>
                             <input

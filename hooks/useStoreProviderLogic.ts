@@ -146,22 +146,9 @@ export const useStoreProviderLogic = () => {
     const activeNote = useMemo(() => activeNoteId ? getNoteById(activeNoteId) : null, [activeNoteId, getNoteById]);
     const activeSmartCollection = useMemo(() => activeSmartCollectionId ? store.smartCollections.find(sc => sc.id === activeSmartCollectionId) : null, [activeSmartCollectionId, store.smartCollections]);
     
-    const notesRef = useRef(notes);
-    notesRef.current = notes;
-    const collectionsRef = useRef(collections);
-    collectionsRef.current = collections;
-    
-    const structuralNotesDep = useMemo(() => JSON.stringify(
-        notes.map(n => ({ id: n.id, parentId: n.parentId, title: n.title })).sort((a, b) => a.id.localeCompare(b.id))
-    ), [notes]);
-
-    const structuralCollectionsDep = useMemo(() => JSON.stringify(
-        collections.map(c => ({ id: c.id, parentId: c.parentId, name: c.name })).sort((a, b) => a.id.localeCompare(b.id))
-    ), [collections]);
-
     const fileTree = useMemo(() => {
-        return buildTree(notesRef.current, collectionsRef.current);
-    }, [structuralNotesDep, structuralCollectionsDep]);
+        return buildTree(notes, collections);
+    }, [notes, collections]);
 
     const onAddNote = useCallback(async (parentId: string | null = null, title: string = "Untitled Note", content: string = "") => {
         const newNoteId = await createNote(parentId, title, content);

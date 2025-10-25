@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
@@ -32,6 +32,54 @@ const getVimeoVideoId = (url: string) => {
     const regex = /(?:https?:\/\/)?(?:www\.)?vimeo\.com\/(?:channels\/(?:\w+\/)?|groups\/(?:[^\/]*)\/videos\/|album\/(?:\d+)\/video\/|)(\d+)/;
     const match = url.match(regex);
     return match ? match[1] : null;
+};
+
+const ImageRenderer = ({ src, alt, ...props }: { src?: string, alt?: string, [key: string]: any }) => {
+    const [isLoading, setIsLoading] = useState(true);
+    const [hasError, setHasError] = useState(false);
+
+    useEffect(() => {
+        setIsLoading(true);
+        setHasError(false);
+        if (!src) {
+            setHasError(true);
+            setIsLoading(false);
+        }
+    }, [src]);
+
+    const handleLoad = () => setIsLoading(false);
+    const handleError = () => {
+        setIsLoading(false);
+        setHasError(true);
+    };
+
+    if (hasError || !src) {
+        return (
+            <div className="my-4 p-4 bg-light-ui dark:bg-dark-ui rounded-lg flex flex-col items-center justify-center text-center text-sm text-light-text/60 dark:text-dark-text/60">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <span>{!src ? "Image source missing." : "Could not load image."}</span>
+                <span className="text-xs truncate max-w-full">{alt || src}</span>
+            </div>
+        );
+    }
+    
+    return (
+        <div className="relative my-4">
+            {isLoading && (
+                <div className="absolute inset-0 bg-light-ui dark:bg-dark-ui rounded-lg animate-pulse"></div>
+            )}
+            <img 
+                src={src} 
+                alt={alt || ''}
+                onLoad={handleLoad}
+                onError={handleError}
+                className={`rounded-lg transition-opacity duration-300 ${isLoading ? 'opacity-0' : 'opacity-100'}`}
+                {...props} 
+            />
+        </div>
+    );
 };
 
 interface MarkdownPreviewProps {
@@ -100,6 +148,10 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({ title, content, onTog
 
             return <a href={url} target="_blank" rel="noopener noreferrer" className="text-light-primary dark:text-dark-primary underline" {...props}>{children}</a>;
         },
+        // FIX: The props passed to ImageRenderer were not correctly typed, causing an error.
+        // The original ImageRenderer was also not robust enough to handle missing `src` props from react-markdown.
+        // Updated ImageRenderer to handle optional/missing props and resolve the type error.
+        img: ({node, ...props}) => <ImageRenderer {...props} />,
         input({ node, className, ...props }: any) {
             const { type, checked } = props;
             if (type === 'checkbox') {

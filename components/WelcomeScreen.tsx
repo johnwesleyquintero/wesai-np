@@ -1,5 +1,6 @@
 
 
+
 import React from 'react';
 import { Bars3Icon, PlusIcon, SparklesIcon, ArrowDownTrayIcon, Cog6ToothIcon } from './Icons';
 import { useStoreContext } from '../context/AppContext';
@@ -54,7 +55,8 @@ const WelcomeScreen: React.FC<{
                         <div onClick={openSettings} className="bg-light-ui/50 dark:bg-dark-ui/50 p-4 rounded-lg text-left cursor-pointer hover:bg-light-ui dark:hover:bg-dark-ui transition-colors">
                             <Cog6ToothIcon className="w-6 h-6 mb-2" />
                             <h4 className="font-semibold text-light-text dark:text-dark-text">Check Settings</h4>
-                            <p className="text-xs mt-1">Add your Gemini API key for AI features.</p>
+                            {/* FIX: Removed text about API key to align with guidelines. */}
+                            <p className="text-xs mt-1">Manage templates and data.</p>
                         </div>
                     </div>
                 </div>

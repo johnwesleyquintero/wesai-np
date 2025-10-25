@@ -1,8 +1,6 @@
 import { GoogleGenAI, Type, GenerateContentResponse, Content, Chat, FunctionDeclaration } from "@google/genai";
 import { Note, SpellingError, ChatMessage, InlineAction } from "../types";
 
-const API_KEY_STORAGE_KEY = 'wesai-api-key';
-
 // Helper to safely parse JSON responses, even when wrapped in markdown code blocks
 function safeJsonParse<T>(jsonString: string, defaultValue: T): T {
     if (!jsonString) {
@@ -32,8 +30,10 @@ const handleGeminiError = (error: unknown, context: string): Error => {
     // Convert the error to a string to reliably check for keywords.
     const errorString = (error instanceof Error) ? error.message : JSON.stringify(error);
 
-    if (errorString.includes("API key is not configured")) {
-        return new Error("Your API key is missing. Please add it in the settings to use AI features.");
+    // FIX: Updated error message to align with removal of API key settings UI, per Gemini API guidelines.
+    // The API key is now exclusively managed via environment variables.
+    if (errorString.includes("API key not valid") || errorString.includes("API key is not configured")) {
+        return new Error("The Gemini API key is not configured correctly. The administrator needs to set the API_KEY environment variable for the application to function.");
     }
     if (errorString.includes('429') || errorString.toLowerCase().includes('quota')) {
         window.dispatchEvent(new CustomEvent('ai-rate-limit'));
@@ -207,30 +207,20 @@ const aiTools: FunctionDeclaration[] = [
 
 class GeminiAPIService {
     private ai: GoogleGenAI | null = null;
-    private lastUsedApiKey: string | undefined | null = null;
     private generalChatSession: Chat | null = null;
 
+    // Fix: Aligned with Gemini API guidelines to exclusively use process.env.API_KEY.
     private getApiKey(): string | undefined {
-        try {
-            const storedKey = localStorage.getItem(API_KEY_STORAGE_KEY);
-            return storedKey || process.env.API_KEY;
-        } catch {
-            return process.env.API_KEY;
-        }
+        return process.env.API_KEY;
     }
 
     private getAi(): GoogleGenAI {
-        const key = this.getApiKey();
-
-        if (this.lastUsedApiKey !== key) {
-            this.ai = null;
-            this.lastUsedApiKey = key;
-            this.generalChatSession = null;
-        }
-
+        // Fix: Simplified AI client initialization to a singleton pattern, per guidelines.
         if (!this.ai) {
+            const key = this.getApiKey();
             if (!key) {
-                throw new Error("API key is not configured. Please add it in the settings.");
+                // This string is what handleGeminiError checks for.
+                throw new Error("API key is not configured");
             }
             this.ai = new GoogleGenAI({ apiKey: key });
         }
@@ -520,7 +510,7 @@ ${JSON.stringify(simplifiedNotes)}`
                 userParts.push({ inlineData: { mimeType, data } });
             }
 
-            const result = await chat.sendMessageStream({ message: userParts });
+            const result = await chat.sendMessageStream({ message: userParts as any });
             return result;
         } catch (error) {
             throw handleGeminiError(error, "AI chat");
@@ -741,9 +731,7 @@ Always inform the user of the actions you have taken, such as which note you hav
             }
             return this.generalChatSession;
         } catch (error) {
-            if (error instanceof Error && error.message.includes("API key")) {
-                this.resetGeneralChat();
-            }
+            // Fix: Cleaned up error handling logic. The specific check for API key is now handled by the general handler.
             throw handleGeminiError(error, "general AI chat session");
         }
     };

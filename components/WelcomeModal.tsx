@@ -33,19 +33,13 @@ const WelcomeModal: React.FC<WelcomeModalProps> = ({ isOpen, onClose }) => {
                 <div className="p-6 border-b border-light-border dark:border-dark-border">
                     <h2 id="welcome-modal-title" className="text-2xl font-bold">Welcome to WesAI Notepad!</h2>
                 </div>
+                {/* FIX: Removed content related to API key setup to align with guidelines. */}
                 <div className="overflow-y-auto p-6 space-y-4">
                     <p>This is a powerful, AI-enhanced notepad where your data is securely stored and synced across your devices using your private Supabase account.</p>
-                    <div>
-                        <h3 className="font-semibold mb-1">To unlock AI features, you'll need a Google Gemini API key.</h3>
-                        <p className="text-sm text-light-text/60 dark:text-dark-text/60">
-                            You can get a free key from <a href="https://ai.google.dev/" target="_blank" rel="noopener noreferrer" className="underline text-light-primary dark:text-dark-primary">Google AI Studio</a>. It's quick and easy to set up.
-                        </p>
-                    </div>
-                    <p>Your API key is stored locally in your browser and is never shared, ensuring your AI interactions remain private.</p>
+                    <p>Get started by creating your first note or exploring the AI chat assistant!</p>
                 </div>
                 <div className="flex justify-end items-center space-x-4 p-6 border-t border-light-border dark:border-dark-border">
-                    <button onClick={onClose} className="px-4 py-2 rounded-md hover:bg-light-ui dark:hover:bg-dark-ui">Maybe Later</button>
-                    <button onClick={handleOpenSettings} className="px-4 py-2 bg-light-primary text-white rounded-md hover:bg-light-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover">Open Settings</button>
+                    <button onClick={onClose} className="px-4 py-2 bg-light-primary text-white rounded-md hover:bg-light-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover">Got It!</button>
                 </div>
             </div>
         </div>

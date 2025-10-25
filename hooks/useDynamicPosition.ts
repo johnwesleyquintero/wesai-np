@@ -1,4 +1,4 @@
-// Fix: Import React to provide types like React.RefObject and React.CSSProperties
+// FIX: Ensured the main 'React' object is imported alongside hooks to provide necessary types.
 import React, { useState, useLayoutEffect } from 'react';
 
 interface UseDynamicPositionOptions {

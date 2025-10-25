@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { PlusIcon } from './Icons';
 import TemplateEditorModal from './TemplateEditorModal';
 import { Template } from '../types';
-import { useApiKey } from '../hooks/useApiKey';
 import { useStoreContext } from '../context/AppContext';
 import ConfirmationModal from './ConfirmationModal';
 import { useToast } from '../context/ToastContext';
@@ -16,26 +15,25 @@ interface SettingsModalProps {
 
 const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
     const { templates, addTemplate, updateTemplate, deleteTemplate, notes, collections, smartCollections, importData } = useStoreContext();
-    const { apiKey, saveApiKey } = useApiKey();
     const { showToast } = useToast();
     
     const [isTemplateEditorOpen, setIsTemplateEditorOpen] = useState(false);
     const [templateToEdit, setTemplateToEdit] = useState<Template | null>(null);
-    const [localApiKey, setLocalApiKey] = useState('');
     const [isImportConfirmOpen, setIsImportConfirmOpen] = useState(false);
     const [dataToImport, setDataToImport] = useState<any | null>(null);
 
-    const saveButtonRef = useRef<HTMLButtonElement>(null);
+    // FIX: Focus the close button since the API key section and save button are removed.
+    const closeButtonRef = useRef<HTMLButtonElement>(null);
     const modalRef = useRef<HTMLDivElement>(null);
 
     useModalAccessibility(isOpen, onClose, modalRef);
 
     useEffect(() => {
         if (isOpen) {
-            setLocalApiKey(apiKey || '');
-            setTimeout(() => saveButtonRef.current?.focus(), 100);
+            // FIX: Focus the close button on modal open for better accessibility.
+            setTimeout(() => closeButtonRef.current?.focus(), 100);
         }
-    }, [isOpen, apiKey]);
+    }, [isOpen]);
 
     const handleOpenTemplateEditor = (template: Template | null) => {
         setTemplateToEdit(template);
@@ -54,12 +52,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
         if (window.confirm('Are you sure you want to delete this template?')) {
             deleteTemplate(id);
         }
-    };
-
-    const handleSaveSettings = () => {
-        saveApiKey(localApiKey);
-        showToast({ message: 'Settings saved!', type: 'success' });
-        onClose();
     };
 
     const handleSignOut = async () => {
@@ -148,20 +140,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                     
                     <div className="overflow-y-auto p-6">
                         <div className="space-y-6">
-                            <div>
-                                <h3 className="text-lg font-semibold mb-2">Gemini API Key</h3>
-                                <p className="text-sm text-light-text/60 dark:text-dark-text/60 mb-2">
-                                    Your API key is stored locally and is required for all AI features. You can get a key from <a href="https://ai.google.dev/" target="_blank" rel="noopener noreferrer" className="underline text-light-primary dark:text-dark-primary">Google AI Studio</a>. Free keys have usage limits; for heavy use, consider enabling billing for your key.
-                                </p>
-                                <input
-                                    type="password"
-                                    value={localApiKey}
-                                    onChange={(e) => setLocalApiKey(e.target.value)}
-                                    placeholder="Enter your Gemini API Key"
-                                    className="w-full p-2 bg-light-ui dark:bg-dark-ui rounded-md border border-light-border dark:border-dark-border focus:ring-2 focus:ring-light-primary focus:outline-none"
-                                />
-                            </div>
-
+                            {/* FIX: Removed Gemini API Key section to comply with guidelines. */}
                              <div>
                                 <h3 className="text-lg font-semibold mb-3">Account</h3>
                                  <button onClick={handleSignOut} className="w-full text-center px-4 py-2 rounded-md bg-light-ui dark:bg-dark-ui hover:bg-light-ui-hover dark:hover:bg-dark-ui-hover">Sign Out</button>
@@ -202,8 +181,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                     </div>
 
                     <div className="flex justify-end items-center space-x-4 p-6 border-t border-light-border dark:border-dark-border flex-shrink-0">
-                        <button onClick={onClose} className="px-4 py-2 rounded-md hover:bg-light-ui dark:hover:bg-dark-ui">Cancel</button>
-                        <button ref={saveButtonRef} onClick={handleSaveSettings} className="px-4 py-2 bg-light-primary text-white rounded-md hover:bg-light-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover">Save Settings</button>
+                        {/* FIX: Removed "Save Settings" button as it's no longer needed. */}
+                        <button ref={closeButtonRef} onClick={onClose} className="px-4 py-2 rounded-md hover:bg-light-ui dark:hover:bg-dark-ui">Close</button>
                     </div>
                 </div>
             </div>
@@ -218,12 +197,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                 onClose={() => setIsImportConfirmOpen(false)}
                 onConfirm={handleImportConfirm}
                 title="Overwrite All Data?"
-                message="Importing a backup file will permanently replace all your current notes, folders, and templates. This cannot be undone."
-                confirmText="Overwrite"
-                confirmClass="bg-red-600 hover:bg-red-700"
-            />
+                message="Importing a backup file will permanently replace all your current notes, folders, and templates. This cannot be undone."/>
         </>
     );
 };
 
+// Fix: Add default export for lazy loading.
 export default SettingsModal;

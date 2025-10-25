@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { ChatMessage, Note, ChatMode, ChatStatus } from '../types';
-import { generateChatStream, semanticSearchNotes, getGeneralChatSession, resetGeneralChat } from '../services/geminiService';
+import { generateChatStream, semanticSearchNotes, createGeneralChatSession } from '../services/geminiService';
 import { useStoreContext } from '../context/AppContext';
 import { useDebounce } from './useDebounce';
+import { Chat } from '@google/genai';
 
 const CHAT_HISTORIES_STORAGE_KEY = 'wesai-chat-histories';
 
@@ -12,7 +13,7 @@ export const useChatProviderLogic = () => {
         updateNote: updateNoteInStore, collections, ...store 
     } = useStoreContext();
     
-    const [chatMode, setChatMode] = useState<ChatMode>('ASSISTANT');
+    const [chatMode, setInternalChatMode] = useState<ChatMode>('ASSISTANT');
     const [chatHistories, setChatHistories] = useState<Record<ChatMode, ChatMessage[]>>(() => {
         try {
             const saved = localStorage.getItem(CHAT_HISTORIES_STORAGE_KEY);
@@ -38,10 +39,19 @@ export const useChatProviderLogic = () => {
     const [activeToolName, setActiveToolName] = useState<string | null>(null);
     const streamSessionIdRef = useRef(0);
     const chatHistoriesRef = useRef(chatHistories);
+    const generalChatRef = useRef<Chat | null>(null);
 
     useEffect(() => {
         chatHistoriesRef.current = chatHistories;
     }, [chatHistories]);
+
+    const setChatMode = useCallback((mode: ChatMode) => {
+        if (chatMode === 'GENERAL' && mode !== 'GENERAL') {
+            generalChatRef.current = null;
+        }
+        setInternalChatMode(mode);
+    }, [chatMode]);
+
 
     useEffect(() => {
         try {
@@ -142,13 +152,20 @@ ${sourceNotes.length > 0 ? sourceNotes.map(n => `--- NOTE: ${n.title} ---\n${n.c
     }, [_handleStreamedChat]);
 
     const onSendGeneralMessage = useCallback(async (query: string, image?: string) => {
+        const getChat = () => {
+            if (!generalChatRef.current) {
+                generalChatRef.current = createGeneralChatSession();
+            }
+            return generalChatRef.current;
+        };
+
         setChatError(null);
         const userMessage: ChatMessage = { id: crypto.randomUUID(), role: 'user', content: query, image, status: 'processing' };
         setChatHistories(prev => ({ ...prev, [chatMode]: [...prev[chatMode], userMessage] }));
         let lastTouchedNoteId: string | null = null;
 
         try {
-            const chat = getGeneralChatSession();
+            const chat = getChat();
             let response = await chat.sendMessage({ message: query });
             
             while (response.functionCalls && response.functionCalls.length > 0) {
@@ -316,7 +333,7 @@ ${sourceNotes.length > 0 ? sourceNotes.map(n => `--- NOTE: ${n.title} ---\n${n.c
         setChatStatus('idle');
         setActiveToolName(null);
         if (chatMode === 'GENERAL') {
-            resetGeneralChat();
+            generalChatRef.current = null;
         }
     }, [chatMode]);
     

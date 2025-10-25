@@ -197,11 +197,7 @@ export const generateChatStream = async (
 };
 
 // --- General Chat with Tools ---
-let generalChat: Chat | null = null;
-export const getGeneralChatSession = (): Chat => {
-    if (generalChat) {
-        return generalChat;
-    }
+export const createGeneralChatSession = (): Chat => {
     const ai = getGenAI();
 
     const functionDeclarations: FunctionDeclaration[] = [
@@ -215,7 +211,7 @@ export const getGeneralChatSession = (): Chat => {
         { name: 'moveNoteToCollection', parameters: { type: Type.OBJECT, properties: { noteId: { type: Type.STRING }, collectionId: { type: Type.STRING } }, required: ['noteId', 'collectionId'] } },
     ];
 
-    generalChat = ai.chats.create({
+    return ai.chats.create({
         model: 'gemini-2.5-pro',
         config: {
             systemInstruction: "You are a helpful assistant with access to a user's notes. You can create, find, read, update, and delete notes and folders. You MUST use the provided tools to interact with the notes.",
@@ -223,11 +219,6 @@ export const getGeneralChatSession = (): Chat => {
         },
         safetySettings
     });
-    return generalChat;
-};
-
-export const resetGeneralChat = () => {
-    generalChat = null;
 };
 
 

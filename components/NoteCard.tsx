@@ -3,11 +3,12 @@ import { Note } from '../types';
 import { StarIcon } from './Icons';
 import Highlight from './Highlight';
 import { formatDate } from '../lib/dateUtils';
+import { generatePreviewFromMarkdown } from '../lib/markdownUtils';
 
 interface NoteCardProps {
     id: string;
     title: string;
-    contentPreview: string;
+    content: string;
     updatedAt: string;
     isFavorite: boolean;
     isActive: boolean;
@@ -17,10 +18,10 @@ interface NoteCardProps {
 }
 
 const NoteCard: React.FC<NoteCardProps> = ({ 
-    id, title, contentPreview, updatedAt, isFavorite, 
+    id, title, content, updatedAt, isFavorite, 
     isActive, onClick, searchTerm, onContextMenu 
 }) => {
-    const preview = contentPreview + (contentPreview.length >= 160 ? '...' : '');
+    const preview = generatePreviewFromMarkdown(content);
 
     return (
         <div

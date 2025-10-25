@@ -245,7 +245,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                         key={note.id}
                         id={note.id}
                         title={note.title}
-                        contentPreview={note.content.substring(0, 160)}
+                        content={note.content}
                         updatedAt={note.updatedAt}
                         isFavorite={note.isFavorite}
                         isActive={note.id === activeNoteId}

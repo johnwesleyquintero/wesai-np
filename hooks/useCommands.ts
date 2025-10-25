@@ -10,7 +10,8 @@ export const useCommands = (onComplete: () => void): Command[] => {
     const {
         onAddNote,
         activeNote,
-        setNoteToDelete,
+// @FIX: 'setNoteToDelete' does not exist on the store context. Replaced with 'handleDeleteNoteConfirm'.
+        handleDeleteNoteConfirm,
         toggleFavorite,
     } = useStoreContext();
     
@@ -21,7 +22,9 @@ export const useCommands = (onComplete: () => void): Command[] => {
         setView,
         view,
         isAiRateLimited,
-        onToggleSidebar
+        onToggleSidebar,
+// @FIX: Added 'showConfirmation' to use the confirmation modal for delete actions.
+        showConfirmation,
     } = useUIContext();
 
     const { editorActions } = useEditorContext();
@@ -71,7 +74,16 @@ export const useCommands = (onComplete: () => void): Command[] => {
                 {
                     id: 'delete-note',
                     name: 'Delete Note',
-                    action: () => { setNoteToDelete(activeNote); onComplete(); },
+// @FIX: Replaced direct state setting with a call to the confirmation modal for safer deletion.
+                    action: () => {
+                        showConfirmation({
+                            title: "Delete Note",
+                            message: `Are you sure you want to permanently delete "${activeNote.title}"? This action cannot be undone.`,
+                            onConfirm: () => handleDeleteNoteConfirm(activeNote),
+                            confirmText: "Delete",
+                        });
+                        onComplete();
+                    },
                     icon: React.createElement(TrashIcon),
                     keywords: 'remove trash',
                     section: 'Note',
@@ -199,7 +211,9 @@ export const useCommands = (onComplete: () => void): Command[] => {
         setView,
         view,
         activeNote,
-        setNoteToDelete,
+// @FIX: Updated dependency array to reflect the use of 'handleDeleteNoteConfirm' and 'showConfirmation'.
+        handleDeleteNoteConfirm,
+        showConfirmation,
         toggleFavorite,
         editorActions,
         isAiRateLimited,

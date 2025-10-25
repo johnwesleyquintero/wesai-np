@@ -59,7 +59,7 @@ export const useStoreProviderLogic = () => {
     const { notes, collections, getNoteById, deleteCollection, deleteNote, deleteSmartCollection, addNote: createNote, addNoteFromFile } = store;
     
     const { showToast } = useToast();
-    const { setView, isMobileView, setIsSidebarOpen } = useUIContext();
+    const { setView, isMobileView, setIsSidebarOpen, hideConfirmation } = useUIContext();
 
     const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
@@ -67,9 +67,6 @@ export const useStoreProviderLogic = () => {
     const [isAiSearching, setIsAiSearching] = useState(false);
     const [aiSearchError, setAiSearchError] = useState<string | null>(null);
     const [aiSearchResultIds, setAiSearchResultIds] = useState<string[] | null>(null);
-    const [noteToDelete, setNoteToDelete] = useState<Note | null>(null);
-    const [collectionToDelete, setCollectionToDelete] = useState<Collection | null>(null);
-    const [smartCollectionToDelete, setSmartCollectionToDelete] = useState<SmartCollection | null>(null);
     const [activeSmartCollectionId, setActiveSmartCollectionId] = useState<string | null>(null);
     const debouncedSearchTerm = useDebounce(searchTerm, 500);
 
@@ -184,28 +181,22 @@ export const useStoreProviderLogic = () => {
         return newNoteId;
     }, [addNoteFromFile, isMobileView, showToast, setActiveNoteId, setView, setIsSidebarOpen]);
 
-    const handleDeleteNoteConfirm = useCallback(async () => {
-        if (noteToDelete) {
-            await deleteNote(noteToDelete.id);
-            if (activeNoteId === noteToDelete.id) setActiveNoteId(null);
-            setNoteToDelete(null);
-        }
-    }, [noteToDelete, deleteNote, activeNoteId]);
+    const handleDeleteNoteConfirm = useCallback(async (note: Note) => {
+        await deleteNote(note.id);
+        if (activeNoteId === note.id) setActiveNoteId(null);
+        hideConfirmation();
+    }, [deleteNote, activeNoteId, hideConfirmation]);
 
-    const handleDeleteCollectionConfirm = useCallback(async () => {
-        if (collectionToDelete) {
-            const deletedNoteIds = await deleteCollection(collectionToDelete.id);
-            if (activeNoteId && deletedNoteIds.includes(activeNoteId)) setActiveNoteId(null);
-            setCollectionToDelete(null);
-        }
-    }, [collectionToDelete, deleteCollection, activeNoteId]);
+    const handleDeleteCollectionConfirm = useCallback(async (collection: Collection) => {
+        const deletedNoteIds = await deleteCollection(collection.id);
+        if (activeNoteId && deletedNoteIds.includes(activeNoteId)) setActiveNoteId(null);
+        hideConfirmation();
+    }, [deleteCollection, activeNoteId, hideConfirmation]);
 
-    const handleDeleteSmartCollectionConfirm = useCallback(async () => {
-        if (smartCollectionToDelete) {
-            await deleteSmartCollection(smartCollectionToDelete.id);
-            setSmartCollectionToDelete(null);
-        }
-    }, [smartCollectionToDelete, deleteSmartCollection]);
+    const handleDeleteSmartCollectionConfirm = useCallback(async (smartCollection: SmartCollection) => {
+        await deleteSmartCollection(smartCollection.id);
+        hideConfirmation();
+    }, [deleteSmartCollection, hideConfirmation]);
 
     const handleActivateSmartCollection = useCallback((collection: SmartCollection) => {
         setActiveSmartCollectionId(collection.id);
@@ -240,18 +231,13 @@ export const useStoreProviderLogic = () => {
         activeNoteId, setActiveNoteId, activeNote, favoriteNotes, searchData, searchTerm,
         handleSearchTermChange, searchMode, setSearchMode, isAiSearching, aiSearchError,
         activeSmartCollection, handleActivateSmartCollection, handleClearActiveSmartCollection,
-        noteToDelete, setNoteToDelete, 
-        collectionToDelete, setCollectionToDelete,
-        smartCollectionToDelete, setSmartCollectionToDelete, handleDeleteNoteConfirm,
-        handleDeleteCollectionConfirm, handleDeleteSmartCollectionConfirm,
+        handleDeleteNoteConfirm, handleDeleteCollectionConfirm, handleDeleteSmartCollectionConfirm,
     }), [
         store, onAddNote, onAddNoteFromFile, fileTree,
         activeNoteId, setActiveNoteId, activeNote, favoriteNotes, searchData, searchTerm,
         handleSearchTermChange, searchMode, setSearchMode, isAiSearching, aiSearchError,
         activeSmartCollection, handleActivateSmartCollection, handleClearActiveSmartCollection,
-        noteToDelete, setNoteToDelete, collectionToDelete, setCollectionToDelete,
-        smartCollectionToDelete, setSmartCollectionToDelete, handleDeleteNoteConfirm,
-        handleDeleteCollectionConfirm, handleDeleteSmartCollectionConfirm,
+        handleDeleteNoteConfirm, handleDeleteCollectionConfirm, handleDeleteSmartCollectionConfirm,
     ]);
     
     return storeValue;

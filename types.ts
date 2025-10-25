@@ -107,6 +107,19 @@ export interface ToastMessage {
     type: 'success' | 'error' | 'info';
 }
 
+export interface ConfirmationOptions {
+    title: string;
+    message: string;
+    onConfirm: () => void | Promise<void>;
+    confirmText?: string;
+    confirmClass?: string;
+    confirmationRequiredText?: string;
+}
+
+export interface ConfirmationState extends ConfirmationOptions {
+    isOpen: boolean;
+}
+
 export interface ContextMenuItem {
     label: string;
     action?: () => void;

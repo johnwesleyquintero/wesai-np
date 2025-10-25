@@ -1,7 +1,14 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { SmartCollection, ContextMenuItem, ViewState } from '../types';
+import { SmartCollection, ContextMenuItem, ViewState, ConfirmationState, ConfirmationOptions } from '../types';
 import { useMobileView } from './useMobileView';
 import { useApiKey } from './useApiKey';
+
+const initialConfirmationState: ConfirmationState = {
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+};
 
 export const useUIProviderLogic = () => {
     const [theme, setTheme] = useState<'light' | 'dark'>(() => (localStorage.getItem('theme') as 'light' | 'dark') || 'light');
@@ -25,6 +32,7 @@ export const useUIProviderLogic = () => {
     const [smartFolderToEdit, setSmartFolderToEdit] = useState<SmartCollection | null>(null);
     const [contextMenu, setContextMenu] = useState<{ x: number; y: number; items: ContextMenuItem[] } | null>(null);
     const [isWelcomeModalOpen, setIsWelcomeModalOpen] = useState(false);
+    const [confirmation, setConfirmation] = useState<ConfirmationState>(initialConfirmationState);
     const { apiKey } = useApiKey();
 
     useEffect(() => {
@@ -83,6 +91,14 @@ export const useUIProviderLogic = () => {
     const openSmartFolderModal = useCallback((folder: SmartCollection | null) => { setSmartFolderToEdit(folder); setIsSmartFolderModalOpen(true); }, []);
     const onOpenContextMenu = useCallback((e: React.MouseEvent, items: ContextMenuItem[]) => { e.preventDefault(); e.stopPropagation(); setContextMenu({ x: e.clientX, y: e.clientY, items }); }, []);
     const closeWelcomeModal = useCallback(() => { localStorage.setItem('wesai-seen-welcome', 'true'); setIsWelcomeModalOpen(false); }, []);
+    
+    const showConfirmation = useCallback((options: ConfirmationOptions) => {
+        setConfirmation({ ...options, isOpen: true });
+    }, []);
+
+    const hideConfirmation = useCallback(() => {
+        setConfirmation(prev => ({ ...initialConfirmationState, isOpen: false }));
+    }, []);
 
     const uiValue = useMemo(() => ({
         theme, toggleTheme, view, setView, isMobileView, isSidebarOpen, setIsSidebarOpen,
@@ -92,6 +108,7 @@ export const useUIProviderLogic = () => {
         setIsSmartFolderModalOpen, smartFolderToEdit, openSmartFolderModal, contextMenu,
         setContextMenu, onOpenContextMenu, isWelcomeModalOpen, closeWelcomeModal, isApiKeyMissing: !apiKey,
         draggingItemId, setDraggingItemId,
+        confirmation, showConfirmation, hideConfirmation,
     }), [
         theme, toggleTheme, view, setView, isMobileView, isSidebarOpen, setIsSidebarOpen,
         onToggleSidebar, isSidebarCollapsed, toggleSidebarCollapsed,
@@ -100,6 +117,7 @@ export const useUIProviderLogic = () => {
         setIsSmartFolderModalOpen, smartFolderToEdit, openSmartFolderModal, contextMenu,
         setContextMenu, onOpenContextMenu, isWelcomeModalOpen, closeWelcomeModal, apiKey,
         draggingItemId, setDraggingItemId,
+        confirmation, showConfirmation, hideConfirmation,
     ]);
     
     return uiValue;

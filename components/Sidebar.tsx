@@ -93,19 +93,21 @@ const Sidebar: React.FC<SidebarProps> = ({
 }) => {
     const {
         collections, smartCollections, onAddNote, addCollection, moveItem,
-        deleteSmartCollection, onAddNoteFromFile, 
-        setNoteToDelete, fileTree, notes, favoriteNotes, searchData, activeNoteId,
+        onAddNoteFromFile, 
+        fileTree, notes, favoriteNotes, searchData, activeNoteId,
         searchTerm, handleSearchTermChange: setSearchTerm, searchMode, setSearchMode,
         isAiSearching, aiSearchError, activeSmartCollection,
         handleActivateSmartCollection: onActivateSmartCollection,
         handleClearActiveSmartCollection: onClearActiveSmartCollection,
-        setActiveNoteId
+        setActiveNoteId,
+        handleDeleteNoteConfirm, handleDeleteSmartCollectionConfirm,
     } = useStoreContext();
     
     const {
         theme, toggleTheme, isMobileView, isSidebarOpen, setIsSidebarOpen, view, setView,
         isAiRateLimited, openSmartFolderModal, onOpenContextMenu, openSettings, isApiKeyMissing,
         isSidebarCollapsed, toggleSidebarCollapsed: onToggleCollapsed, setIsCommandPaletteOpen,
+        showConfirmation,
     } = useUIContext();
     
     const rootDropRef = useRef<HTMLDivElement>(null);
@@ -221,7 +223,17 @@ const Sidebar: React.FC<SidebarProps> = ({
     
     const handleNoteCardContextMenu = (e: React.MouseEvent, note: Note) => {
         onOpenContextMenu(e, [
-            { label: 'Delete Note', action: () => setNoteToDelete(note), isDestructive: true, icon: <TrashIcon /> },
+            { 
+                label: 'Delete Note', 
+                action: () => showConfirmation({
+                    title: "Delete Note",
+                    message: `Are you sure you want to permanently delete "${note.title}"? This action cannot be undone.`,
+                    confirmText: "Delete",
+                    onConfirm: () => handleDeleteNoteConfirm(note),
+                }), 
+                isDestructive: true, 
+                icon: <TrashIcon /> 
+            },
         ]);
     };
     
@@ -260,7 +272,16 @@ const Sidebar: React.FC<SidebarProps> = ({
                      onClick={() => onActivateSmartCollection(sc)}
                      onContextMenu={(e) => onOpenContextMenu(e, [
                          { label: 'Edit Smart Folder', action: () => openSmartFolderModal(sc), icon: <PencilSquareIcon /> },
-                         { label: 'Delete Smart Folder', action: () => deleteSmartCollection(sc.id), isDestructive: true, icon: <TrashIcon /> },
+                         { 
+                             label: 'Delete Smart Folder', 
+                             action: () => showConfirmation({
+                                title: "Delete Smart Folder",
+                                message: `Are you sure you want to delete the smart folder "${sc.name}"? This will not delete any notes.`,
+                                onConfirm: () => handleDeleteSmartCollectionConfirm(sc),
+                             }), 
+                             isDestructive: true, 
+                             icon: <TrashIcon /> 
+                        },
                      ])}
                 >
                      <div className="flex items-center truncate">

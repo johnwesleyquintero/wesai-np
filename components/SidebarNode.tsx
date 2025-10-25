@@ -24,9 +24,9 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
 }) => {
     const { 
         collections, onAddNote, onAddNoteFromFile, updateCollection, renameNoteTitle, moveItem,
-        copyNote, setNoteToDelete, setCollectionToDelete
+        copyNote, handleDeleteNoteConfirm, handleDeleteCollectionConfirm, notes
     } = useStoreContext();
-    const { onOpenContextMenu, renamingItemId, setRenamingItemId, draggingItemId, setDraggingItemId } = useUIContext();
+    const { onOpenContextMenu, renamingItemId, setRenamingItemId, draggingItemId, setDraggingItemId, showConfirmation } = useUIContext();
 
     const isCollection = 'name' in node;
     const [renameValue, setRenameValue] = useState('');
@@ -91,7 +91,22 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
             menuItems = [
                 { label: 'New Note in Folder', action: () => onAddNote(node.id), icon: <PencilSquareIcon /> },
                 { label: 'Rename Folder', action: () => setRenamingItemId(node.id), icon: <PencilSquareIcon /> },
-                { label: 'Delete Folder', action: () => setCollectionToDelete(collectionAsCollection), icon: <TrashIcon />, isDestructive: true },
+                { 
+                    label: 'Delete Folder', 
+                    action: () => {
+                        const hasChildren = notes.some(n => n.parentId === collectionAsCollection.id) || collections.some(c => c.parentId === collectionAsCollection.id);
+                        showConfirmation({
+                            title: 'Delete Folder',
+                            message: hasChildren
+                                ? `Are you sure you want to delete the folder "${collectionAsCollection.name}"? All notes and folders inside it will also be permanently deleted. This action cannot be undone.`
+                                : `Are you sure you want to delete the empty folder "${collectionAsCollection.name}"? This action cannot be undone.`,
+                            confirmationRequiredText: hasChildren ? collectionAsCollection.name : undefined,
+                            onConfirm: () => handleDeleteCollectionConfirm(collectionAsCollection),
+                        });
+                    }, 
+                    icon: <TrashIcon />, 
+                    isDestructive: true 
+                },
             ];
         } else {
             const noteAsNote = node as Note;
@@ -156,7 +171,17 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
                     }, 
                     icon: <ClipboardDocumentIcon /> 
                 },
-                { label: 'Delete Note', action: () => setNoteToDelete(noteAsNote), icon: <TrashIcon />, isDestructive: true },
+                { 
+                    label: 'Delete Note', 
+                    action: () => showConfirmation({
+                        title: 'Delete Note',
+                        message: `Are you sure you want to permanently delete "${noteAsNote.title}"? This action cannot be undone.`,
+                        onConfirm: () => handleDeleteNoteConfirm(noteAsNote),
+                        confirmText: 'Delete',
+                    }), 
+                    icon: <TrashIcon />, 
+                    isDestructive: true 
+                },
             ];
         }
         onOpenContextMenu(e, menuItems);

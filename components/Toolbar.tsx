@@ -3,11 +3,10 @@ import { Note, Template } from '../types';
 import { StarIcon, TrashIcon, SparklesIcon, HistoryIcon, ArrowDownTrayIcon, DocumentDuplicateIcon, Bars3Icon, ArrowUturnLeftIcon, ArrowUturnRightIcon, EyeIcon, PencilSquareIcon, CheckBadgeIcon, ClipboardDocumentIcon, InformationCircleIcon, EllipsisVerticalIcon, DocumentPlusIcon } from './Icons';
 import { useToast } from '../context/ToastContext';
 import NoteInfoPopover from './NoteInfoPopover';
-import { useStoreContext } from '../context/AppContext';
+import { useStoreContext, useUIContext } from '../context/AppContext';
 
 interface ToolbarProps {
     note: Note;
-    onDelete: (noteId: string) => void;
     onToggleFavorite: (id: string) => void;
     saveStatus: 'saved' | 'saving' | 'unsaved' | 'error';
     editorTitle: string;
@@ -221,12 +220,13 @@ const MoreActionsMenu: React.FC<{
 };
 
 const Toolbar: React.FC<ToolbarProps> = ({ 
-    note, onDelete, onToggleFavorite, saveStatus, editorTitle, onEnhance, onSummarize, onToggleHistory, isHistoryOpen, 
+    note, onToggleFavorite, saveStatus, editorTitle, onEnhance, onSummarize, onToggleHistory, isHistoryOpen, 
     onApplyTemplate, isMobileView, onToggleSidebar, onUndo, onRedo, canUndo, canRedo,
     viewMode, onToggleViewMode, wordCount, charCount,
     aiActionError, setAiActionError, isFullAiActionLoading
 }) => {
-    const { setNoteToDelete, addTemplate } = useStoreContext();
+    const { addTemplate, handleDeleteNoteConfirm } = useStoreContext();
+    const { showConfirmation } = useUIContext();
     const [isInfoOpen, setIsInfoOpen] = useState(false);
     const { showToast } = useToast();
 
@@ -309,7 +309,17 @@ const Toolbar: React.FC<ToolbarProps> = ({
                     <button onClick={() => onToggleFavorite(note.id)} disabled={isDisabled} className="p-2 rounded-md hover:bg-light-ui dark:hover:bg-dark-ui transition-colors disabled:opacity-50 disabled:cursor-not-allowed" aria-label={note.isFavorite ? 'Remove from favorites' : 'Add to favorites'}>
                         <StarIcon className={`w-5 h-5 ${note.isFavorite ? 'text-yellow-500' : ''}`} filled={note.isFavorite} />
                     </button>
-                    <button onClick={() => setNoteToDelete(note)} disabled={isDisabled} className="p-2 rounded-md hover:bg-light-ui dark:hover:bg-dark-ui transition-colors text-red-500 disabled:opacity-50 disabled:cursor-not-allowed" aria-label="Delete note">
+                    <button 
+                        onClick={() => showConfirmation({
+                            title: 'Delete Note',
+                            message: `Are you sure you want to permanently delete "${note.title}"? This action cannot be undone.`,
+                            onConfirm: () => handleDeleteNoteConfirm(note),
+                            confirmText: 'Delete',
+                        })} 
+                        disabled={isDisabled} 
+                        className="p-2 rounded-md hover:bg-light-ui dark:hover:bg-dark-ui transition-colors text-red-500 disabled:opacity-50 disabled:cursor-not-allowed" 
+                        aria-label="Delete note"
+                    >
                         <TrashIcon />
                     </button>
 

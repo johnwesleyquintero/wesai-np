@@ -1,5 +1,6 @@
 
 
+
 import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Sidebar from './components/Sidebar';
 import { useStoreContext } from './context/AppContext';
@@ -38,12 +39,8 @@ const MAX_SIDEBAR_WIDTH = 500;
 
 function AppContent() {
     const {
-        notes, collections, activeNoteId, setActiveNoteId, onAddNote,
-        noteToDelete, setNoteToDelete,
-        collectionToDelete, setCollectionToDelete,
-        smartCollectionToDelete, setSmartCollectionToDelete, handleDeleteCollectionConfirm,
-        handleDeleteNoteConfirm, handleDeleteSmartCollectionConfirm,
-        addSmartCollection, updateSmartCollection, templates, restoreNoteVersion
+        notes, activeNoteId, setActiveNoteId, onAddNote,
+        addSmartCollection, updateSmartCollection,
     } = useStoreContext();
 
     const {
@@ -55,6 +52,7 @@ function AppContent() {
         isApiKeyMissing,
         isSidebarCollapsed,
         toggleSidebarCollapsed,
+        confirmation, hideConfirmation,
     } = useUIContext();
 
     const isResizing = useRef(false);
@@ -77,13 +75,6 @@ function AppContent() {
         return notes.find(n => n.id === activeNoteId) || null;
     }, [activeNoteId, notes]);
     
-    const isCollectionToDeleteEmpty = useMemo(() => {
-        if (!collectionToDelete) return false;
-        // A folder is empty if no note or other folder has it as a parent.
-        const hasChildren = notes.some(n => n.parentId === collectionToDelete.id) || collections.some(c => c.parentId === collectionToDelete.id);
-        return !hasChildren;
-    }, [collectionToDelete, notes, collections]);
-
     useEffect(() => {
         if (activeNoteId && !notes.some(n => n.id === activeNoteId)) {
             setActiveNoteId(null);
@@ -204,35 +195,15 @@ function AppContent() {
                 <WelcomeModal isOpen={isWelcomeModalOpen} onClose={closeWelcomeModal} />
             </Suspense>
 
-
             <ConfirmationModal
-                isOpen={!!noteToDelete}
-                onClose={() => setNoteToDelete(null)}
-                onConfirm={handleDeleteNoteConfirm}
-                title="Delete Note"
-                message={`Are you sure you want to permanently delete "${noteToDelete?.title}"? This action cannot be undone.`}
-                confirmText="Delete"
-            />
-            
-            <ConfirmationModal
-                isOpen={!!collectionToDelete}
-                onClose={() => setCollectionToDelete(null)}
-                onConfirm={handleDeleteCollectionConfirm}
-                title="Delete Folder"
-                message={
-                    isCollectionToDeleteEmpty
-                        ? `Are you sure you want to delete the empty folder "${collectionToDelete?.name}"? This action cannot be undone.`
-                        : `Are you sure you want to delete the folder "${collectionToDelete?.name}"? All notes and folders inside it will also be permanently deleted. This action cannot be undone.`
-                }
-                confirmationRequiredText={isCollectionToDeleteEmpty ? undefined : collectionToDelete?.name}
-            />
-
-            <ConfirmationModal
-                isOpen={!!smartCollectionToDelete}
-                onClose={() => setSmartCollectionToDelete(null)}
-                onConfirm={handleDeleteSmartCollectionConfirm}
-                title="Delete Smart Folder"
-                message={`Are you sure you want to delete the smart folder "${smartCollectionToDelete?.name}"? This will not delete any notes.`}
+                isOpen={confirmation.isOpen}
+                onClose={hideConfirmation}
+                onConfirm={confirmation.onConfirm}
+                title={confirmation.title}
+                message={confirmation.message}
+                confirmText={confirmation.confirmText}
+                confirmClass={confirmation.confirmClass}
+                confirmationRequiredText={confirmation.confirmationRequiredText}
             />
         </div>
     );

@@ -1,6 +1,4 @@
 
-
-
 import React, { useEffect, useRef, useMemo, useCallback } from 'react';
 import { Note, NoteVersion, Template } from '../types';
 import Toolbar from './Toolbar';
@@ -24,6 +22,7 @@ import RelatedNotes from './RelatedNotes';
 import { useNoteEditorReducer, initialNoteEditorUIState } from '../hooks/useNoteEditorReducer';
 import { useAiSuggestions } from '../hooks/useAiSuggestions';
 import { useAiActions } from '../hooks/useAiActions';
+import { useDebounce } from '../hooks/useDebounce';
 
 interface NoteEditorProps {
     note: Note;
@@ -59,6 +58,8 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         tags: note.tags,
     });
     
+    const debouncedEditorState = useDebounce(editorState, 1500);
+
     const latestEditorStateRef = useRef(editorState);
     useEffect(() => {
         latestEditorStateRef.current = editorState;
@@ -134,12 +135,45 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         }
     }, [note.id, resetEditorState, resetAiSuggestions, setActiveSpellingError]);
 
-    // Handle auto-saving status
+    // Auto-save and status handling logic
     useEffect(() => {
-        if (previewVersion) return;
-        const isDirty = JSON.stringify(editorState) !== JSON.stringify({ title: note.title, content: note.content, tags: note.tags });
-        dispatch({ type: 'SET_SAVE_STATUS', payload: isDirty ? 'unsaved' : 'saved' });
-    }, [editorState, note.title, note.content, note.tags, previewVersion]);
+        if (previewVersion) return; // Don't save while previewing history
+
+        const isLiveDirty = JSON.stringify(editorState) !== JSON.stringify({
+            title: note.title,
+            content: note.content,
+            tags: note.tags,
+        });
+
+        const isDebouncedDirty = JSON.stringify(debouncedEditorState) !== JSON.stringify({
+            title: note.title,
+            content: note.content,
+            tags: note.tags,
+        });
+
+        if (isLiveDirty) {
+            const userHasStoppedTyping = JSON.stringify(editorState) === JSON.stringify(debouncedEditorState);
+            if (isDebouncedDirty && userHasStoppedTyping) {
+                dispatch({ type: 'SET_SAVE_STATUS', payload: 'saving' });
+                updateNote(note.id, editorState)
+                    .catch(error => {
+                        console.error("Auto-save failed:", error);
+                        showToast({ message: `Auto-save failed. Your changes are safe here.`, type: 'error' });
+                        dispatch({ type: 'SET_SAVE_STATUS', payload: 'unsaved' });
+                    });
+            } else {
+                // User is still typing, just show the unsaved status
+                if (saveStatus !== 'unsaved') {
+                    dispatch({ type: 'SET_SAVE_STATUS', payload: 'unsaved' });
+                }
+            }
+        } else {
+            // No difference between editor state and saved state
+            if (saveStatus !== 'saved') {
+                dispatch({ type: 'SET_SAVE_STATUS', payload: 'saved' });
+            }
+        }
+    }, [editorState, debouncedEditorState, note, updateNote, showToast, dispatch, previewVersion, saveStatus]);
 
     // Robust saving on navigation/unmount
     useEffect(() => {

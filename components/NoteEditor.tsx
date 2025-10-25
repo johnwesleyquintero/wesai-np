@@ -71,6 +71,8 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
     useEffect(() => {
         latestEditorStateRef.current = editorState;
     }, [editorState]);
+    
+    const prevNoteRef = useRef(note);
 
     const [uiState, dispatch] = useNoteEditorReducer();
     const {
@@ -142,6 +144,59 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
             setTimeout(() => titleInputRef.current?.focus(), 100);
         }
     }, [note.id, resetEditorState, resetAiSuggestions, setActiveSpellingError]);
+    
+    // Effect to handle external note updates (e.g., from another tab)
+    useEffect(() => {
+        // If the note ID has changed, it's a new note loading.
+        // The main reset effect handles this, so we update our ref and exit.
+        if (note.id !== prevNoteRef.current.id) {
+            prevNoteRef.current = note;
+            return;
+        }
+
+        // If updatedAt has changed, a modification occurred.
+        if (note.updatedAt !== prevNoteRef.current.updatedAt) {
+            // Check if the incoming update matches the current editor state.
+            // If it does, it's just our own save reflecting back. Do nothing.
+            const isSelfUpdate = JSON.stringify(latestEditorStateRef.current) === JSON.stringify({
+                title: note.title,
+                content: note.content,
+                tags: note.tags,
+            });
+
+            if (isSelfUpdate) {
+                prevNoteRef.current = note; // Update ref and continue
+                return;
+            }
+
+            // The update is external. Now check if the user has local, unsaved changes.
+            // "Dirty" is defined as the current editor state differing from the *previous* note prop state.
+            const hasLocalChanges = JSON.stringify(latestEditorStateRef.current) !== JSON.stringify({
+                title: prevNoteRef.current.title,
+                content: prevNoteRef.current.content,
+                tags: prevNoteRef.current.tags,
+            });
+
+            if (hasLocalChanges) {
+                // User is actively editing. Warn them but preserve their work.
+                showToast({
+                    message: `"${note.title}" was updated in another tab. Your next save will overwrite.`,
+                    type: 'info',
+                });
+            } else {
+                // Editor is "clean", so it's safe to load the external changes.
+                resetEditorState({ title: note.title, content: note.content, tags: note.tags });
+                showToast({
+                    message: `"${note.title}" was synced from an external change.`,
+                    type: 'info',
+                });
+            }
+        }
+
+        // Update the ref for the next comparison.
+        prevNoteRef.current = note;
+    }, [note, resetEditorState, showToast]);
+
 
     // Auto-save and status handling logic
     useEffect(() => {

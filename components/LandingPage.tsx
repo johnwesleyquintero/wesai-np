@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { useUIContext } from '../context/AppContext';
-import { LockClosedIcon, SparklesIcon, MagnifyingGlassIcon, TrendingUpIcon, Cog6ToothIcon, PencilSquareIcon, ServerStackIcon, SunIcon, MoonIcon } from './Icons';
+import { LockClosedIcon, SparklesIcon, MagnifyingGlassIcon, TrendingUpIcon, Cog6ToothIcon, PencilSquareIcon, ServerStackIcon, SunIcon, MoonIcon, LinkIcon, LightBulbIcon } from './Icons';
 
 // Moved static data outside the component for performance and clarity.
 const templates = [
@@ -21,6 +21,45 @@ const templates = [
         icon: <TrendingUpIcon className="w-8 h-8 text-light-primary dark:text-dark-primary" />,
         title: 'Content & Data Analysis',
         description: 'Process VOC insights, benchmark competitors, and generate content strategies from raw data.',
+    },
+];
+
+const coreFeatures = [
+    {
+        id: 'multi-mode-ai',
+        icon: <SparklesIcon />,
+        title: 'Multi-Mode AI Assistant',
+        description: 'Switch between a knowledge assistant, a service responder, and a general co-pilot to tackle any task.',
+    },
+    {
+        id: 'bi-directional-linking',
+        icon: <LinkIcon />,
+        title: 'Bi-Directional Linking',
+        description: 'Connect ideas and build a web of knowledge. Backlinks are automatically tracked and displayed.',
+    },
+    {
+        id: 'proactive-suggestions',
+        icon: <LightBulbIcon />,
+        title: 'Proactive Related Notes',
+        description: 'The AI analyzes your work in real-time to surface relevant notes from your knowledge base.',
+    },
+    {
+        id: 'secure-sync',
+        icon: <LockClosedIcon />,
+        title: 'Secure Cloud Sync',
+        description: 'Your data is protected and synced in real-time across all your devices via your private cloud backend.',
+    },
+    {
+        id: 'command-palette',
+        icon: <MagnifyingGlassIcon />,
+        title: 'Command Palette',
+        description: 'Access nearly every feature, from creating notes to running AI actions, without leaving your keyboard.',
+    },
+    {
+        id: 'markdown-editor',
+        icon: <PencilSquareIcon />,
+        title: 'Rich Markdown Editor',
+        description: 'A full-featured editor with syntax highlighting, live preview, embedded media, and more.',
     },
 ];
 
@@ -124,7 +163,7 @@ const LandingPage: React.FC<{ onGetStarted: () => void }> = ({ onGetStarted }) =
                             One cockpit, endless AI-powered workflows.
                         </h1>
                         <p className="mt-6 max-w-2xl mx-auto text-lg text-light-text/70 dark:text-dark-text/70">
-                            The operator-first platform for building, executing, and automating high-value work. Powered by the engine you already trust.
+                            The operator-first platform for building, executing, and automating high-value work. Powered by a modular AI engine and your private cloud.
                         </p>
                         <div className="mt-8 flex justify-center gap-4">
                             <button onClick={onGetStarted} className="px-8 py-3 bg-light-primary text-white dark:bg-dark-primary dark:text-zinc-900 rounded-md text-lg font-semibold hover:bg-light-primary-hover dark:hover:bg-dark-primary-hover transition-transform hover:scale-105">
@@ -137,7 +176,6 @@ const LandingPage: React.FC<{ onGetStarted: () => void }> = ({ onGetStarted }) =
                                 <p><span className="text-slate-500">&gt;</span> Discuss Q3 launch</p>
                                 <p><span className="text-slate-500">&gt;</span> John: need to finalize marketing copy</p>
                                 <p><span className="text-slate-500">&gt;</span> Jane: budget is tight, focus on organic</p>
-                                {/* FIX: Removed invalid closing </span> tag which was causing a JSX parsing error. */}
                                 <p className="text-slate-500">&gt; Action: JW to draft blog post</p>
                             </div>
                             <div className="animate-step2">
@@ -193,7 +231,28 @@ const LandingPage: React.FC<{ onGetStarted: () => void }> = ({ onGetStarted }) =
                         </div>
                     </div>
                 </section>
+
                 <section ref={el => { sectionsRef.current[2] = el; }} className="py-20 bg-light-ui/50 dark:bg-dark-ui/50 scroll-animate">
+                    <div className="container mx-auto px-4">
+                        <div className="text-center max-w-3xl mx-auto mb-16">
+                            <h2 className="text-3xl font-bold">The Sovereign Cockpit</h2>
+                            <p className="mt-4 text-lg text-light-text/70 dark:text-dark-text/70">
+                                WesCore is more than a tool; it's a force multiplier. Here's how it empowers you.
+                            </p>
+                        </div>
+                        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                            {coreFeatures.map((feature) => (
+                                <div key={feature.id} className="bg-light-background dark:bg-dark-background p-6 rounded-lg border border-light-border dark:border-dark-border">
+                                    <div className="text-light-primary dark:text-dark-primary w-6 h-6 mb-3">{feature.icon}</div>
+                                    <h3 className="font-bold">{feature.title}</h3>
+                                    <p className="text-sm mt-1 text-light-text/70 dark:text-dark-text/70">{feature.description}</p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </section>
+
+                <section ref={el => { sectionsRef.current[3] = el; }} className="py-20 scroll-animate">
                     <div className="container mx-auto px-4">
                         <div className="text-center max-w-3xl mx-auto">
                             <h2 className="text-3xl font-bold">A Power Tool for Every Operator</h2>
@@ -214,7 +273,7 @@ const LandingPage: React.FC<{ onGetStarted: () => void }> = ({ onGetStarted }) =
                         </div>
                     </div>
                 </section>
-                <section ref={el => { sectionsRef.current[3] = el; }} className="py-20 scroll-animate">
+                <section ref={el => { sectionsRef.current[4] = el; }} className="py-20 scroll-animate">
                     <div className="container mx-auto px-4 text-center">
                         <h2 className="text-3xl font-bold">Ready to build your second brain?</h2>
                         <p className="mt-4 max-w-2xl mx-auto text-lg text-light-text/70 dark:text-dark-text/70">
@@ -228,7 +287,7 @@ const LandingPage: React.FC<{ onGetStarted: () => void }> = ({ onGetStarted }) =
             </main>
             <footer className="py-8 border-t border-light-border dark:border-dark-border">
                 <div className="container mx-auto px-4 text-center text-sm text-light-text/60 dark:text-dark-text/60">
-                    &copy; {new Date().getFullYear()} WesCore by ScaleSmart. All Rights Reserved. Version 2.0.0
+                    &copy; {new Date().getFullYear()} WesCore by ScaleSmart. All Rights Reserved.
                 </div>
             </footer>
         </div>

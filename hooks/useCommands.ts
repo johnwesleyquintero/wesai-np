@@ -10,7 +10,6 @@ export const useCommands = (onComplete: () => void): Command[] => {
     const {
         onAddNote,
         activeNote,
-// @FIX: 'setNoteToDelete' does not exist on the store context. Replaced with 'handleDeleteNoteConfirm'.
         handleDeleteNoteConfirm,
         toggleFavorite,
     } = useStoreContext();
@@ -23,7 +22,6 @@ export const useCommands = (onComplete: () => void): Command[] => {
         view,
         isAiRateLimited,
         onToggleSidebar,
-// @FIX: Added 'showConfirmation' to use the confirmation modal for delete actions.
         showConfirmation,
     } = useUIContext();
 
@@ -74,7 +72,6 @@ export const useCommands = (onComplete: () => void): Command[] => {
                 {
                     id: 'delete-note',
                     name: 'Delete Note',
-// @FIX: Replaced direct state setting with a call to the confirmation modal for safer deletion.
                     action: () => {
                         showConfirmation({
                             title: "Delete Note",
@@ -211,7 +208,6 @@ export const useCommands = (onComplete: () => void): Command[] => {
         setView,
         view,
         activeNote,
-// @FIX: Updated dependency array to reflect the use of 'handleDeleteNoteConfirm' and 'showConfirmation'.
         handleDeleteNoteConfirm,
         showConfirmation,
         toggleFavorite,

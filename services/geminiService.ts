@@ -1,6 +1,7 @@
 
 
 
+
 import { GoogleGenAI, HarmCategory, HarmBlockThreshold, Type, FunctionDeclaration, Content, GenerateContentResponse, Chat, Part } from "@google/genai";
 import { Note, ChatMessage, InlineAction, SpellingError } from '../types';
 import { MODEL_NAMES } from '../lib/config';
@@ -218,7 +219,6 @@ export const generateChatStream = async (
     }
 
     return _callGemini(
-// @FIX: The 'safetySettings' property is not a valid top-level parameter for 'generateContentStream' and has been moved into the 'config' object.
         (ai) => ai.models.generateContentStream({
             model: MODEL_NAMES.FLASH,
             contents: { role: 'user', parts: userParts },
@@ -247,7 +247,6 @@ export const createGeneralChatSession = (): Chat => {
         { name: 'moveNoteToCollection', parameters: { type: Type.OBJECT, properties: { noteId: { type: Type.STRING }, collectionId: { type: Type.STRING } }, required: ['noteId', 'collectionId'] } },
     ];
 
-// @FIX: The 'safetySettings' property is not a valid top-level parameter for 'chats.create' and has been moved into the 'config' object.
     return ai.chats.create({
         model: MODEL_NAMES.PRO,
         config: {
@@ -309,7 +308,6 @@ export const performInlineEdit = async (text: string, action: InlineAction): Pro
         case 'makeCasual': instruction = 'Rewrite the following text in a casual tone:'; break;
     }
 
-// @FIX: The 'safetySettings' property is not a valid top-level parameter for 'generateContent' and has been moved into a new 'config' object.
     return _callGemini(
         (ai) => ai.models.generateContent({
             model: MODEL_NAMES.FLASH,
@@ -355,7 +353,6 @@ ${content}`,
 
 
 export const enhanceText = async (text: string, tone: string): Promise<string> => {
-// @FIX: The 'safetySettings' property is not a valid top-level parameter for 'generateContent' and has been moved into a new 'config' object.
     return _callGemini(
         (ai) => ai.models.generateContent({
             model: MODEL_NAMES.FLASH,

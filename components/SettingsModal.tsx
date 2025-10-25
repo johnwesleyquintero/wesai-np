@@ -7,6 +7,7 @@ import ConfirmationModal from './ConfirmationModal';
 import { useToast } from '../context/ToastContext';
 import { useModalAccessibility } from '../hooks/useModalAccessibility';
 import { supabase } from '../lib/supabaseClient';
+import { useApiKey } from '../hooks/useApiKey';
 
 interface SettingsModalProps {
     isOpen: boolean;
@@ -17,23 +18,33 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
     const { templates, addTemplate, updateTemplate, deleteTemplate, notes, collections, smartCollections, importData } = useStoreContext();
     const { showToast } = useToast();
     
+    const { apiKey, saveApiKey } = useApiKey();
+    const [localApiKey, setLocalApiKey] = useState(apiKey || '');
+    const [isSaving, setIsSaving] = useState(false);
+    
     const [isTemplateEditorOpen, setIsTemplateEditorOpen] = useState(false);
     const [templateToEdit, setTemplateToEdit] = useState<Template | null>(null);
     const [isImportConfirmOpen, setIsImportConfirmOpen] = useState(false);
     const [dataToImport, setDataToImport] = useState<any | null>(null);
 
-    // FIX: Focus the close button since the API key section and save button are removed.
-    const closeButtonRef = useRef<HTMLButtonElement>(null);
+    const apiKeyInputRef = useRef<HTMLInputElement>(null);
+    const saveButtonRef = useRef<HTMLButtonElement>(null);
     const modalRef = useRef<HTMLDivElement>(null);
 
     useModalAccessibility(isOpen, onClose, modalRef);
 
     useEffect(() => {
         if (isOpen) {
-            // FIX: Focus the close button on modal open for better accessibility.
-            setTimeout(() => closeButtonRef.current?.focus(), 100);
+            setLocalApiKey(apiKey || '');
+            setTimeout(() => {
+                if (!apiKey) {
+                    apiKeyInputRef.current?.focus();
+                } else {
+                    saveButtonRef.current?.focus();
+                }
+            }, 100);
         }
-    }, [isOpen]);
+    }, [isOpen, apiKey]);
 
     const handleOpenTemplateEditor = (template: Template | null) => {
         setTemplateToEdit(template);
@@ -127,6 +138,17 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
             }
         }
     };
+    
+    const handleSaveSettings = () => {
+        setIsSaving(true);
+        saveApiKey(localApiKey);
+        setTimeout(() => {
+            setIsSaving(false);
+            showToast({ message: 'Settings saved!', type: 'success' });
+            onClose();
+        }, 500);
+    };
+
 
     if (!isOpen) return null;
 
@@ -140,7 +162,24 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                     
                     <div className="overflow-y-auto p-6">
                         <div className="space-y-6">
-                            {/* FIX: Removed Gemini API Key section to comply with guidelines. */}
+                             <div>
+                                <h3 className="text-lg font-semibold mb-3">Gemini API Key</h3>
+                                <p className="text-sm text-light-text/60 dark:text-dark-text/60 mb-3">
+                                    Your personal API key for Google Gemini is required for all AI features. Your key is stored securely in your browser's local storage and is never sent to our servers.
+                                </p>
+                                <input
+                                    ref={apiKeyInputRef}
+                                    type="password"
+                                    value={localApiKey}
+                                    onChange={(e) => setLocalApiKey(e.target.value)}
+                                    placeholder="Enter your Gemini API key"
+                                    className="w-full p-2 bg-light-ui dark:bg-dark-ui rounded-md border border-light-border dark:border-dark-border focus:ring-2 focus:ring-light-primary focus:outline-none"
+                                />
+                                <a href="https://ai.google.dev/" target="_blank" rel="noopener noreferrer" className="text-xs text-light-primary dark:text-dark-primary hover:underline mt-2 block">
+                                    Get an API key from Google AI Studio &rarr;
+                                </a>
+                            </div>
+
                              <div>
                                 <h3 className="text-lg font-semibold mb-3">Account</h3>
                                  <button onClick={handleSignOut} className="w-full text-center px-4 py-2 rounded-md bg-light-ui dark:bg-dark-ui hover:bg-light-ui-hover dark:hover:bg-dark-ui-hover">Sign Out</button>
@@ -181,8 +220,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                     </div>
 
                     <div className="flex justify-end items-center space-x-4 p-6 border-t border-light-border dark:border-dark-border flex-shrink-0">
-                        {/* FIX: Removed "Save Settings" button as it's no longer needed. */}
-                        <button ref={closeButtonRef} onClick={onClose} className="px-4 py-2 rounded-md hover:bg-light-ui dark:hover:bg-dark-ui">Close</button>
+                        <button onClick={onClose} className="px-4 py-2 rounded-md hover:bg-light-ui dark:hover:bg-dark-ui">Cancel</button>
+                        <button ref={saveButtonRef} onClick={handleSaveSettings} disabled={isSaving} className="px-4 py-2 bg-light-primary text-white rounded-md hover:bg-light-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover disabled:opacity-50">
+                            {isSaving ? 'Saving...' : 'Save Settings'}
+                        </button>
                     </div>
                 </div>
             </div>

@@ -33,13 +33,17 @@ const WelcomeModal: React.FC<WelcomeModalProps> = ({ isOpen, onClose }) => {
                 <div className="p-6 border-b border-light-border dark:border-dark-border">
                     <h2 id="welcome-modal-title" className="text-2xl font-bold">Welcome to WesAI Notepad!</h2>
                 </div>
-                {/* FIX: Removed content related to API key setup to align with guidelines. */}
                 <div className="overflow-y-auto p-6 space-y-4">
-                    <p>This is a powerful, AI-enhanced notepad where your data is securely stored and synced across your devices using your private Supabase account.</p>
-                    <p>Get started by creating your first note or exploring the AI chat assistant!</p>
+                    <p>To unlock the powerful AI features, you'll need to add your personal Google Gemini API key.</p>
+                    <div className="p-3 bg-light-ui dark:bg-dark-ui rounded-md text-sm">
+                        <p><strong>Step 1:</strong> Get a free API key from <a href="https://ai.google.dev/" target="_blank" rel="noopener noreferrer" className="font-semibold text-light-primary dark:text-dark-primary hover:underline">Google AI Studio</a>.</p>
+                        <p className="mt-2"><strong>Step 2:</strong> Click "Open Settings" below and paste your key.</p>
+                    </div>
+                    <p className="text-xs text-light-text/60 dark:text-dark-text/60">Your key is stored only in your browser and is never sent to our servers.</p>
                 </div>
                 <div className="flex justify-end items-center space-x-4 p-6 border-t border-light-border dark:border-dark-border">
-                    <button onClick={onClose} className="px-4 py-2 bg-light-primary text-white rounded-md hover:bg-light-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover">Got It!</button>
+                    <button onClick={onClose} className="px-4 py-2 rounded-md hover:bg-light-ui dark:hover:bg-dark-ui">Do it later</button>
+                    <button onClick={handleOpenSettings} className="px-4 py-2 bg-light-primary text-white rounded-md hover:bg-light-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover">Open Settings</button>
                 </div>
             </div>
         </div>

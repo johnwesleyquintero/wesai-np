@@ -30,10 +30,9 @@ const handleGeminiError = (error: unknown, context: string): Error => {
     // Convert the error to a string to reliably check for keywords.
     const errorString = (error instanceof Error) ? error.message : JSON.stringify(error);
 
-    // FIX: Updated error message to align with removal of API key settings UI, per Gemini API guidelines.
-    // The API key is now exclusively managed via environment variables.
+    // FIX: Updated error message to guide users to the settings panel.
     if (errorString.includes("API key not valid") || errorString.includes("API key is not configured")) {
-        return new Error("The Gemini API key is not configured correctly. The administrator needs to set the API_KEY environment variable for the application to function.");
+        return new Error("The Gemini API key is missing or invalid. Please add a valid key in the Settings menu.");
     }
     if (errorString.includes('429') || errorString.toLowerCase().includes('quota')) {
         window.dispatchEvent(new CustomEvent('ai-rate-limit'));
@@ -207,25 +206,31 @@ const aiTools: FunctionDeclaration[] = [
 
 class GeminiAPIService {
     private ai: GoogleGenAI | null = null;
+    private currentApiKey: string | null = null;
     private generalChatSession: Chat | null = null;
 
-    // FIX: Updated to be compatible with Vercel's client-side environment variable requirements.
-    // Vercel requires a specific prefix (like NEXT_PUBLIC_) to expose variables to the browser.
-    // This maintains the principle of sourcing the key from the environment while adapting to the deployment platform.
-    private getApiKey(): string | undefined {
-        return process.env.NEXT_PUBLIC_API_KEY || process.env.API_KEY;
+    private getApiKey(): string | null {
+        try {
+            return localStorage.getItem('wesai-api-key');
+        } catch (e) {
+            console.error("Could not access localStorage for API key", e);
+            return null;
+        }
     }
 
     private getAi(): GoogleGenAI {
-        // Fix: Simplified AI client initialization to a singleton pattern, per guidelines.
-        if (!this.ai) {
-            const key = this.getApiKey();
-            if (!key) {
-                // This string is what handleGeminiError checks for.
-                throw new Error("API key is not configured");
-            }
-            this.ai = new GoogleGenAI({ apiKey: key });
+        const key = this.getApiKey();
+
+        if (!key) {
+            throw new Error("API key is not configured");
         }
+
+        if (!this.ai || this.currentApiKey !== key) {
+            this.ai = new GoogleGenAI({ apiKey: key });
+            this.currentApiKey = key;
+            this.resetGeneralChat(); // Reset chat session which depends on the `ai` instance
+        }
+        
         return this.ai;
     }
 
@@ -733,7 +738,6 @@ Always inform the user of the actions you have taken, such as which note you hav
             }
             return this.generalChatSession;
         } catch (error) {
-            // Fix: Cleaned up error handling logic. The specific check for API key is now handled by the general handler.
             throw handleGeminiError(error, "general AI chat session");
         }
     };

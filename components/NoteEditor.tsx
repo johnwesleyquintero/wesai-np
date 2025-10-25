@@ -1,5 +1,6 @@
 
 
+
 import React, { useEffect, useRef, useMemo, useCallback } from 'react';
 import { Note, NoteVersion, Template } from '../types';
 import Toolbar from './Toolbar';
@@ -471,7 +472,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
     const handleApplyTitleSuggestion = (title: string) => { setEditorState({ ...editorState, title }); setSuggestedTitle(null); setTitleSuggestionError(null); };
 
     const editorPaddingClass = 'px-4 sm:px-8';
-    const sharedEditorClasses = 'w-full p-0 border-0 text-base sm:text-lg resize-none focus:outline-none leading-relaxed whitespace-pre-wrap break-words font-sans';
+    const sharedEditorClasses = 'w-full p-0 border-0 text-base sm:text-lg resize-none focus:outline-none leading-relaxed whitespace-pre-wrap break-words';
 
     return (
         <div className="flex-1 flex flex-col h-full relative bg-light-background dark:bg-dark-background" onDragOver={(e) => { e.preventDefault(); if (!isEffectivelyReadOnly) dispatch({ type: 'SET_DRAG_OVER', payload: true }); }} onDragLeave={() => dispatch({ type: 'SET_DRAG_OVER', payload: false })} onDrop={handleDrop}>
@@ -488,7 +489,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
                                 ref={titleInputRef} type="text" value={displayedTitle}
                                 onChange={(e) => setEditorState({ ...editorState, title: e.target.value })}
                                 placeholder="Note Title"
-                                className={`w-full bg-transparent text-3xl sm:text-4xl font-bold focus:outline-none mb-2 rounded-md ${isEffectivelyReadOnly ? 'cursor-not-allowed opacity-70' : ''}`}
+                                className={`w-full bg-transparent text-3xl sm:text-4xl font-bold focus:outline-none rounded-md ${isEffectivelyReadOnly ? 'cursor-not-allowed opacity-70' : ''}`}
                                 readOnly={isEffectivelyReadOnly}
                             />
                             {!isEffectivelyReadOnly && <TitleSuggestion suggestion={suggestedTitle} onApply={handleApplyTitleSuggestion} isLoading={isSuggestingTitle} error={titleSuggestionError} />}
@@ -497,12 +498,16 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
                                     ref={textareaRef} onSelect={handleSelect} onScroll={handleScroll} onKeyDown={handleKeyDown}
                                     value={displayedContent} onChange={handleChange}
                                     placeholder="Start writing, drop a file, or type / for commands..."
-                                    className={`${sharedEditorClasses} relative z-10 caret-light-text dark:caret-dark-text bg-transparent block`}
+                                    className={`${sharedEditorClasses} font-serif-editor relative z-10 caret-light-text dark:caret-dark-text bg-transparent block`}
                                     readOnly={isEffectivelyReadOnly} spellCheck={false}
                                 />
                             </div>
                         </>
-                    ) : <MarkdownPreview title={displayedTitle} content={displayedContent} onToggleTask={handleToggleTask} />}
+                    ) : (
+                        <div className="font-serif-editor">
+                             <MarkdownPreview title={displayedTitle} content={displayedContent} onToggleTask={handleToggleTask} />
+                        </div>
+                    )}
 
                     <div className="mt-12 space-y-8">
                         <BacklinksDisplay backlinks={backlinks} />

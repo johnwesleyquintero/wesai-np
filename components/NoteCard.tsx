@@ -13,7 +13,7 @@ interface NoteCardProps {
 }
 
 const NoteCard: React.FC<NoteCardProps> = ({ note, isActive, onClick, searchTerm, onContextMenu }) => {
-    const preview = note.content.substring(0, 80) + (note.content.length > 80 ? '...' : '');
+    const preview = note.content.substring(0, 160) + (note.content.length > 160 ? '...' : '');
 
     return (
         <div
@@ -29,7 +29,7 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isActive, onClick, searchTerm
                 <Highlight text={note.title} highlight={searchTerm} />
                 {note.isFavorite && <StarIcon className="w-4 h-4 text-yellow-500" filled />}
             </h3>
-            <p className="text-sm text-light-text/70 dark:text-dark-text/70 truncate">
+            <p className="text-sm text-light-text/70 dark:text-dark-text/70 note-card-preview">
                  <Highlight text={preview || 'No content'} highlight={searchTerm} />
             </p>
             <p className="text-xs text-light-text/50 dark:text-dark-text/50 mt-1">{formatDate(note.updatedAt)}</p>
@@ -45,7 +45,7 @@ const noteCardPropsAreEqual = (prevProps: NoteCardProps, nextProps: NoteCardProp
         prevProps.note.title === nextProps.note.title &&
         prevProps.note.isFavorite === nextProps.note.isFavorite &&
         prevProps.note.updatedAt === nextProps.note.updatedAt &&
-        prevProps.note.content.substring(0, 80) === nextProps.note.content.substring(0, 80)
+        prevProps.note.content.substring(0, 160) === nextProps.note.content.substring(0, 160)
     );
 };
 

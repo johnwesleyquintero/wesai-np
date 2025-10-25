@@ -1,0 +1,16 @@
+{
+  "short_name": "WesCore",
+  "name": "WesCore",
+  "description": "The operator-first platform for building, executing, and automating high-value workflows. Powered by a modular AI engine and real-time cloud sync.",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any"
+    }
+  ],
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#06b6d4",
+  "background_color": "#f8fafc"
+}

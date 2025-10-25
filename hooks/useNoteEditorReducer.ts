@@ -7,7 +7,7 @@ export type NoteLinkerState = { query: string; position: { top: number; left: nu
 export type SlashCommandState = { query: string; position: { top: number; left: number }, range: { start: number, end: number } } | null;
 
 export interface NoteEditorUIState {
-    saveStatus: 'saved' | 'saving' | 'unsaved';
+    saveStatus: 'saved' | 'saving' | 'unsaved' | 'error';
     isHistoryOpen: boolean;
     previewVersion: NoteVersion | null;
     viewMode: 'edit' | 'preview';
@@ -37,7 +37,7 @@ export const initialNoteEditorUIState: NoteEditorUIState = {
 };
 
 export type NoteEditorAction =
-    | { type: 'SET_SAVE_STATUS'; payload: 'saved' | 'saving' | 'unsaved' }
+    | { type: 'SET_SAVE_STATUS'; payload: 'saved' | 'saving' | 'unsaved' | 'error' }
     | { type: 'SET_HISTORY_OPEN'; payload: boolean }
     | { type: 'SET_PREVIEW_VERSION'; payload: NoteVersion | null }
     | { type: 'SET_VIEW_MODE'; payload: 'edit' | 'preview' }

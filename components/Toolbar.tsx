@@ -9,7 +9,7 @@ interface ToolbarProps {
     note: Note;
     onDelete: (noteId: string) => void;
     onToggleFavorite: (id: string) => void;
-    saveStatus: 'saved' | 'saving' | 'unsaved';
+    saveStatus: 'saved' | 'saving' | 'unsaved' | 'error';
     editorTitle: string;
     onEnhance: (tone: string) => Promise<void>;
     onSummarize: () => Promise<void>;
@@ -34,7 +34,7 @@ interface ToolbarProps {
 }
 
 interface StatusIndicatorProps {
-    saveStatus: 'saved' | 'saving' | 'unsaved';
+    saveStatus: 'saved' | 'saving' | 'unsaved' | 'error';
     isAiRateLimited: boolean;
     isCheckingSpelling: boolean;
     isFullAiActionLoading: string | null;
@@ -76,6 +76,10 @@ const StatusIndicator: React.FC<StatusIndicatorProps> = ({
             case 'saved':
                 colorClass = 'bg-green-500';
                 text = 'Saved';
+                break;
+            case 'error':
+                colorClass = 'bg-red-500';
+                text = 'Save Failed';
                 break;
         }
     }

@@ -1,4 +1,5 @@
 
+
 import React, { useEffect, useRef, useMemo, useCallback } from 'react';
 import { Note, NoteVersion, Template } from '../types';
 import Toolbar from './Toolbar';
@@ -39,7 +40,7 @@ const StatusBar: React.FC<{ wordCount: number; charCount: number }> = ({ wordCou
 
 const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
     const { updateNote, deleteNote, toggleFavorite, notes, restoreNoteVersion, templates } = useStoreContext();
-    const { isMobileView, onToggleSidebar, isAiRateLimited } = useUIContext();
+    const { isMobileView, onToggleSidebar, isAiRateLimited, isSettingsOpen, isCommandPaletteOpen, isSmartFolderModalOpen, isWelcomeModalOpen } = useUIContext();
     const { session } = useAuthContext();
     const { showToast } = useToast();
     const { registerEditorActions, unregisterEditorActions } = useEditorContext();
@@ -159,7 +160,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
                     .catch(error => {
                         console.error("Auto-save failed:", error);
                         showToast({ message: `Auto-save failed. Your changes are safe here.`, type: 'error' });
-                        dispatch({ type: 'SET_SAVE_STATUS', payload: 'unsaved' });
+                        dispatch({ type: 'SET_SAVE_STATUS', payload: 'error' });
                     });
             } else {
                 // User is still typing, just show the unsaved status
@@ -234,19 +235,34 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
     // Global undo/redo handler
     useEffect(() => {
         const handleGlobalKeyDown = (event: KeyboardEvent) => {
+            // 1. If any major modal is visibly managed by our context, bail.
+            if (isSettingsOpen || isCommandPaletteOpen || isSmartFolderModalOpen || isWelcomeModalOpen || noteLinker || noteLinkerForSelection) {
+                return;
+            }
+            
+            // 2. Check the event target. If it's an input-like element that is NOT our main editor, bail.
+            const target = event.target as HTMLElement;
+            const isGenericInput = ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName) || target.isContentEditable;
+            const isOurEditorField = target === titleInputRef.current || target === textareaRef.current;
+            if (isGenericInput && !isOurEditorField) {
+                return;
+            }
+    
             const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
             const modKey = isMac ? event.metaKey : event.ctrlKey;
             
             if (modKey && event.key.toLowerCase() === 'z') {
-                if (noteLinker) return; event.preventDefault(); undo();
+                event.preventDefault(); 
+                undo();
             } else if (modKey && (event.key.toLowerCase() === 'y' || (event.shiftKey && event.key.toLowerCase() === 'z'))) {
-                if (noteLinker) return; event.preventDefault(); redo();
+                event.preventDefault();
+                redo();
             }
         };
         
         document.addEventListener('keydown', handleGlobalKeyDown);
         return () => document.removeEventListener('keydown', handleGlobalKeyDown);
-    }, [undo, redo, noteLinker]);
+    }, [undo, redo, isSettingsOpen, isCommandPaletteOpen, isSmartFolderModalOpen, isWelcomeModalOpen, noteLinker, noteLinkerForSelection]);
 
     const getCursorPositionRect = (textarea: HTMLTextAreaElement, position: number): DOMRect => {
         const pre = document.createElement('pre');

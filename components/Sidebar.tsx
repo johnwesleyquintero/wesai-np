@@ -8,7 +8,8 @@ import {
     TrashIcon,
     ChartBarIcon,
     TrendingUpIcon,
-    NetworkIcon
+    NetworkIcon,
+    DocumentTextIcon
 } from './Icons';
 import SidebarNode from './SidebarNode';
 import Highlight from './Highlight';
@@ -386,6 +387,14 @@ const Sidebar: React.FC<SidebarProps> = ({
             <div className="p-2 flex-shrink-0 border-t border-light-border dark:border-dark-border">
                 <div className="flex justify-end items-center space-x-1">
                     <FooterButton
+                        onClick={() => setView('NOTES')}
+                        tooltip="Notes"
+                        isActive={view === 'NOTES'}
+                    >
+                        <DocumentTextIcon />
+                    </FooterButton>
+
+                    <FooterButton
                         onClick={() => setView('GRAPH')}
                         tooltip="Graph View"
                         isActive={view === 'GRAPH'}
@@ -478,6 +487,9 @@ const Sidebar: React.FC<SidebarProps> = ({
 
         {/* Footer actions */}
         <div className="flex flex-col space-y-1 flex-shrink-0">
+            <FooterButton onClick={() => setView('NOTES')} tooltip="Notes" isActive={view === 'NOTES'}>
+                <DocumentTextIcon />
+            </FooterButton>
             <FooterButton onClick={() => setView('GRAPH')} tooltip="Graph View" isActive={view === 'GRAPH'}>
                 <NetworkIcon />
             </FooterButton>

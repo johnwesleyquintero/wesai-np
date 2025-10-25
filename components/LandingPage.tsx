@@ -44,15 +44,16 @@ const LandingPage: React.FC<{ onGetStarted: () => void }> = ({ onGetStarted }) =
                 <div className="container mx-auto flex justify-between items-center">
                     <div className="flex items-center gap-3">
                         <svg width="32" height="32" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                           <rect width="64" height="64" rx="12" className="fill-light-background dark:fill-dark-background"/>
                            <g className="stroke-light-primary dark:stroke-dark-primary">
-                                <path d="M32 14L16 23V41L32 50L48 41V23L32 14Z" strokeWidth="4"/>
-                                <path d="M32 24L22 29.5V40.5L32 46L42 40.5V29.5L32 24Z" strokeWidth="2"/>
-                                <path d="M16 23L22 29.5" strokeWidth="2"/>
-                                <path d="M48 23L42 29.5" strokeWidth="2"/>
-                                <path d="M16 41L22 40.5" strokeWidth="2"/>
-                                <path d="M48 41L42 40.5" strokeWidth="2"/>
-                                <path d="M32 14V24" strokeWidth="2"/>
-                                <path d="M32 50V46" strokeWidth="2"/>
+                                <path d="M32 14L16 25V39L32 50L48 39V25L32 14Z" strokeWidth="4"/>
+                                <path d="M32 22L22 29V37L32 44L42 37V29L32 22Z" strokeWidth="2"/>
+                                <path d="M16 25L22 29" strokeWidth="2"/>
+                                <path d="M48 25L42 29" strokeWidth="2"/>
+                                <path d="M16 39L22 37" strokeWidth="2"/>
+                                <path d="M48 39L42 37" strokeWidth="2"/>
+                                <path d="M32 14V22" strokeWidth="2"/>
+                                <path d="M32 50V44" strokeWidth="2"/>
                             </g>
                         </svg>
                         <span className="font-bold text-lg">WesCore</span>

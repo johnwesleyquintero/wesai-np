@@ -57,7 +57,7 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
         reader.readAsText(file);
     };
 
-    const { isDragOver, dropPosition, dragAndDropProps } = useDragAndDrop(nodeRef, {
+    const { isDragOver, isFileOver, dropPosition, dragAndDropProps } = useDragAndDrop(nodeRef, {
         id: node.id,
         parentId: node.parentId,
         type: isCollection ? 'collection' : 'note',
@@ -188,6 +188,8 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
     if (!isVisible) {
         return null;
     }
+    
+    const isDropTarget = isDragOver || isFileOver;
 
     return (
         <div className="relative">
@@ -209,7 +211,7 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
                     isActive
                         ? 'bg-light-primary/30 dark:bg-dark-primary/30 text-light-primary dark:text-dark-primary font-semibold'
                         : 'hover:bg-light-background dark:hover:bg-dark-background'
-                } ${isDragOver ? 'outline-2 outline-dashed outline-light-primary dark:outline-dark-primary bg-light-primary/10 dark:bg-dark-primary/10' : ''}
+                } ${isDropTarget ? 'outline-2 outline-dashed outline-light-primary dark:outline-dark-primary bg-light-primary/10 dark:bg-dark-primary/10' : ''}
                   ${isFocused ? 'ring-2 ring-light-primary/50 dark:ring-dark-primary/50' : ''}
                   ${isDimmed ? 'opacity-50' : ''}
                   ${isDraggingThisNode ? 'opacity-40' : ''}`}

@@ -1,10 +1,15 @@
 
 
 
+
 import { GoogleGenAI, HarmCategory, HarmBlockThreshold, Type, FunctionDeclaration, Content, GenerateContentResponse, Chat, Part } from "@google/genai";
 import { Note, ChatMessage, InlineAction, SpellingError } from '../types';
 
 const API_KEY_STORAGE_KEY = 'wesai-api-key';
+
+// Cache for the GenAI instance to avoid re-creating it on every call.
+let genAI: GoogleGenAI | null = null;
+let cachedApiKey: string | null = null;
 
 const getGenAI = (): GoogleGenAI => {
     let apiKey: string | null = null;
@@ -15,10 +20,22 @@ const getGenAI = (): GoogleGenAI => {
     }
     
     if (!apiKey) {
+        // Clear cached instance if API key is removed
+        genAI = null;
+        cachedApiKey = null;
         window.dispatchEvent(new CustomEvent('ai-rate-limit'));
         throw new Error("Gemini API key not found. Please set it in the settings.");
     }
-    return new GoogleGenAI({ apiKey });
+
+    // If we have a cached instance and the key hasn't changed, return it.
+    if (genAI && apiKey === cachedApiKey) {
+        return genAI;
+    }
+
+    // Otherwise, create a new instance and cache it.
+    genAI = new GoogleGenAI({ apiKey });
+    cachedApiKey = apiKey;
+    return genAI;
 };
 
 const safetySettings = [

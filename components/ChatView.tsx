@@ -1,10 +1,11 @@
 
 
+
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useChatContext, useStoreContext, useUIContext } from '../context/AppContext';
 import { ChatMessage, ChatMode, ChatStatus, Note } from '../types';
 import MarkdownPreview from './MarkdownPreview';
-import { PaperAirplaneIcon, SparklesIcon, XCircleIcon, DocumentPlusIcon, PaperClipIcon, ClipboardDocumentIcon } from './Icons';
+import { PaperAirplaneIcon, SparklesIcon, XCircleIcon, DocumentPlusIcon, PaperClipIcon, ClipboardDocumentIcon, EllipsisHorizontalIcon, TrashIcon } from './Icons';
 import { useToast } from '../context/ToastContext';
 import ChatViewSkeleton from './ChatViewSkeleton';
 
@@ -83,10 +84,37 @@ const SourceNotes: React.FC<{ sources: Note[] }> = ({ sources }) => {
     );
 };
 
-const Message: React.FC<{ message: ChatMessage }> = ({ message }) => {
+const MessageActions: React.FC<{ onDelete: () => void }> = ({ onDelete }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    
+    return (
+        <div className="relative">
+            <button
+                onClick={() => setIsOpen(p => !p)}
+                className="p-1 rounded-full hover:bg-light-ui dark:hover:bg-dark-ui"
+            >
+                <EllipsisHorizontalIcon className="w-4 h-4" />
+            </button>
+            {isOpen && (
+                <div className="absolute bottom-full mb-1 right-0 bg-light-background dark:bg-dark-background rounded-md shadow-lg border border-light-border dark:border-dark-border z-10 py-1">
+                    <button
+                        onClick={onDelete}
+                        className="w-full flex items-center gap-2 text-left px-3 py-1.5 text-sm text-red-500 hover:bg-red-500/10"
+                    >
+                        <TrashIcon className="w-4 h-4" />
+                        Delete
+                    </button>
+                </div>
+            )}
+        </div>
+    );
+};
+
+const Message: React.FC<{ message: ChatMessage; onDelete: () => void }> = ({ message, onDelete }) => {
     const { showToast } = useToast();
     const { onAddNote, setActiveNoteId } = useStoreContext();
     const { setView } = useUIContext();
+    const [isHovered, setIsHovered] = useState(false);
 
     const handleSaveAsNote = () => {
         if (typeof message.content === 'string') {
@@ -136,8 +164,14 @@ const Message: React.FC<{ message: ChatMessage }> = ({ message }) => {
     const isTool = message.role === 'tool';
     
     return (
-        <div className={`flex items-start gap-4 ${isUser ? 'justify-end' : ''}`}>
+        <div 
+            className={`group flex items-start gap-3 ${isUser ? 'justify-end' : ''}`}
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+        >
              {!isUser && <div className="w-8 h-8 rounded-full bg-light-primary dark:bg-dark-primary flex items-center justify-center text-white flex-shrink-0 mt-1"><SparklesIcon className="w-5 h-5"/></div>}
+             {isUser && isHovered && <div className="flex-shrink-0 self-center"><MessageActions onDelete={onDelete} /></div>}
+
             <div className={`p-3 rounded-lg max-w-full md:max-w-2xl w-fit ${isUser ? 'bg-light-ui dark:bg-dark-ui' : 'bg-light-background dark:bg-dark-background'}`}>
                 {message.image && <img src={`data:image/jpeg;base64,${message.image}`} alt="User upload" className="max-w-xs rounded-lg mb-2" />}
                 {renderContent()}
@@ -158,6 +192,7 @@ const Message: React.FC<{ message: ChatMessage }> = ({ message }) => {
                     </div>
                 )}
             </div>
+            {!isUser && isHovered && <div className="flex-shrink-0 self-center"><MessageActions onDelete={onDelete} /></div>}
         </div>
     );
 };
@@ -260,7 +295,7 @@ const ChatInput: React.FC = () => {
 
 
 const ChatView: React.FC = () => {
-    const { chatMessages, chatStatus } = useChatContext();
+    const { chatMessages, chatStatus, activeToolName, deleteMessage } = useChatContext();
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -271,20 +306,27 @@ const ChatView: React.FC = () => {
         return <ChatViewSkeleton />;
     }
 
+    const getStatusMessage = () => {
+        switch (chatStatus) {
+            case 'searching': return 'Searching notes...';
+            case 'replying': return 'Generating response...';
+            case 'using_tool': return activeToolName ? `Using tool: ${activeToolName}...` : 'Using tools...';
+            default: return null;
+        }
+    };
+
     return (
         <div className="flex-1 flex flex-col h-full bg-light-background dark:bg-dark-background">
             <ChatHeader />
             <div className="flex-1 overflow-y-auto p-4 sm:p-8">
                 <div className="max-w-3xl mx-auto w-full space-y-6">
-                    {chatMessages.map((msg, index) => <Message key={index} message={msg} />)}
+                    {chatMessages.map(msg => <Message key={msg.id} message={msg} onDelete={() => deleteMessage(msg.id)} />)}
                     {chatStatus !== 'idle' && (
                         <div className="flex items-start gap-4">
                              <div className="w-8 h-8 rounded-full bg-light-primary dark:bg-dark-primary flex items-center justify-center text-white flex-shrink-0 mt-1 animate-pulse"><SparklesIcon className="w-5 h-5"/></div>
                              <div className="p-3 rounded-lg bg-light-background dark:bg-dark-background">
                                  <p className="text-sm font-semibold italic text-light-text/80 dark:text-dark-text/80">
-                                     {chatStatus === 'searching' && 'Searching notes...'}
-                                     {chatStatus === 'replying' && 'Generating response...'}
-                                     {chatStatus === 'using_tool' && 'Using tools...'}
+                                     {getStatusMessage()}
                                 </p>
                             </div>
                         </div>

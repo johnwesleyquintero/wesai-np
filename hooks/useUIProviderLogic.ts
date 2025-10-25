@@ -18,6 +18,7 @@ export const useUIProviderLogic = () => {
     const [isAiRateLimited, setIsAiRateLimited] = useState(false);
     const rateLimitTimerRef = useRef<number | null>(null);
     const [renamingItemId, setRenamingItemId] = useState<string | null>(null);
+    const [draggingItemId, setDraggingItemId] = useState<string | null>(null);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
     const [isSmartFolderModalOpen, setIsSmartFolderModalOpen] = useState(false);
@@ -89,14 +90,16 @@ export const useUIProviderLogic = () => {
         isAiRateLimited, renamingItemId, setRenamingItemId, isSettingsOpen, setIsSettingsOpen,
         openSettings, isCommandPaletteOpen, setIsCommandPaletteOpen, isSmartFolderModalOpen,
         setIsSmartFolderModalOpen, smartFolderToEdit, openSmartFolderModal, contextMenu,
-        setContextMenu, onOpenContextMenu, isWelcomeModalOpen, closeWelcomeModal, isApiKeyMissing: !apiKey
+        setContextMenu, onOpenContextMenu, isWelcomeModalOpen, closeWelcomeModal, isApiKeyMissing: !apiKey,
+        draggingItemId, setDraggingItemId,
     }), [
         theme, toggleTheme, view, setView, isMobileView, isSidebarOpen, setIsSidebarOpen,
         onToggleSidebar, isSidebarCollapsed, toggleSidebarCollapsed,
         isAiRateLimited, renamingItemId, setRenamingItemId, isSettingsOpen, setIsSettingsOpen,
         openSettings, isCommandPaletteOpen, setIsCommandPaletteOpen, isSmartFolderModalOpen,
         setIsSmartFolderModalOpen, smartFolderToEdit, openSmartFolderModal, contextMenu,
-        setContextMenu, onOpenContextMenu, isWelcomeModalOpen, closeWelcomeModal, apiKey
+        setContextMenu, onOpenContextMenu, isWelcomeModalOpen, closeWelcomeModal, apiKey,
+        draggingItemId, setDraggingItemId,
     ]);
     
     return uiValue;

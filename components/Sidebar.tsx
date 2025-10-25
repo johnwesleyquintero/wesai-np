@@ -86,6 +86,7 @@ const CollapsibleSection: React.FC<{
 };
 
 const COLLAPSED_WIDTH = 56;
+const EXPANDED_FOLDERS_KEY = 'wesai-sidebar-expanded-folders';
 
 const Sidebar: React.FC<SidebarProps> = ({
     width
@@ -124,8 +125,23 @@ const Sidebar: React.FC<SidebarProps> = ({
         },
     });
 
-    const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({});
+    const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>(() => {
+        try {
+            const saved = localStorage.getItem(EXPANDED_FOLDERS_KEY);
+            return saved ? JSON.parse(saved) : {};
+        } catch {
+            return {};
+        }
+    });
     const [focusedNodeId, setFocusedNodeId] = useState<string | null>(null);
+
+    useEffect(() => {
+        try {
+            localStorage.setItem(EXPANDED_FOLDERS_KEY, JSON.stringify(expandedFolders));
+        } catch (error) {
+            console.error("Failed to save expanded folders state:", error);
+        }
+    }, [expandedFolders]);
 
     const onSelectNote = useCallback((id: string) => {
         setActiveNoteId(id);

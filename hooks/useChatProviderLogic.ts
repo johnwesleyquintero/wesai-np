@@ -35,6 +35,7 @@ export const useChatProviderLogic = () => {
     const debouncedChatHistories = useDebounce(chatHistories, 1000);
     const [chatError, setChatError] = useState<string | null>(null);
     const [chatStatus, setChatStatus] = useState<ChatStatus>('idle');
+    const [activeToolName, setActiveToolName] = useState<string | null>(null);
     const streamSessionIdRef = useRef(0);
     const chatHistoriesRef = useRef(chatHistories);
 
@@ -69,7 +70,7 @@ export const useChatProviderLogic = () => {
     const _handleStreamedChat = useCallback(async (query: string, image: string | undefined, getSystemInstruction: (sourceNotes: Note[]) => string) => {
         const currentSessionId = ++streamSessionIdRef.current;
         setChatError(null);
-        const newUserMessage: ChatMessage = { role: 'user', content: query, image };
+        const newUserMessage: ChatMessage = { id: crypto.randomUUID(), role: 'user', content: query, image };
         setChatHistories(prev => ({ ...prev, [chatMode]: [...prev[chatMode], newUserMessage] }));
         setChatStatus('searching');
 
@@ -84,7 +85,7 @@ export const useChatProviderLogic = () => {
             const systemInstruction = getSystemInstruction(sourceNotes);
             const stream = await generateChatStream(query, systemInstruction, image);
 
-            const newAiMessage: ChatMessage = { role: 'ai', content: '', sources: sourceNotes };
+            const newAiMessage: ChatMessage = { id: crypto.randomUUID(), role: 'ai', content: '', sources: sourceNotes };
             
             if (currentSessionId !== streamSessionIdRef.current) return;
             setChatHistories(prev => ({ ...prev, [chatMode]: [...prev[chatMode], newAiMessage] }));
@@ -95,11 +96,9 @@ export const useChatProviderLogic = () => {
                 fullResponse += chunk.text;
                 setChatHistories(prev => {
                     const currentModeHistory = [...prev[chatMode]];
-                    if (currentModeHistory.length > 0) {
-                        const lastMessage = currentModeHistory[currentModeHistory.length - 1];
-                        if (lastMessage.role === 'ai') {
-                            currentModeHistory[currentModeHistory.length - 1] = { ...lastMessage, content: fullResponse };
-                        }
+                    const messageIndex = currentModeHistory.findIndex(m => m.id === newAiMessage.id);
+                    if (messageIndex > -1) {
+                         currentModeHistory[messageIndex] = { ...currentModeHistory[messageIndex], content: fullResponse };
                     }
                     return { ...prev, [chatMode]: currentModeHistory };
                 });
@@ -108,7 +107,7 @@ export const useChatProviderLogic = () => {
             if (currentSessionId !== streamSessionIdRef.current) return;
             const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
             setChatError(errorMessage);
-            const errorAiMessage: ChatMessage = { role: 'ai', content: `Sorry, I ran into an error: ${errorMessage}` };
+            const errorAiMessage: ChatMessage = { id: crypto.randomUUID(), role: 'ai', content: `Sorry, I ran into an error: ${errorMessage}` };
             setChatHistories(prev => ({ ...prev, [chatMode]: [...prev[chatMode], errorAiMessage] }));
         } finally {
             if (currentSessionId === streamSessionIdRef.current) {
@@ -144,7 +143,7 @@ ${sourceNotes.length > 0 ? sourceNotes.map(n => `--- NOTE: ${n.title} ---\n${n.c
 
     const onSendGeneralMessage = useCallback(async (query: string, image?: string) => {
         setChatError(null);
-        const userMessage: ChatMessage = { role: 'user', content: query, image, status: 'processing' };
+        const userMessage: ChatMessage = { id: crypto.randomUUID(), role: 'user', content: query, image, status: 'processing' };
         setChatHistories(prev => ({ ...prev, [chatMode]: [...prev[chatMode], userMessage] }));
         let lastTouchedNoteId: string | null = null;
 
@@ -155,15 +154,16 @@ ${sourceNotes.length > 0 ? sourceNotes.map(n => `--- NOTE: ${n.title} ---\n${n.c
             while (response.functionCalls && response.functionCalls.length > 0) {
                 setChatStatus('using_tool');
                 const functionResponses = [];
-                const pendingToolMessages: ChatMessage[] = response.functionCalls.map((fc, index) => ({
+                const pendingToolMessages: ChatMessage[] = response.functionCalls.map(fc => ({
+                    id: crypto.randomUUID(),
                     role: 'tool',
-                    id: `client-tool-${Date.now()}-${index}`,
                     content: { name: fc.name, args: fc.args, status: 'pending' }
                 }));
                 setChatHistories(prev => ({ ...prev, [chatMode]: [...prev[chatMode], ...pendingToolMessages] }));
 
                 for (const [index, fc] of response.functionCalls.entries()) {
                     const toolMessageId = pendingToolMessages[index].id;
+                    setActiveToolName(fc.name);
                     let result: any;
                     let status: 'complete' | 'error' = 'complete';
                     try {
@@ -253,6 +253,8 @@ ${sourceNotes.length > 0 ? sourceNotes.map(n => `--- NOTE: ${n.title} ---\n${n.c
                     } catch (toolError) {
                         result = { success: false, error: (toolError as Error).message };
                         status = 'error';
+                    } finally {
+                        setActiveToolName(null);
                     }
 
                     setChatHistories(prev => {
@@ -284,27 +286,35 @@ ${sourceNotes.length > 0 ? sourceNotes.map(n => `--- NOTE: ${n.title} ---\n${n.c
             }
 
             if (response.text) {
-                setChatHistories(prev => ({ ...prev, [chatMode]: [...prev[chatMode], { role: 'ai', content: response.text, noteId: lastTouchedNoteId }] }));
+                setChatHistories(prev => ({ ...prev, [chatMode]: [...prev[chatMode], { id: crypto.randomUUID(), role: 'ai', content: response.text, noteId: lastTouchedNoteId }] }));
             }
 
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
             setChatError(errorMessage);
-            setChatHistories(prev => ({ ...prev, [chatMode]: [...prev[chatMode], { role: 'ai', content: `Sorry, I ran into an error: ${errorMessage}` }] }));
+            setChatHistories(prev => ({ ...prev, [chatMode]: [...prev[chatMode], { id: crypto.randomUUID(), role: 'ai', content: `Sorry, I ran into an error: ${errorMessage}` }] }));
         } finally {
             setChatStatus('idle');
             setChatHistories(prev => {
-                const newHistory = prev[chatMode].map(msg => msg === userMessage ? { ...msg, status: 'complete' } : msg);
+                const newHistory = prev[chatMode].map(msg => msg.id === userMessage.id ? { ...msg, status: 'complete' } : msg);
                 return { ...prev, [chatMode]: newHistory };
             });
         }
     }, [chatMode, onAddNote, notes, getNoteById, updateNoteInStore, deleteNote, activeNoteId, store, collections, setActiveNoteId]);
+
+    const deleteMessage = useCallback((messageId: string) => {
+        setChatHistories(prev => ({
+            ...prev,
+            [chatMode]: prev[chatMode].filter(msg => msg.id !== messageId)
+        }));
+    }, [chatMode]);
 
     const clearChat = useCallback(() => {
         streamSessionIdRef.current++; // Invalidate any in-flight streaming sessions
         setChatHistories(prev => ({ ...prev, [chatMode]: [] }));
         setChatError(null);
         setChatStatus('idle');
+        setActiveToolName(null);
         if (chatMode === 'GENERAL') {
             resetGeneralChat();
         }
@@ -313,10 +323,12 @@ ${sourceNotes.length > 0 ? sourceNotes.map(n => `--- NOTE: ${n.title} ---\n${n.c
     const chatValue = useMemo(() => ({
         chatMessages: chatHistories[chatMode] || [], 
         chatStatus, chatMode, setChatMode, 
-        onSendMessage, onGenerateServiceResponse, onSendGeneralMessage, onGenerateAmazonCopy, clearChat
+        onSendMessage, onGenerateServiceResponse, onSendGeneralMessage, onGenerateAmazonCopy, clearChat,
+        activeToolName, deleteMessage,
     }), [
         chatHistories, chatMode, chatStatus, setChatMode,
-        onSendMessage, onGenerateServiceResponse, onSendGeneralMessage, onGenerateAmazonCopy, clearChat
+        onSendMessage, onGenerateServiceResponse, onSendGeneralMessage, onGenerateAmazonCopy, clearChat,
+        activeToolName, deleteMessage,
     ]);
 
     return chatValue;

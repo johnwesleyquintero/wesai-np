@@ -26,7 +26,7 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
         collections, onAddNote, onAddNoteFromFile, updateCollection, renameNoteTitle, moveItem,
         copyNote, setNoteToDelete, setCollectionToDelete
     } = useStoreContext();
-    const { onOpenContextMenu, renamingItemId, setRenamingItemId } = useUIContext();
+    const { onOpenContextMenu, renamingItemId, setRenamingItemId, draggingItemId, setDraggingItemId } = useUIContext();
 
     const isCollection = 'name' in node;
     const [renameValue, setRenameValue] = useState('');
@@ -38,6 +38,7 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
     const isRenaming = renamingItemId === node.id;
     const name = isCollection ? node.name : node.title;
     const isActive = !isCollection && activeNoteId === node.id;
+    const isDraggingThisNode = draggingItemId === node.id;
 
     const { isSearching, visibleIds, matchIds } = searchData;
     const isVisible = !isSearching || (visibleIds && visibleIds.has(node.id));
@@ -194,6 +195,13 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
             <div
                 ref={nodeRef}
                 {...dragAndDropProps}
+                onDragStart={(e) => {
+                    setDraggingItemId(node.id);
+                    dragAndDropProps.onDragStart(e);
+                }}
+                onDragEnd={() => {
+                    setDraggingItemId(null);
+                }}
                 onClick={handleNodeClick}
                 onDoubleClick={handleDoubleClick}
                 onContextMenu={handleContextMenu}
@@ -203,7 +211,8 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
                         : 'hover:bg-light-background dark:hover:bg-dark-background'
                 } ${isDragOver ? 'outline-2 outline-dashed outline-light-primary dark:outline-dark-primary bg-light-primary/10 dark:bg-dark-primary/10' : ''}
                   ${isFocused ? 'ring-2 ring-light-primary/50 dark:ring-dark-primary/50' : ''}
-                  ${isDimmed ? 'opacity-50' : ''}`}
+                  ${isDimmed ? 'opacity-50' : ''}
+                  ${isDraggingThisNode ? 'opacity-40' : ''}`}
                 style={{ paddingLeft: `${level * 16 + 8}px` }}
             >
                 <div className="flex items-center truncate py-1.5">

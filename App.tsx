@@ -173,7 +173,7 @@ function AppContent() {
     return (
         <div className="flex h-screen w-screen font-sans text-light-text dark:text-dark-text bg-light-background dark:bg-dark-background overflow-hidden">
             <Sidebar width={sidebarWidth} />
-            <SidebarResizer onResizeStart={handleResizeStart} />
+            {!isMobileView && <SidebarResizer onResizeStart={handleResizeStart} />}
             <main className="flex-1 flex flex-col h-full min-w-0">
                 {isApiKeyMissing && <ApiKeyIndicator />}
                 <Suspense fallback={suspenseFallback}>

@@ -175,10 +175,11 @@ export const useStoreProviderLogic = () => {
     }, [deleteNote, activeNoteId, hideConfirmation]);
 
     const handleDeleteCollectionConfirm = useCallback(async (collection: Collection) => {
-        const deletedNoteIds = await deleteCollection(collection.id);
-        if (activeNoteId && deletedNoteIds.includes(activeNoteId)) setActiveNoteId(null);
+        await deleteCollection(collection.id);
+        // The active note will be cleared automatically by the effect in App.tsx
+        // that monitors the notes array, thanks to real-time updates.
         hideConfirmation();
-    }, [deleteCollection, activeNoteId, hideConfirmation]);
+    }, [deleteCollection, hideConfirmation]);
 
     const handleDeleteSmartCollectionConfirm = useCallback(async (smartCollection: SmartCollection) => {
         await deleteSmartCollection(smartCollection.id);

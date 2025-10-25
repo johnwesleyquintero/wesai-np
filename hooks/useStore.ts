@@ -235,9 +235,11 @@ export const useStore = (user: User | undefined) => {
 
     const deleteCollection = useCallback(async (collectionId: string) => {
         if (!user) throw new Error("User must be logged in to delete a collection.");
-        const { data, error } = await supabase.rpc('delete_collection_and_descendants', { p_collection_id: collectionId });
+        // The RPC returns the IDs of deleted notes, but we don't need them
+        // as our real-time subscription will update the UI automatically.
+        const { error } = await supabase.rpc('delete_collection_and_descendants', { p_collection_id: collectionId });
         if (error) throw error;
-        return (data as any)?.deleted_note_ids || [];
+        // No return value is needed.
     }, [user]);
 
     const getCollectionById = useCallback((id: string) => collections.find(c => c.id === id), [collections]);

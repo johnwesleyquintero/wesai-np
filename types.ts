@@ -109,9 +109,11 @@ export interface ToastMessage {
 
 export interface ContextMenuItem {
     label: string;
-    action: () => void;
+    action?: () => void;
     icon?: React.ReactElement;
     isDestructive?: boolean;
+    children?: ContextMenuItem[];
+    disabled?: boolean;
 }
 
 export type TreeNode = (Note | (Collection & { type: 'collection' })) & {

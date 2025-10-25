@@ -94,8 +94,46 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
             ];
         } else {
             const noteAsNote = node as Note;
+            
+            const generateMoveToMenuItems = (
+                targetNote: Note,
+                allCollections: Collection[],
+                moveItemAction: (draggedItemId: string, targetItemId: string | null, position: 'inside') => void
+            ): ContextMenuItem[] => {
+                const childrenMap = new Map<string | null, Collection[]>();
+                allCollections.forEach(c => {
+                    const parent = c.parentId ?? null;
+                    if (!childrenMap.has(parent)) childrenMap.set(parent, []);
+                    childrenMap.get(parent)!.push(c);
+                });
+            
+                const buildMenu = (parentId: string | null): ContextMenuItem[] => {
+                    const children = childrenMap.get(parentId) || [];
+                    return children.sort((a, b) => a.name.localeCompare(b.name)).map(collection => ({
+                        label: collection.name,
+                        action: () => moveItemAction(targetNote.id, collection.id, 'inside'),
+                        disabled: targetNote.parentId === collection.id,
+                        children: (childrenMap.get(collection.id) || []).length > 0 ? buildMenu(collection.id) : undefined
+                    }));
+                };
+                
+                const menu: ContextMenuItem[] = [{
+                    label: "Root",
+                    icon: <FolderIcon />,
+                    action: () => moveItemAction(targetNote.id, null, 'inside'),
+                    disabled: targetNote.parentId === null
+                }, ...buildMenu(null)];
+                
+                return menu;
+            };
+
             menuItems = [
                 { label: 'Rename Note', action: () => setRenamingItemId(node.id), icon: <PencilSquareIcon /> },
+                {
+                    label: 'Move to...',
+                    icon: <FolderIcon />,
+                    children: generateMoveToMenuItems(noteAsNote, collections, moveItem),
+                },
                 { 
                     label: 'Duplicate Note', 
                     action: () => {

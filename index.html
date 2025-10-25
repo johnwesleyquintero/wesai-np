@@ -77,6 +77,16 @@
     .animate-step1 { animation: demo-flow 10s infinite; }
     .animate-step2 { animation: demo-flow-2 10s infinite; }
     .animate-step3 { animation: demo-flow-3 10s infinite; }
+
+    .scroll-animate {
+        opacity: 0;
+        transform: translateY(20px);
+        transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+    }
+    .scroll-animate-visible {
+        opacity: 1;
+        transform: translateY(0);
+    }
   </style>
   <script type="importmap">
 {

@@ -1,7 +1,42 @@
-import React from 'react';
-import { LockClosedIcon, SparklesIcon, RocketLaunchIcon, TrendingUpIcon, Cog6ToothIcon, PencilSquareIcon, ServerStackIcon } from './Icons';
+import React, { useEffect, useRef } from 'react';
+import { useUIContext } from '../context/AppContext';
+import { LockClosedIcon, SparklesIcon, RocketLaunchIcon, TrendingUpIcon, Cog6ToothIcon, PencilSquareIcon, ServerStackIcon, SunIcon, MoonIcon } from './Icons';
 
 const LandingPage: React.FC<{ onGetStarted: () => void }> = ({ onGetStarted }) => {
+    const { theme, toggleTheme } = useUIContext();
+    const sectionsRef = useRef<Array<HTMLElement | null>>([]);
+
+    useEffect(() => {
+        const observer = new IntersectionObserver(
+            (entries) => {
+                entries.forEach((entry, index) => {
+                    if (entry.isIntersecting) {
+                        // Adding a slight delay based on index for a staggered effect
+                        setTimeout(() => {
+                            entry.target.classList.add('scroll-animate-visible');
+                        }, 100);
+                        observer.unobserve(entry.target);
+                    }
+                });
+            },
+            {
+                rootMargin: '0px 0px -50px 0px', // Trigger a bit before it's fully in view
+            }
+        );
+
+        const currentSections = sectionsRef.current.filter(Boolean);
+        currentSections.forEach((section) => {
+            if (section) observer.observe(section);
+        });
+
+        return () => {
+            currentSections.forEach((section) => {
+                if (section) observer.unobserve(section);
+            });
+            observer.disconnect();
+        };
+    }, []);
+
     const templates = [
         {
             icon: <PencilSquareIcon className="w-8 h-8 text-light-primary dark:text-dark-primary" />,
@@ -58,9 +93,18 @@ const LandingPage: React.FC<{ onGetStarted: () => void }> = ({ onGetStarted }) =
                         </svg>
                         <span className="font-bold text-lg">WesCore</span>
                     </div>
-                    <button onClick={onGetStarted} className="px-4 py-2 text-sm font-semibold rounded-md border border-light-border dark:border-dark-border hover:bg-light-ui dark:hover:bg-dark-ui transition-colors">
-                        Launch Cockpit
-                    </button>
+                    <div className="flex items-center gap-4">
+                        <button
+                            onClick={toggleTheme}
+                            className="p-2 rounded-md border border-transparent hover:border-light-border dark:hover:border-dark-border hover:bg-light-ui dark:hover:bg-dark-ui transition-colors"
+                            aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
+                        >
+                            {theme === 'light' ? <MoonIcon className="w-5 h-5" /> : <SunIcon className="w-5 h-5" />}
+                        </button>
+                        <button onClick={onGetStarted} className="px-4 py-2 text-sm font-semibold rounded-md border border-light-border dark:border-dark-border hover:bg-light-ui dark:hover:bg-dark-ui transition-colors">
+                            Launch Cockpit
+                        </button>
+                    </div>
                 </div>
             </header>
 
@@ -68,7 +112,7 @@ const LandingPage: React.FC<{ onGetStarted: () => void }> = ({ onGetStarted }) =
                 <section className="pt-32 pb-20 text-center relative overflow-hidden">
                     <div className="absolute inset-0 -z-10 bg-light-ui/30 dark:bg-dark-ui/30 [mask-image:radial-gradient(ellipse_at_center,black,transparent_70%)]"></div>
                     <div className="container mx-auto px-4">
-                        <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight text-light-text dark:text-dark-text">
+                        <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight bg-gradient-to-r from-cyan-500 to-cyan-600 dark:from-cyan-400 dark:to-cyan-500 bg-clip-text text-transparent">
                             One cockpit, endless AI-powered workflows.
                         </h1>
                         <p className="mt-6 max-w-2xl mx-auto text-lg text-light-text/70 dark:text-dark-text/70">
@@ -101,7 +145,7 @@ const LandingPage: React.FC<{ onGetStarted: () => void }> = ({ onGetStarted }) =
                     </div>
                 </section>
 
-                <section className="py-20 bg-light-ui/50 dark:bg-dark-ui/50">
+                <section ref={el => { sectionsRef.current[0] = el; }} className="py-20 bg-light-ui/50 dark:bg-dark-ui/50 scroll-animate">
                     <div className="container mx-auto px-4">
                         <div className="text-center max-w-3xl mx-auto mb-16">
                             <h2 className="text-3xl font-bold">Start with Core Templates</h2>
@@ -123,7 +167,7 @@ const LandingPage: React.FC<{ onGetStarted: () => void }> = ({ onGetStarted }) =
                     </div>
                 </section>
                 
-                 <section className="py-24 bg-light-background dark:bg-dark-background">
+                 <section ref={el => { sectionsRef.current[1] = el; }} className="py-24 bg-light-background dark:bg-dark-background scroll-animate">
                     <div className="container mx-auto px-4 text-center max-w-4xl">
                         <h2 className="text-3xl font-bold mb-2">Built for Security and Performance</h2>
                         <p className="text-lg text-light-text/70 dark:text-dark-text/70 mb-12">A robust backend for a seamless experience. Built on a foundation of privacy and power.</p>
@@ -142,7 +186,7 @@ const LandingPage: React.FC<{ onGetStarted: () => void }> = ({ onGetStarted }) =
                     </div>
                 </section>
 
-                <section className="py-20 bg-light-ui/50 dark:bg-dark-ui/50">
+                <section ref={el => { sectionsRef.current[2] = el; }} className="py-20 bg-light-ui/50 dark:bg-dark-ui/50 scroll-animate">
                     <div className="container mx-auto px-4">
                         <div className="text-center max-w-3xl mx-auto">
                             <h2 className="text-3xl font-bold">A Power Tool for Every Operator</h2>
@@ -164,7 +208,7 @@ const LandingPage: React.FC<{ onGetStarted: () => void }> = ({ onGetStarted }) =
                     </div>
                 </section>
 
-                <section className="py-20">
+                <section ref={el => { sectionsRef.current[3] = el; }} className="py-20 scroll-animate">
                     <div className="container mx-auto px-4 text-center">
                         <h2 className="text-3xl font-bold">Ready to build your second brain?</h2>
                         <p className="mt-4 max-w-2xl mx-auto text-lg text-light-text/70 dark:text-dark-text/70">

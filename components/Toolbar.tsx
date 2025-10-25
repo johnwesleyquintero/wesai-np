@@ -24,8 +24,6 @@ interface ToolbarProps {
     canRedo: boolean;
     viewMode: 'edit' | 'preview';
     onToggleViewMode: () => void;
-    isCheckingSpelling: boolean;
-    isAiRateLimited: boolean;
     wordCount: number;
     charCount: number;
     aiActionError: string | null;
@@ -35,15 +33,11 @@ interface ToolbarProps {
 
 interface StatusIndicatorProps {
     saveStatus: 'saved' | 'saving' | 'unsaved' | 'error';
-    isAiRateLimited: boolean;
-    isCheckingSpelling: boolean;
     isFullAiActionLoading: string | null;
 }
 
 const StatusIndicator: React.FC<StatusIndicatorProps> = ({
     saveStatus,
-    isAiRateLimited,
-    isCheckingSpelling,
     isFullAiActionLoading
 }) => {
     if (isFullAiActionLoading) {
@@ -59,30 +53,22 @@ const StatusIndicator: React.FC<StatusIndicatorProps> = ({
     let text = 'Unsaved changes';
     let pulse = false;
 
-    if (isAiRateLimited) {
-        colorClass = 'bg-red-500';
-        text = 'AI Paused';
-    } else if (isCheckingSpelling) {
-        colorClass = 'bg-blue-500';
-        text = 'Checking...';
-        pulse = true;
-    } else {
-        switch (saveStatus) {
-            case 'saving':
-                colorClass = 'bg-yellow-500';
-                text = 'Saving...';
-                pulse = true;
-                break;
-            case 'saved':
-                colorClass = 'bg-green-500';
-                text = 'Saved';
-                break;
-            case 'error':
-                colorClass = 'bg-red-500';
-                text = 'Save Failed';
-                break;
-        }
+    switch (saveStatus) {
+        case 'saving':
+            colorClass = 'bg-yellow-500';
+            text = 'Saving...';
+            pulse = true;
+            break;
+        case 'saved':
+            colorClass = 'bg-green-500';
+            text = 'Saved';
+            break;
+        case 'error':
+            colorClass = 'bg-red-500';
+            text = 'Save Failed';
+            break;
     }
+
 
     return (
         <div className="flex items-center space-x-2">
@@ -101,9 +87,8 @@ const ErrorIcon = () => (
 const AiMenu: React.FC<{
     onEnhance: (tone: string) => Promise<void>;
     onSummarize: () => Promise<void>;
-    isAiRateLimited: boolean;
     isDisabled: boolean;
-}> = ({ onEnhance, onSummarize, isAiRateLimited, isDisabled }) => {
+}> = ({ onEnhance, onSummarize, isDisabled }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [customTone, setCustomTone] = useState('');
     const [isCustomTone, setIsCustomTone] = useState(false);
@@ -125,7 +110,7 @@ const AiMenu: React.FC<{
 
     return (
         <div className="relative">
-            <button onClick={() => setIsOpen(prev => !prev)} className="p-2 rounded-md hover:bg-light-ui dark:hover:bg-dark-ui transition-colors flex items-center disabled:opacity-50 disabled:cursor-not-allowed" disabled={isAiRateLimited || isDisabled}>
+            <button onClick={() => setIsOpen(prev => !prev)} className="p-2 rounded-md hover:bg-light-ui dark:hover:bg-dark-ui transition-colors flex items-center disabled:opacity-50 disabled:cursor-not-allowed" disabled={isDisabled}>
                 <SparklesIcon className="mr-0 sm:mr-1 text-light-primary dark:text-dark-primary" />
                 <span className="hidden sm:inline">Enhance</span>
             </button>
@@ -238,7 +223,7 @@ const MoreActionsMenu: React.FC<{
 const Toolbar: React.FC<ToolbarProps> = ({ 
     note, onDelete, onToggleFavorite, saveStatus, editorTitle, onEnhance, onSummarize, onToggleHistory, isHistoryOpen, 
     onApplyTemplate, isMobileView, onToggleSidebar, onUndo, onRedo, canUndo, canRedo,
-    viewMode, onToggleViewMode, isCheckingSpelling, isAiRateLimited, wordCount, charCount,
+    viewMode, onToggleViewMode, wordCount, charCount,
     aiActionError, setAiActionError, isFullAiActionLoading
 }) => {
     const { setNoteToDelete, addTemplate } = useStoreContext();
@@ -287,8 +272,6 @@ const Toolbar: React.FC<ToolbarProps> = ({
                     )}
                     <StatusIndicator 
                         saveStatus={saveStatus} 
-                        isAiRateLimited={isAiRateLimited}
-                        isCheckingSpelling={isCheckingSpelling}
                         isFullAiActionLoading={isFullAiActionLoading}
                     />
                 </div>
@@ -304,7 +287,6 @@ const Toolbar: React.FC<ToolbarProps> = ({
                     <AiMenu 
                         onEnhance={onEnhance}
                         onSummarize={onSummarize}
-                        isAiRateLimited={isAiRateLimited}
                         isDisabled={isDisabled}
                     />
                     

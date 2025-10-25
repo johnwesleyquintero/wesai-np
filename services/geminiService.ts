@@ -1,815 +1,408 @@
-import { GoogleGenAI, Type, GenerateContentResponse, Content, Chat, FunctionDeclaration } from "@google/genai";
-import { Note, SpellingError, ChatMessage, InlineAction } from "../types";
 
-// Helper to safely parse JSON responses, even when wrapped in markdown code blocks
-function safeJsonParse<T>(jsonString: string, defaultValue: T): T {
-    if (!jsonString) {
-        return defaultValue;
-    }
+import { GoogleGenAI, HarmCategory, HarmBlockThreshold, Type, FunctionDeclaration, Content, GenerateContentResponse, Chat, Part } from "@google/genai";
+import { Note, ChatMessage, InlineAction, SpellingError } from '../types';
+
+const API_KEY_STORAGE_KEY = 'wesai-api-key';
+
+const getGenAI = (): GoogleGenAI => {
+    let apiKey: string | null = null;
     try {
-        // Gemini sometimes returns JSON wrapped in markdown ```json ... ```
-        const cleanedString = jsonString.replace(/^```json\n?/, '').replace(/\n?```$/, '');
-        return JSON.parse(cleanedString) as T;
-    } catch (error) {
-        console.warn("Failed to parse JSON string after cleaning:", { original: jsonString }, error);
-        return defaultValue;
+        apiKey = localStorage.getItem(API_KEY_STORAGE_KEY);
+    } catch (e) {
+        console.error("Could not access localStorage for API key.", e);
     }
-}
-
-const parseDataUrl = (dataUrl: string): { mimeType: string; data: string } => {
-    const match = dataUrl.match(/^data:(.+);base64,(.+)$/);
-    if (!match) {
-        throw new Error("Invalid data URL format");
-    }
-    return { mimeType: match[1], data: match[2] };
-};
-
-const handleGeminiError = (error: unknown, context: string): Error => {
-    console.error(`Error in ${context}:`, error);
-
-    // Convert the error to a string to reliably check for keywords.
-    const errorString = (error instanceof Error) ? error.message : JSON.stringify(error);
-
-    // FIX: Updated error message to guide users to the settings panel.
-    if (errorString.includes("API key not valid") || errorString.includes("API key is not configured")) {
-        return new Error("The Gemini API key is missing or invalid. Please add a valid key in the Settings menu.");
-    }
-    if (errorString.includes('429') || errorString.toLowerCase().includes('quota')) {
+    
+    if (!apiKey) {
         window.dispatchEvent(new CustomEvent('ai-rate-limit'));
-        return new Error("You've exceeded your API quota. Please check your plan and billing details at ai.google.dev. Features will resume shortly.");
+        throw new Error("Gemini API key not found. Please set it in the settings.");
     }
-    if (errorString.includes('fetch failed')) {
-        return new Error("Network error. Please check your connection and try again.");
-    }
-
-    // Fallback for other errors from the Error object, if available.
-    if (error instanceof Error) {
-        return new Error(`An AI error occurred in ${context}: ${error.message}. Please try again later.`);
-    }
-
-    return new Error(`An unknown error occurred during ${context}.`);
+    return new GoogleGenAI({ apiKey });
 };
 
-// --- Function Calling Tool Definitions ---
-
-const createNoteTool: FunctionDeclaration = {
-  name: 'createNote',
-  parameters: {
-    type: Type.OBJECT,
-    description: 'Creates a new note with a title and content.',
-    properties: {
-      title: {
-        type: Type.STRING,
-        description: 'The title of the new note.',
-      },
-      content: {
-        type: Type.STRING,
-        description: 'The markdown content of the new note.',
-      },
-    },
-    required: ['title', 'content'],
-  },
-};
-
-const findNotesTool: FunctionDeclaration = {
-  name: 'findNotes',
-  parameters: {
-    type: Type.OBJECT,
-    description: 'Finds notes based on a search query.',
-    properties: {
-      query: {
-        type: Type.STRING,
-        description: 'The search query to find relevant notes.',
-      },
-    },
-    required: ['query'],
-  },
-};
-
-const getNoteContentTool: FunctionDeclaration = {
-  name: 'getNoteContent',
-  parameters: {
-    type: Type.OBJECT,
-    description: 'Retrieves the full title and markdown content of a specific note.',
-    properties: {
-      noteId: {
-        type: Type.STRING,
-        description: 'The ID of the note to read.',
-      },
-    },
-    required: ['noteId'],
-  },
-};
-
-const updateNoteTool: FunctionDeclaration = {
-  name: 'updateNote',
-  parameters: {
-    type: Type.OBJECT,
-    description: 'Updates an existing note by replacing its title and/or content. Provide only the fields that need to be changed.',
-    properties: {
-      noteId: {
-        type: Type.STRING,
-        description: 'The ID of the note to update.',
-      },
-      title: {
-        type: Type.STRING,
-        description: 'The new title for the note.',
-      },
-      content: {
-        type: Type.STRING,
-        description: 'The new, full markdown content that will replace the entire existing content of the note.',
-      },
-    },
-    required: ['noteId'],
-  },
-};
-
-const deleteNoteTool: FunctionDeclaration = {
-  name: 'deleteNote',
-  parameters: {
-    type: Type.OBJECT,
-    description: 'Permanently deletes a note.',
-    properties: {
-      noteId: {
-        type: Type.STRING,
-        description: 'The ID of the note to delete.',
-      },
-    },
-    required: ['noteId'],
-  },
-};
-
-const createCollectionTool: FunctionDeclaration = {
-  name: 'createCollection',
-  parameters: {
-    type: Type.OBJECT,
-    description: 'Creates a new folder (collection) to organize notes.',
-    properties: {
-      name: {
-        type: Type.STRING,
-        description: 'The name of the new folder.',
-      },
-      parentId: {
-        type: Type.STRING,
-        description: 'Optional. The ID of the parent folder to create this folder inside.',
-      },
-    },
-    required: ['name'],
-  },
-};
-
-const findCollectionsTool: FunctionDeclaration = {
-  name: 'findCollections',
-  parameters: {
-    type: Type.OBJECT,
-    description: 'Finds folders (collections) based on a search query.',
-    properties: {
-      query: {
-        type: Type.STRING,
-        description: 'The search query to find relevant folders.',
-      },
-    },
-    required: ['query'],
-  },
-};
-
-const moveNoteToCollectionTool: FunctionDeclaration = {
-  name: 'moveNoteToCollection',
-  parameters: {
-    type: Type.OBJECT,
-    description: 'Moves a note into a specific folder (collection).',
-    properties: {
-      noteId: {
-        type: Type.STRING,
-        description: 'The ID of the note to move.',
-      },
-      collectionId: {
-        type: Type.STRING,
-        description: 'The ID of the destination folder. Use null to move the note to the root level.',
-      },
-    },
-    required: ['noteId', 'collectionId'],
-  },
-};
-
-
-const aiTools: FunctionDeclaration[] = [
-    createNoteTool,
-    findNotesTool,
-    getNoteContentTool,
-    updateNoteTool,
-    deleteNoteTool,
-    createCollectionTool,
-    findCollectionsTool,
-    moveNoteToCollectionTool,
+const safetySettings = [
+    { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+    { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
+    { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
+    { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
 ];
 
-class GeminiAPIService {
-    private ai: GoogleGenAI | null = null;
-    private currentApiKey: string | null = null;
-    private generalChatSession: Chat | null = null;
-
-    private getApiKey(): string | null {
-        try {
-            return localStorage.getItem('wesai-api-key');
-        } catch (e) {
-            console.error("Could not access localStorage for API key", e);
-            return null;
-        }
+const fireRateLimitEvent = (error: any) => {
+    if (error?.message?.includes('429') || error?.message?.includes('API key not valid')) {
+        window.dispatchEvent(new CustomEvent('ai-rate-limit'));
     }
+};
 
-    private getAi(): GoogleGenAI {
-        const key = this.getApiKey();
+// --- Spellcheck ---
+export const findMisspelledWords = async (text: string): Promise<SpellingError[]> => {
+    if (!text.trim()) return [];
+    try {
+        const ai = getGenAI();
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: `Analyze the following text and identify all misspelled words. For each misspelled word, provide its exact text, its starting index in the original text, and its length.
+Text: "${text}"`,
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: {
+                    type: Type.ARRAY,
+                    items: {
+                        type: Type.OBJECT,
+                        properties: {
+                            word: { type: Type.STRING },
+                            index: { type: Type.INTEGER },
+                            length: { type: Type.INTEGER },
+                        },
+                        required: ["word", "index", "length"],
+                    },
+                },
+            },
+        });
+        const jsonText = response.text.trim();
+        return JSON.parse(jsonText) as SpellingError[];
+    } catch (e) {
+        console.error("Error in findMisspelledWords:", e);
+        fireRateLimitEvent(e);
+        return []; // Fail gracefully
+    }
+};
 
-        if (!key) {
-            throw new Error("API key is not configured");
+export const getSpellingSuggestions = async (word: string): Promise<string[]> => {
+    try {
+        const ai = getGenAI();
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: `Provide up to 5 spelling suggestions for the word "${word}".`,
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: {
+                    type: Type.ARRAY,
+                    items: { type: Type.STRING },
+                },
+            },
+        });
+        const jsonText = response.text.trim();
+        return JSON.parse(jsonText) as string[];
+    } catch (e) {
+        console.error("Error in getSpellingSuggestions:", e);
+        fireRateLimitEvent(e);
+        return [];
+    }
+};
+
+
+// --- Semantic Search ---
+export const semanticSearchNotes = async (query: string, notes: Note[], limit: number = 5): Promise<string[]> => {
+    if (notes.length === 0) return [];
+    try {
+        const ai = getGenAI();
+        const notesContext = notes
+            .filter(n => n.id)
+            .map(note => `ID: ${note.id}\nTITLE: ${note.title}\nCONTENT: ${note.content.substring(0, 200)}...`)
+            .join('\n---\n');
+
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: `Based on the user's query, which of the following notes are the most relevant? List the top ${limit} most relevant note IDs.
+QUERY: "${query}"
+
+NOTES:
+${notesContext}`,
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: {
+                    type: Type.ARRAY,
+                    description: `An array of the top ${limit} most relevant note IDs.`,
+                    items: { type: Type.STRING },
+                },
+            },
+        });
+        const jsonText = response.text.trim();
+        return JSON.parse(jsonText);
+    } catch (e) {
+        console.error("Error in semanticSearchNotes:", e);
+        fireRateLimitEvent(e);
+        throw new Error("AI search failed. Please check your API key and try again.");
+    }
+};
+
+// --- Note Actions ---
+export const suggestNoteConsolidation = async (note1: Note, note2: Note): Promise<{ title: string, content: string }> => {
+    try {
+        const ai = getGenAI();
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: `Consolidate the following two notes into a single, coherent note. Create a new title that synthesizes the topics, and merge the content, removing redundancy and improving flow.
+
+Note 1 Title: "${note1.title}"
+Note 1 Content:
+${note1.content}
+
+Note 2 Title: "${note2.title}"
+Note 2 Content:
+${note2.content}`,
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: {
+                    type: Type.OBJECT,
+                    properties: {
+                        title: { type: Type.STRING },
+                        content: { type: Type.STRING },
+                    },
+                    required: ["title", "content"]
+                },
+            },
+        });
+        const jsonText = response.text.trim();
+        return JSON.parse(jsonText);
+    } catch (e) {
+        console.error("Error in suggestNoteConsolidation:", e);
+        fireRateLimitEvent(e);
+        throw new Error("Failed to generate consolidation. Please try again.");
+    }
+};
+
+
+// --- Chat ---
+const buildChatContext = (sourceNotes: Note[]): Content => {
+    return {
+        role: 'system',
+        parts: [{
+            text: `You are a helpful AI assistant integrated into a note-taking app. Use the provided "Source Notes" to answer the user's query. If the sources are relevant, synthesize them in your answer. If they are not relevant, ignore them. Be concise and helpful.
+
+Source Notes:
+${sourceNotes.length > 0 ? sourceNotes.map(n => `--- NOTE: ${n.title} ---\n${n.content}\n`).join('') : 'No source notes provided.'}`
+        }]
+    };
+};
+
+export const getStreamingChatResponse = async (query: string, sourceNotes: Note[], image?: string) => {
+    try {
+        const ai = getGenAI();
+
+        const contents: Content[] = [buildChatContext(sourceNotes)];
+        const userParts: Part[] = [{ text: query }];
+        if (image) {
+            userParts.push({
+                inlineData: {
+                    mimeType: 'image/jpeg',
+                    data: image,
+                },
+            });
         }
+        contents.push({ role: 'user', parts: userParts });
 
-        if (!this.ai || this.currentApiKey !== key) {
-            this.ai = new GoogleGenAI({ apiKey: key });
-            this.currentApiKey = key;
-            this.resetGeneralChat(); // Reset chat session which depends on the `ai` instance
+        return ai.models.generateContentStream({
+            model: 'gemini-2.5-flash',
+            contents,
+            safetySettings,
+        });
+
+    } catch (e) {
+        console.error("Error getting streaming chat response:", e);
+        fireRateLimitEvent(e);
+        throw new Error("Failed to get streaming response. Please check your API key.");
+    }
+};
+
+export const generateCustomerResponse = async (customerQuery: string, sourceNotes: Note[], image?: string): Promise<string> => {
+     try {
+        const ai = getGenAI();
+        const systemInstruction = `You are a professional and empathetic customer service agent. Your goal is to resolve the customer's issue using the provided knowledge base. If the knowledge base doesn't have the answer, apologize and explain that you will escalate the issue.
+Knowledge Base:
+${sourceNotes.length > 0 ? sourceNotes.map(n => `--- DOC: ${n.title} ---\n${n.content}\n`).join('') : 'No knowledge provided.'}`;
+
+        const userParts: Part[] = [{ text: `Customer Query: ${customerQuery}` }];
+         if (image) {
+             userParts.push({ inlineData: { mimeType: 'image/jpeg', data: image } });
+         }
+
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: { role: 'user', parts: userParts },
+            config: { systemInstruction },
+            safetySettings
+        });
+        return response.text;
+    } catch (e) {
+        console.error("Error in generateCustomerResponse:", e);
+        fireRateLimitEvent(e);
+        throw new Error("Failed to generate customer response.");
+    }
+};
+
+export const generateAmazonListingCopy = async (productInfo: string, sourceNotes: Note[], image?: string): Promise<string> => {
+    try {
+        const ai = getGenAI();
+        const systemInstruction = `You are an expert Amazon copywriter. Create a compelling, SEO-optimized product listing based on the provided information. Follow Amazon's style guidelines. The output should be well-structured Markdown, including a title, bullet points, and a product description. Use information from the provided research notes if available.
+Research Notes:
+${sourceNotes.length > 0 ? sourceNotes.map(n => `--- NOTE: ${n.title} ---\n${n.content}\n`).join('') : 'No research notes provided.'}`;
+        
+        const userParts: Part[] = [{ text: `Product Info: ${productInfo}` }];
+        if (image) {
+            userParts.push({ inlineData: { mimeType: 'image/jpeg', data: image } });
         }
         
-        return this.ai;
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: { role: 'user', parts: userParts },
+            config: { systemInstruction },
+            safetySettings
+        });
+        return response.text;
+    } catch (e) {
+        console.error("Error in generateAmazonListingCopy:", e);
+        fireRateLimitEvent(e);
+        throw new Error("Failed to generate Amazon copy.");
+    }
+};
+
+
+// --- General Chat with Tools ---
+let generalChat: Chat | null = null;
+export const getGeneralChatSession = (): Chat => {
+    if (generalChat) {
+        return generalChat;
+    }
+    const ai = getGenAI();
+
+    const functionDeclarations: FunctionDeclaration[] = [
+        { name: 'createNote', parameters: { type: Type.OBJECT, properties: { title: { type: Type.STRING }, content: { type: Type.STRING } }, required: ['title'] } },
+        { name: 'findNotes', parameters: { type: Type.OBJECT, properties: { query: { type: Type.STRING } }, required: ['query'] } },
+        { name: 'getNoteContent', parameters: { type: Type.OBJECT, properties: { noteId: { type: Type.STRING } }, required: ['noteId'] } },
+        { name: 'updateNote', parameters: { type: Type.OBJECT, properties: { noteId: { type: Type.STRING }, title: { type: Type.STRING }, content: { type: Type.STRING } }, required: ['noteId'] } },
+        { name: 'deleteNote', parameters: { type: Type.OBJECT, properties: { noteId: { type: Type.STRING } }, required: ['noteId'] } },
+        { name: 'createCollection', parameters: { type: Type.OBJECT, properties: { name: { type: Type.STRING }, parentId: { type: Type.STRING } }, required: ['name'] } },
+        { name: 'findCollections', parameters: { type: Type.OBJECT, properties: { query: { type: Type.STRING } }, required: ['query'] } },
+        { name: 'moveNoteToCollection', parameters: { type: Type.OBJECT, properties: { noteId: { type: Type.STRING }, collectionId: { type: Type.STRING } }, required: ['noteId', 'collectionId'] } },
+    ];
+
+    generalChat = ai.chats.create({
+        model: 'gemini-2.5-pro',
+        config: {
+            systemInstruction: "You are a helpful assistant with access to a user's notes. You can create, find, read, update, and delete notes and folders. You MUST use the provided tools to interact with the notes.",
+            tools: [{ functionDeclarations }],
+        },
+        safetySettings
+    });
+    return generalChat;
+};
+
+export const resetGeneralChat = () => {
+    generalChat = null;
+};
+
+
+// --- Editor AI Actions ---
+export const suggestTags = async (title: string, content: string): Promise<string[]> => {
+    try {
+        const ai = getGenAI();
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: `Suggest up to 5 relevant, single-word or two-word tags for the following note.
+Title: ${title}
+Content: ${content.substring(0, 500)}`,
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: {
+                    type: Type.ARRAY,
+                    items: { type: Type.STRING }
+                }
+            },
+        });
+        const jsonText = response.text.trim();
+        return JSON.parse(jsonText);
+    } catch (e) {
+        console.error("Error suggesting tags:", e);
+        fireRateLimitEvent(e);
+        throw new Error("Failed to suggest tags.");
+    }
+};
+
+export const suggestTitle = async (content: string): Promise<string> => {
+     try {
+        const ai = getGenAI();
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: `Suggest a concise, descriptive title for the following note content. The title should be no more than 10 words.
+Content: ${content.substring(0, 1000)}`,
+        });
+        // Remove quotes and periods from the response
+        return response.text.trim().replace(/["\.]/g, '');
+    } catch (e) {
+        console.error("Error suggesting title:", e);
+        fireRateLimitEvent(e);
+        throw new Error("Failed to suggest a title.");
+    }
+};
+
+export const performInlineEdit = async (text: string, action: InlineAction): Promise<string> => {
+    let instruction = '';
+    switch(action) {
+        case 'fix': instruction = 'Fix spelling and grammar mistakes in the following text:'; break;
+        case 'shorten': instruction = 'Make the following text more concise:'; break;
+        case 'expand': instruction = 'Expand on the following text, making it more detailed:'; break;
+        case 'simplify': instruction = 'Simplify the language of the following text:'; break;
+        case 'makeProfessional': instruction = 'Rewrite the following text in a professional tone:'; break;
+        case 'makeCasual': instruction = 'Rewrite the following text in a casual tone:'; break;
     }
 
-    public performInlineEdit = async (text: string, action: InlineAction): Promise<string> => {
-        if (!text) return "";
+    try {
+        const ai = getGenAI();
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: `${instruction}\n\n"${text}"`,
+            safetySettings,
+        });
+        return response.text.trim();
+    } catch (e) {
+        console.error("Error performing inline edit:", e);
+        fireRateLimitEvent(e);
+        throw new Error(`AI action "${action}" failed.`);
+    }
+};
 
-        let instruction = '';
-        switch (action) {
-            case 'fix':
-                instruction = 'Fix all spelling and grammar errors in the following text.';
-                break;
-            case 'shorten':
-                instruction = 'Make the following text more concise and to the point.';
-                break;
-            case 'expand':
-                instruction = 'Expand on the following text, adding more detail and explanation.';
-                break;
-            case 'simplify':
-                instruction = 'Rewrite the following text using simpler language that a 5th grader could understand.';
-                break;
-            case 'makeProfessional':
-                instruction = 'Rewrite the following text with a formal, professional tone.';
-                break;
-            case 'makeCasual':
-                instruction = 'Rewrite the following text with a more casual, conversational tone.';
-                break;
-            default:
-                throw new Error('Unknown inline edit action.');
-        }
-
-        const prompt = `${instruction} Only return the modified text, without any additional commentary, introductory phrases, or markdown formatting.\n\nTEXT: """${text}"""`;
-
-        try {
-            const ai = this.getAi();
-            const response = await ai.models.generateContent({
-                model: 'gemini-2.5-flash',
-                contents: [{ parts: [{ text: prompt }] }],
-            });
-            return response.text.trim();
-        } catch (error) {
-            throw handleGeminiError(error, `inline edit (${action})`);
-        }
-    };
-    
-    public enhanceText = async (text: string, tone: string): Promise<string> => {
-        if (!text) {
-            return "";
-        }
-
-        try {
-            const ai = this.getAi();
-
-            const prompt = tone === 'Custom' 
-                ? `Rewrite the following text. Do not add any extra commentary, just provide the rewritten text:\n\n${text}`
-                : `Rewrite the following text with a ${tone} tone. Do not add any extra commentary, just provide the rewritten text:\n\n${text}`;
-            
-            const response = await ai.models.generateContent({
-                model: 'gemini-2.5-flash',
-                contents: [{ parts: [{ text: prompt }] }],
-            });
-
-            return response.text;
-        } catch (error) {
-            throw handleGeminiError(error, "text enhancement");
-        }
-    };
-    
-    public summarizeAndExtractActions = async (text: string): Promise<{ summary: string; actionItems: string[] }> => {
-        if (!text) {
-            return { summary: '', actionItems: [] };
-        }
-
-        try {
-            const ai = this.getAi();
-
-            const schema = {
-                type: Type.OBJECT,
-                properties: {
-                    summary: {
-                        type: Type.STRING,
-                        description: 'A concise summary of the text, capturing the main points.',
+export const summarizeAndExtractActions = async (content: string): Promise<{ summary: string; actionItems: string[] }> => {
+    try {
+        const ai = getGenAI();
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: `Summarize the following note and extract a list of action items.
+Note:
+${content}`,
+            config: {
+                responseMimeType: 'application/json',
+                responseSchema: {
+                    type: Type.OBJECT,
+                    properties: {
+                        summary: { type: Type.STRING },
+                        actionItems: { type: Type.ARRAY, items: { type: Type.STRING } },
                     },
-                    actionItems: {
-                        type: Type.ARRAY,
-                        items: {
-                            type: Type.STRING,
-                        },
-                        description: 'A list of clear, actionable tasks or to-do items found in the text. If none are found, this should be an empty array.',
-                    },
+                    required: ["summary", "actionItems"]
                 },
-                required: ['summary', 'actionItems'],
-            };
-
-            const prompt = `Summarize the following text and extract any potential action items or tasks. If no action items are found, return an empty array for actionItems. Here is the text:\n\n${text}`;
-
-            const response = await ai.models.generateContent({
-                model: 'gemini-2.5-flash',
-                contents: [{ parts: [{ text: prompt }] }],
-                config: {
-                    responseMimeType: "application/json",
-                    responseSchema: schema,
-                }
-            });
-
-            const responseText = response.text.trim();
-            const result = safeJsonParse(responseText, { summary: '', actionItems: [] });
-            
-            if (!result.summary && (!result.actionItems || result.actionItems.length === 0) && responseText) {
-                 throw new Error("The AI returned an empty or invalid response. This might be due to content filtering.");
-            }
-
-            return result;
-
-        } catch (error) {
-            throw handleGeminiError(error, "summarization");
-        }
-    };
-    
-    public semanticSearchNotes = async (query: string, notes: Note[]): Promise<string[]> => {
-        if (!query) {
-            return notes.map(n => n.id);
-        }
-        if (notes.length === 0) {
-            return [];
-        }
-
-        try {
-            const ai = this.getAi();
-
-            const simplifiedNotes = notes.map(({ id, title, content, tags }) => ({
-                id,
-                title,
-                content: content.substring(0, 4000), // Truncate content to manage context size
-                tags,
-            }));
-
-            const schema = {
-                type: Type.OBJECT,
-                properties: {
-                    relevantNoteIds: {
-                        type: Type.ARRAY,
-                        items: {
-                            type: Type.STRING,
-                        },
-                        description: 'An array of note IDs that are semantically relevant to the user\'s query, ordered from most to least relevant.',
-                    }
-                },
-                required: ['relevantNoteIds']
-            };
-
-            const prompt = `You are a semantic search engine for a note-taking app. A user is searching for: "${query}".
-
-Analyze the user's query and the following list of notes. Identify the notes that are most semantically relevant, even if they don't contain the exact keywords. Consider the title, content, and tags.
-
-Return a JSON object containing a single key "relevantNoteIds", which is an array of the ID strings of the relevant notes, ordered by relevance. If no notes are relevant, return an empty array.
-
-Here are the notes:
-${JSON.stringify(simplifiedNotes)}`;
-
-            const response = await ai.models.generateContent({
-                model: 'gemini-2.5-flash',
-                contents: [{ parts: [{ text: prompt }] }],
-                config: {
-                    responseMimeType: "application/json",
-                    responseSchema: schema,
-                }
-            });
-            
-            const responseText = response.text.trim();
-            const result = safeJsonParse(responseText, { relevantNoteIds: [] });
-            return result.relevantNoteIds || [];
-
-        } catch (error) {
-            throw handleGeminiError(error, "semantic search");
-        }
-    };
-    
-    public suggestTags = async (title: string, content: string): Promise<string[]> => {
-        if (!content) {
-            return [];
-        }
-
-        try {
-            const ai = this.getAi();
-
-            const schema = {
-                type: Type.OBJECT,
-                properties: {
-                    tags: {
-                        type: Type.ARRAY,
-                        items: {
-                            type: Type.STRING,
-                        },
-                        description: 'An array of 3 to 5 relevant tags for the note. Tags should be concise, lowercase, and either single-word or kebab-case (e.g., "project-planning").',
-                    },
-                },
-                required: ['tags'],
-            };
-
-            const prompt = `You are an expert at organizing information. Analyze the following note (title and content) and suggest 3 to 5 relevant tags to help categorize it. The tags should be concise, lowercase, and ideally single-word or in kebab-case.
-
-Note Title: "${title}"
-
-Note Content:
-"${content.substring(0, 4000)}"
-
-Return a JSON object with a single key "tags" containing an array of your suggested tag strings.`;
-
-            const response = await ai.models.generateContent({
-                model: 'gemini-2.5-flash',
-                contents: [{ parts: [{ text: prompt }] }],
-                config: {
-                    responseMimeType: "application/json",
-                    responseSchema: schema,
-                }
-            });
-
-            const responseText = response.text.trim();
-            const result = safeJsonParse(responseText, { tags: [] });
-            return result.tags || [];
-
-        } catch (error) {
-            throw handleGeminiError(error, "tag suggestion");
-        }
-    };
-
-    public suggestTitle = async (content: string): Promise<string> => {
-        if (!content) {
-            return "";
-        }
-
-        try {
-            const ai = this.getAi();
-
-            const prompt = `You are an expert at writing concise and descriptive titles. Analyze the following note content and suggest a single, short title for it (under 10 words). Do not add any extra commentary, quotation marks, or prefixes like "Title:". Just provide the title text.
-
-Note Content:
-"${content.substring(0, 4000)}"`;
-
-            const response = await ai.models.generateContent({
-                model: 'gemini-2.5-flash',
-                contents: [{ parts: [{ text: prompt }] }],
-            });
-
-            return response.text.trim().replace(/^"|"$/g, '');
-
-        } catch (error) {
-            throw handleGeminiError(error, "title suggestion");
-        }
-    };
-
-    public getStreamingChatResponse = async (
-        query: string,
-        contextNotes: Note[],
-        image?: string | null
-    ): Promise<AsyncGenerator<GenerateContentResponse>> => {
-        try {
-            const ai = this.getAi();
-
-            const simplifiedNotes = contextNotes.map(({ title, content, tags }) => ({
-                title,
-                content: content.substring(0, 2000), // Truncate content
-                tags,
-            }));
-            
-            const history: Content[] = [{
-                role: 'user',
-                parts: [{
-                    text: `You are an AI assistant for a note-taking app. Your task is to answer the user's question based *exclusively* on the content of the notes provided in this context. If the notes don't contain relevant information, say so. Do not invent information. Format your answer in clear Markdown.
-
-Here are the notes to use as context:
-${JSON.stringify(simplifiedNotes)}`
-                }]
-            }, {
-                role: 'model',
-                parts: [{ text: "Understood. I will answer the user's next question based only on the provided notes." }]
-            }];
-            
-            const chat = ai.chats.create({ model: 'gemini-2.5-flash', history });
-
-            const userParts: (string | { inlineData: { mimeType: string; data: string } })[] = [query];
-            if (image) {
-                const { mimeType, data } = parseDataUrl(image);
-                userParts.push({ inlineData: { mimeType, data } });
-            }
-
-            const result = await chat.sendMessageStream({ message: userParts as any });
-            return result;
-        } catch (error) {
-            throw handleGeminiError(error, "AI chat");
-        }
-    };
-
-    public generateCustomerResponse = async (
-        customerQuery: string,
-        contextNotes: Note[],
-        image?: string | null
-    ): Promise<string> => {
-        try {
-            const ai = this.getAi();
-            const simplifiedNotes = contextNotes.map(({ title, content, tags }) => ({
-                title,
-                content: content.substring(0, 2000),
-                tags
-            }));
-
-            const systemInstruction = `You are an expert customer service professional. Your goal is to provide helpful, empathetic, and professional responses to customer inquiries. Your response MUST be based *exclusively* on the information provided in the knowledge base notes. If the notes do not contain the answer, politely state that you cannot provide the information and will escalate the issue.
-
-**Platform Compliance Rule:** If you infer the context is a third-party marketplace (like Amazon, eBay), DO NOT include any direct website links, URLs, or off-platform contact information. Instead, guide the user by name (e.g., 'Please visit our official website for more information'). Adhering to this is critical to protect account health.
-
-Format your response in clear, professional Markdown.`;
-            
-            const prompt = `Here is the relevant knowledge base information:
-${JSON.stringify(simplifiedNotes)}
-
-Here is the customer's message (and an attached image, if provided). Please draft a response.
-Customer message: "${customerQuery}"`;
-
-            const userParts: any[] = [{ text: prompt }];
-            if (image) {
-                const { mimeType, data } = parseDataUrl(image);
-                userParts.push({ inlineData: { mimeType, data } });
-            }
-            
-            const response = await ai.models.generateContent({
-                model: 'gemini-2.5-flash',
-                contents: [{ role: 'user', parts: userParts }],
-                config: {
-                    systemInstruction,
-                },
-            });
-
-            return response.text.trim();
-
-        } catch (error) {
-            throw handleGeminiError(error, "customer response generation");
-        }
-    };
-    
-    public generateAmazonListingCopy = async (
-        productInfo: string,
-        contextNotes: Note[],
-        image?: string | null
-    ): Promise<string> => {
-        try {
-            const ai = this.getAi();
-             const simplifiedNotes = contextNotes.map(({ title, content, tags }) => ({
-                title,
-                content: content.substring(0, 2000),
-                tags
-            }));
-
-            const systemInstruction = `You are an expert Amazon e-commerce copywriter. Your goal is to create highly optimized and persuasive product listings that convert. Adhere to Amazon's style guidelines.
-
-You will be given a user's prompt with product information and a set of knowledge base notes. Use the knowledge base notes as the primary source of truth for features, benefits, and tone. Use the user's prompt for supplementary details and keywords.
-
-Based on all the provided information, generate the following components in well-structured Markdown:
-1.  **Title:** A concise, keyword-rich title under 200 characters.
-2.  **Bullet Points:** 5 compelling bullet points, each starting with a capitalized keyword and highlighting a key feature or benefit. Each bullet should be under 500 characters.
-3.  **Product Description:** A detailed, HTML-formatted (using simple tags like <p>, <b>, <ul>, <li>) product description that elaborates on the product's value.
-
-Begin the response immediately with the Markdown, without any introductory phrases.`;
-
-            const prompt = `Here is the relevant knowledge base information to use as the source of truth:
-${JSON.stringify(simplifiedNotes)}
-
-Here is the user's prompt with additional product details.
-User prompt: "${productInfo}"`;
-
-
-            const userParts: any[] = [{ text: prompt }];
-            if (image) {
-                const { mimeType, data } = parseDataUrl(image);
-                userParts.push({ inlineData: { mimeType, data } });
-            }
-
-            const response = await ai.models.generateContent({
-                model: 'gemini-2.5-flash',
-                contents: [{ role: 'user', parts: userParts }],
-                config: {
-                    systemInstruction,
-                },
-            });
-
-            return response.text.trim();
-
-        } catch (error) {
-            throw handleGeminiError(error, "Amazon listing generation");
-        }
-    };
-
-    public findMisspelledWords = async (text: string): Promise<SpellingError[]> => {
-        if (!text || text.trim().length < 2) {
-            return [];
-        }
-
-        try {
-            const ai = this.getAi();
-            const schema = {
-                type: Type.OBJECT,
-                properties: {
-                    errors: {
-                        type: Type.ARRAY,
-                        items: {
-                            type: Type.OBJECT,
-                            properties: {
-                                word: { type: Type.STRING, description: 'The misspelled word.' },
-                                index: { type: Type.INTEGER, description: 'The starting index of the word in the text.' },
-                                length: { type: Type.INTEGER, description: 'The length of the misspelled word.' },
-                            },
-                            required: ['word', 'index', 'length']
-                        },
-                        description: 'An array of identified spelling errors.'
-                    }
-                },
-                required: ['errors']
-            };
-
-            const prompt = `Analyze the following text and identify any misspelled English words. For each misspelled word, provide the word itself, its starting index in the original text, and its length. Do not flag proper nouns or technical terms that are correctly spelled.
-
-TEXT: """${text}"""`;
-
-            const response = await ai.models.generateContent({
-                model: 'gemini-2.5-flash',
-                contents: [{ parts: [{ text: prompt }] }],
-                config: {
-                    responseMimeType: "application/json",
-                    responseSchema: schema,
-                }
-            });
-
-            const responseText = response.text.trim();
-            const result = safeJsonParse(responseText, { errors: [] });
-            return result.errors || [];
-        } catch (error) {
-            // Let the centralized handler manage the error message and side effects.
-            // We can still log a warning here for debugging purposes if needed.
-            console.warn("Spell check failed:", error);
-            return [];
-        }
-    };
-
-    public getSpellingSuggestions = async (word: string): Promise<string[]> => {
-        if (!word) return [];
-
-        try {
-            const ai = this.getAi();
-            const schema = {
-                type: Type.OBJECT,
-                properties: {
-                    suggestions: {
-                        type: Type.ARRAY,
-                        items: { type: Type.STRING },
-                        description: 'An array of up to 5 correct spelling suggestions for the word.'
-                    }
-                },
-                required: ['suggestions']
-            };
-
-            const prompt = `Provide up to 5 correct spelling suggestions for the misspelled word: "${word}"`;
-
-            const response = await ai.models.generateContent({
-                model: 'gemini-2.5-flash',
-                contents: [{ parts: [{ text: prompt }] }],
-                config: {
-                    responseMimeType: "application/json",
-                    responseSchema: schema,
-                }
-            });
-
-            const responseText = response.text.trim();
-            const result = safeJsonParse(responseText, { suggestions: [] });
-            return result.suggestions || [];
-        } catch (error) {
-            throw handleGeminiError(error, "spelling suggestions");
-        }
-    };
-
-    public suggestNoteConsolidation = async (note1: Note, note2: Note): Promise<{ title: string; content: string }> => {
-        try {
-            const ai = this.getAi();
-            const schema = {
-                type: Type.OBJECT,
-                properties: {
-                    title: {
-                        type: Type.STRING,
-                        description: 'A new, concise title for the consolidated note.',
-                    },
-                    content: {
-                        type: Type.STRING,
-                        description: 'A comprehensive, well-structured body for the new note in Markdown format that merges the key ideas from both source notes.',
-                    },
-                },
-                required: ['title', 'content'],
-            };
-            
-            const prompt = `You are an expert at knowledge synthesis. Analyze the following two notes and create a single, consolidated note that merges their key ideas. Provide a new, concise title and a comprehensive body in Markdown format. The goal is to create a unified, well-structured note that preserves important information from both.
-
-**Note 1 Title:** "${note1.title}"
-**Note 1 Content:**
-"""
-${note1.content}
-"""
-
-**Note 2 Title:** "${note2.title}"
-**Note 2 Content:**
-"""
-${note2.content}
-"""`;
-
-            const response = await ai.models.generateContent({
-                model: 'gemini-2.5-flash',
-                contents: [{ parts: [{ text: prompt }] }],
-                config: {
-                    responseMimeType: "application/json",
-                    responseSchema: schema,
-                }
-            });
-
-            const responseText = response.text.trim();
-            return safeJsonParse(responseText, { title: '', content: '' });
-        } catch (error) {
-            throw handleGeminiError(error, "note consolidation");
-        }
-    };
-    
-    public resetGeneralChat = () => {
-        this.generalChatSession = null;
-    };
-    
-    public getGeneralChatSession = (): Chat => {
-        try {
-            const ai = this.getAi();
-            if (!this.generalChatSession) {
-                 this.generalChatSession = ai.chats.create({
-                    model: 'gemini-2.5-flash',
-                    config: {
-                        systemInstruction: `You are WesAI, a helpful and general-purpose AI assistant. Your primary role is to help the user manage their notes. You can create, find, read, update, delete, and organize notes and folders using the provided tools.
-
-**Your workflow for editing or refining a note should be:**
-1. Use \`findNotes\` to locate the relevant note(s).
-2. Use \`getNoteContent\` to retrieve its current content.
-3. Perform the requested refinement (e.g., proofreading, summarizing).
-4. Use \`updateNote\` with the \`noteId\` and the new, complete \`content\` to save the changes.
-
-**Your workflow for organizing notes should be:**
-1. Understand the user's categorization goal (e.g., "group all project notes").
-2. Use \`findNotes\` to identify the notes that need to be organized.
-3. Use \`findCollections\` to see if a suitable folder already exists.
-4. If a folder doesn't exist, use \`createCollection\` to make a new one.
-5. For each note, use \`moveNoteToCollection\` to place it in the correct folder. You can use a \`collectionId\` of \`null\` to move a note to the root.
-
-Always inform the user of the actions you have taken, such as which note you have updated or which notes you have moved.`,
-                        tools: [{ functionDeclarations: aiTools }],
-                    }
-                });
-            }
-            return this.generalChatSession;
-        } catch (error) {
-            throw handleGeminiError(error, "general AI chat session");
-        }
-    };
-}
-
-const geminiService = new GeminiAPIService();
-
-export const {
-    performInlineEdit,
-    enhanceText,
-    summarizeAndExtractActions,
-    semanticSearchNotes,
-    suggestTags,
-    suggestTitle,
-    getStreamingChatResponse,
-    generateCustomerResponse,
-    generateAmazonListingCopy,
-    findMisspelledWords,
-    getSpellingSuggestions,
-    suggestNoteConsolidation,
-    resetGeneralChat,
-    getGeneralChatSession
-} = geminiService;
+            },
+        });
+        const jsonText = response.text.trim();
+        return JSON.parse(jsonText);
+    } catch (e) {
+        console.error("Error in summarizeAndExtractActions:", e);
+        fireRateLimitEvent(e);
+        throw new Error("Failed to summarize and find actions.");
+    }
+};
+
+
+export const enhanceText = async (text: string, tone: string): Promise<string> => {
+    try {
+        const ai = getGenAI();
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: `Rewrite the following text to have a ${tone} tone:\n\n"${text}"`,
+            safetySettings
+        });
+        return response.text.trim();
+    } catch (e) {
+        console.error("Error enhancing text:", e);
+        fireRateLimitEvent(e);
+        throw new Error(`Failed to enhance text with ${tone} tone.`);
+    }
+};

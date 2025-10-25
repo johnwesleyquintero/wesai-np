@@ -1,4 +1,5 @@
 
+
 import { GoogleGenAI, HarmCategory, HarmBlockThreshold, Type, FunctionDeclaration, Content, GenerateContentResponse, Chat, Part } from "@google/genai";
 import { Note, ChatMessage, InlineAction, SpellingError } from '../types';
 
@@ -204,7 +205,7 @@ export const getStreamingChatResponse = async (query: string, sourceNotes: Note[
     }
 };
 
-export const generateCustomerResponse = async (customerQuery: string, sourceNotes: Note[], image?: string): Promise<string> => {
+export const generateCustomerResponseStream = async (customerQuery: string, sourceNotes: Note[], image?: string) => {
      try {
         const ai = getGenAI();
         const systemInstruction = `You are a professional and empathetic customer service agent. Your goal is to resolve the customer's issue using the provided knowledge base. If the knowledge base doesn't have the answer, apologize and explain that you will escalate the issue.
@@ -216,21 +217,20 @@ ${sourceNotes.length > 0 ? sourceNotes.map(n => `--- DOC: ${n.title} ---\n${n.co
              userParts.push({ inlineData: { mimeType: 'image/jpeg', data: image } });
          }
 
-        const response = await ai.models.generateContent({
+        return ai.models.generateContentStream({
             model: 'gemini-2.5-flash',
             contents: { role: 'user', parts: userParts },
             config: { systemInstruction },
             safetySettings
         });
-        return response.text;
     } catch (e) {
-        console.error("Error in generateCustomerResponse:", e);
+        console.error("Error in generateCustomerResponseStream:", e);
         fireRateLimitEvent(e);
-        throw new Error("Failed to generate customer response.");
+        throw new Error("Failed to generate streaming customer response.");
     }
 };
 
-export const generateAmazonListingCopy = async (productInfo: string, sourceNotes: Note[], image?: string): Promise<string> => {
+export const generateAmazonListingCopyStream = async (productInfo: string, sourceNotes: Note[], image?: string) => {
     try {
         const ai = getGenAI();
         const systemInstruction = `You are an expert Amazon copywriter. Create a compelling, SEO-optimized product listing based on the provided information. Follow Amazon's style guidelines. The output should be well-structured Markdown, including a title, bullet points, and a product description. Use information from the provided research notes if available.
@@ -242,17 +242,16 @@ ${sourceNotes.length > 0 ? sourceNotes.map(n => `--- NOTE: ${n.title} ---\n${n.c
             userParts.push({ inlineData: { mimeType: 'image/jpeg', data: image } });
         }
         
-        const response = await ai.models.generateContent({
+        return ai.models.generateContentStream({
             model: 'gemini-2.5-flash',
             contents: { role: 'user', parts: userParts },
             config: { systemInstruction },
             safetySettings
         });
-        return response.text;
     } catch (e) {
-        console.error("Error in generateAmazonListingCopy:", e);
+        console.error("Error in generateAmazonListingCopyStream:", e);
         fireRateLimitEvent(e);
-        throw new Error("Failed to generate Amazon copy.");
+        throw new Error("Failed to generate streaming Amazon copy.");
     }
 };
 

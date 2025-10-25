@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { ChatMessage, Note, ChatMode, ChatStatus } from '../types';
-import { getStreamingChatResponse, semanticSearchNotes, generateCustomerResponse, getGeneralChatSession, resetGeneralChat, generateAmazonListingCopy } from '../services/geminiService';
+import { getStreamingChatResponse, semanticSearchNotes, generateCustomerResponseStream, getGeneralChatSession, resetGeneralChat, generateAmazonListingCopyStream } from '../services/geminiService';
 import { useStoreContext } from '../context/AppContext';
 import { useDebounce } from './useDebounce';
 
@@ -114,6 +114,7 @@ export const useChatProviderLogic = () => {
     }, [chatMode, getNoteById, notes]);
 
     const onGenerateServiceResponse = useCallback(async (customerQuery: string, image?: string) => {
+        const currentSessionId = ++streamSessionIdRef.current;
         setChatError(null);
         const newUserMessage: ChatMessage = { role: 'user', content: customerQuery, image };
         setChatHistories(prev => ({ ...prev, [chatMode]: [...prev[chatMode], newUserMessage] }));
@@ -121,19 +122,43 @@ export const useChatProviderLogic = () => {
         try {
             const sourceNoteIds = await semanticSearchNotes(customerQuery, notes);
             const sourceNotes = sourceNoteIds.map(id => getNoteById(id)).filter((n): n is Note => !!n);
+            
+            if (currentSessionId !== streamSessionIdRef.current) return;
+
             setChatStatus('replying');
-            const responseText = await generateCustomerResponse(customerQuery, sourceNotes, image);
-            setChatHistories(prev => ({ ...prev, [chatMode]: [...prev[chatMode], { role: 'ai', content: responseText, sources: sourceNotes }] }));
+            const stream = await generateCustomerResponseStream(customerQuery, sourceNotes, image);
+            const newAiMessage: ChatMessage = { role: 'ai', content: '', sources: sourceNotes };
+
+            if (currentSessionId !== streamSessionIdRef.current) return;
+            setChatHistories(prev => ({ ...prev, [chatMode]: [...prev[chatMode], newAiMessage] }));
+
+            let fullResponse = '';
+            for await (const chunk of stream) {
+                if (currentSessionId !== streamSessionIdRef.current) break;
+                fullResponse += chunk.text;
+                setChatHistories(prev => {
+                    const currentModeHistory = [...prev[chatMode]];
+                    const lastMessage = currentModeHistory[currentModeHistory.length - 1];
+                    if (lastMessage?.role === 'ai') {
+                        currentModeHistory[currentModeHistory.length - 1] = { ...lastMessage, content: fullResponse };
+                    }
+                    return { ...prev, [chatMode]: currentModeHistory };
+                });
+            }
         } catch (error) {
+            if (currentSessionId !== streamSessionIdRef.current) return;
             const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
             setChatError(errorMessage);
             setChatHistories(prev => ({ ...prev, [chatMode]: [...prev[chatMode], { role: 'ai', content: `Sorry, I ran into an error: ${errorMessage}` }] }));
         } finally {
-            setChatStatus('idle');
+            if (currentSessionId === streamSessionIdRef.current) {
+                setChatStatus('idle');
+            }
         }
     }, [chatMode, getNoteById, notes]);
     
     const onGenerateAmazonCopy = useCallback(async (productInfo: string, image?: string) => {
+        const currentSessionId = ++streamSessionIdRef.current;
         setChatError(null);
         const newUserMessage: ChatMessage = { role: 'user', content: productInfo, image };
         setChatHistories(prev => ({ ...prev, [chatMode]: [...prev[chatMode], newUserMessage] }));
@@ -141,15 +166,38 @@ export const useChatProviderLogic = () => {
         try {
             const sourceNoteIds = await semanticSearchNotes(productInfo, notes);
             const sourceNotes = sourceNoteIds.map(id => getNoteById(id)).filter((n): n is Note => !!n);
+
+            if (currentSessionId !== streamSessionIdRef.current) return;
+            
             setChatStatus('replying');
-            const responseText = await generateAmazonListingCopy(productInfo, sourceNotes, image);
-            setChatHistories(prev => ({ ...prev, [chatMode]: [...prev[chatMode], { role: 'ai', content: responseText, sources: sourceNotes }] }));
+            const stream = await generateAmazonListingCopyStream(productInfo, sourceNotes, image);
+            const newAiMessage: ChatMessage = { role: 'ai', content: '', sources: sourceNotes };
+            
+            if (currentSessionId !== streamSessionIdRef.current) return;
+            setChatHistories(prev => ({ ...prev, [chatMode]: [...prev[chatMode], newAiMessage] }));
+
+            let fullResponse = '';
+            for await (const chunk of stream) {
+                if (currentSessionId !== streamSessionIdRef.current) break;
+                fullResponse += chunk.text;
+                setChatHistories(prev => {
+                    const currentModeHistory = [...prev[chatMode]];
+                    const lastMessage = currentModeHistory[currentModeHistory.length - 1];
+                    if (lastMessage?.role === 'ai') {
+                        currentModeHistory[currentModeHistory.length - 1] = { ...lastMessage, content: fullResponse };
+                    }
+                    return { ...prev, [chatMode]: currentModeHistory };
+                });
+            }
         } catch (error) {
+            if (currentSessionId !== streamSessionIdRef.current) return;
             const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
             setChatError(errorMessage);
             setChatHistories(prev => ({ ...prev, [chatMode]: [...prev[chatMode], { role: 'ai', content: `Sorry, I ran into an error: ${errorMessage}` }] }));
         } finally {
-            setChatStatus('idle');
+            if (currentSessionId === streamSessionIdRef.current) {
+                setChatStatus('idle');
+            }
         }
     }, [chatMode, getNoteById, notes]);
 

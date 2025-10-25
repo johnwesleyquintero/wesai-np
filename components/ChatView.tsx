@@ -1,9 +1,10 @@
 
+
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useChatContext, useStoreContext, useUIContext } from '../context/AppContext';
 import { ChatMessage, ChatMode, ChatStatus, Note } from '../types';
 import MarkdownPreview from './MarkdownPreview';
-import { PaperAirplaneIcon, SparklesIcon, XCircleIcon, DocumentPlusIcon, PaperClipIcon } from './Icons';
+import { PaperAirplaneIcon, SparklesIcon, XCircleIcon, DocumentPlusIcon, PaperClipIcon, ClipboardDocumentIcon } from './Icons';
 import { useToast } from '../context/ToastContext';
 import ChatViewSkeleton from './ChatViewSkeleton';
 
@@ -84,8 +85,8 @@ const SourceNotes: React.FC<{ sources: Note[] }> = ({ sources }) => {
 
 const Message: React.FC<{ message: ChatMessage }> = ({ message }) => {
     const { showToast } = useToast();
-    const { onAddNote } = useStoreContext();
-    const { setActiveNoteId, setView } = useUIContext();
+    const { onAddNote, setActiveNoteId } = useStoreContext();
+    const { setView } = useUIContext();
 
     const handleSaveAsNote = () => {
         if (typeof message.content === 'string') {
@@ -94,6 +95,19 @@ const Message: React.FC<{ message: ChatMessage }> = ({ message }) => {
         }
     };
     
+    const handleCopyToClipboard = () => {
+        if (typeof message.content === 'string') {
+            navigator.clipboard.writeText(message.content)
+                .then(() => {
+                    showToast({ message: 'Copied to clipboard!', type: 'success' });
+                })
+                .catch(err => {
+                    console.error('Failed to copy text: ', err);
+                    showToast({ message: 'Failed to copy.', type: 'error' });
+                });
+        }
+    };
+
     const handleNoteClick = (noteId: string) => {
         setActiveNoteId(noteId);
         setView('NOTES');
@@ -133,7 +147,16 @@ const Message: React.FC<{ message: ChatMessage }> = ({ message }) => {
                         View touched note &rarr;
                     </button>
                 )}
-                {isAi && <button onClick={handleSaveAsNote} className="flex items-center gap-1 text-xs font-semibold text-light-text/60 dark:text-dark-text/60 hover:text-light-text dark:hover:text-dark-text mt-2"><DocumentPlusIcon className="w-4 h-4" /> Save as Note</button>}
+                {isAi && (
+                    <div className="flex items-center gap-4 mt-2">
+                        <button onClick={handleSaveAsNote} className="flex items-center gap-1 text-xs font-semibold text-light-text/60 dark:text-dark-text/60 hover:text-light-text dark:hover:text-dark-text">
+                            <DocumentPlusIcon className="w-4 h-4" /> Save as Note
+                        </button>
+                        <button onClick={handleCopyToClipboard} className="flex items-center gap-1 text-xs font-semibold text-light-text/60 dark:text-dark-text/60 hover:text-light-text dark:hover:text-dark-text">
+                            <ClipboardDocumentIcon className="w-4 h-4" /> Copy
+                        </button>
+                    </div>
+                )}
             </div>
         </div>
     );

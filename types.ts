@@ -58,7 +58,7 @@ export interface ChatMessage {
 
 export type SearchMode = 'KEYWORD' | 'AI';
 
-export type ChatMode = 'ASSISTANT' | 'RESPONDER' | 'GENERAL';
+export type ChatMode = 'ASSISTANT' | 'RESPONDER' | 'GENERAL' | 'AMAZON';
 
 export type ChatStatus = 'idle' | 'searching' | 'replying' | 'using_tool';
 

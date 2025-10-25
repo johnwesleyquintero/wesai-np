@@ -570,6 +570,42 @@ Customer message: "${customerQuery}"`;
         }
     };
     
+    public generateAmazonListingCopy = async (
+        productInfo: string,
+        image?: string | null
+    ): Promise<string> => {
+        try {
+            const ai = this.getAi();
+
+            const systemInstruction = `You are an expert Amazon e-commerce copywriter. Your goal is to create highly optimized and persuasive product listings that convert. Adhere to Amazon's style guidelines. Based on the user's provided product information, generate the following components in well-structured Markdown:
+
+1.  **Title:** A concise, keyword-rich title under 200 characters.
+2.  **Bullet Points:** 5 compelling bullet points, each starting with a capitalized keyword and highlighting a key feature or benefit. Each bullet should be under 500 characters.
+3.  **Product Description:** A detailed, HTML-formatted (using simple tags like <p>, <b>, <ul>, <li>) product description that elaborates on the product's value.
+
+Begin the response immediately with the Markdown, without any introductory phrases.`;
+
+            const userParts: any[] = [{ text: productInfo }];
+            if (image) {
+                const { mimeType, data } = parseDataUrl(image);
+                userParts.push({ inlineData: { mimeType, data } });
+            }
+
+            const response = await ai.models.generateContent({
+                model: 'gemini-2.5-flash',
+                contents: [{ role: 'user', parts: userParts }],
+                config: {
+                    systemInstruction,
+                },
+            });
+
+            return response.text.trim();
+
+        } catch (error) {
+            throw handleGeminiError(error, "Amazon listing generation");
+        }
+    };
+
     public findMisspelledWords = async (text: string): Promise<SpellingError[]> => {
         if (!text || text.trim().length < 2) {
             return [];
@@ -754,6 +790,7 @@ export const {
     suggestTitle,
     getStreamingChatResponse,
     generateCustomerResponse,
+    generateAmazonListingCopy,
     findMisspelledWords,
     getSpellingSuggestions,
     suggestNoteConsolidation,

@@ -13,6 +13,7 @@ const ChatView: React.FC = () => {
         onSendMessage, 
         onGenerateServiceResponse, 
         onSendGeneralMessage, 
+        onGenerateAmazonCopy,
         chatStatus, 
         clearChat, 
         chatMode,
@@ -40,6 +41,8 @@ const ChatView: React.FC = () => {
                 onSendMessage(input, imageData);
             } else if (chatMode === 'RESPONDER') {
                 onGenerateServiceResponse(input, imageData);
+            } else if (chatMode === 'AMAZON') {
+                onGenerateAmazonCopy(input, imageData);
             } else {
                 onSendGeneralMessage(input, imageData);
             }
@@ -208,13 +211,15 @@ const ChatView: React.FC = () => {
     const placeholders = {
         ASSISTANT: "Ask a question about your notes...",
         RESPONDER: "Paste customer message here...",
-        GENERAL: "Create a new note titled..."
+        GENERAL: "Create a new note titled...",
+        AMAZON: "Enter product details, features, and keywords..."
     };
     
     const subtitles = {
         ASSISTANT: "Get answers from your knowledge base.",
         RESPONDER: "Draft professional replies using your notes.",
-        GENERAL: "Your creative partner for managing notes."
+        GENERAL: "Your creative partner for managing notes.",
+        AMAZON: "Generate optimized copy for Amazon listings."
     };
     
     const welcomeMessages = {
@@ -232,6 +237,11 @@ const ChatView: React.FC = () => {
             title: "General Assistant",
             body: "Use natural language to manage your notes. The AI can create, find, and update notes for you.",
             example: 'e.g., "Create a new note titled \'Q3 Marketing Plan\' and add a section about our target audience."'
+        },
+        AMAZON: {
+            title: "Amazon Listing Optimizer",
+            body: "Provide details about your product, including key features, target audience, and desired keywords. The AI will generate a title, bullet points, and a description.",
+            example: "e.g., \"Product: Smart coffee mug. Features: temperature control app, 2-hour battery, ceramic finish. Keywords: heated mug, gift for tech lovers.\""
         }
     };
 
@@ -272,6 +282,12 @@ const ChatView: React.FC = () => {
                             className={`px-3 py-1.5 text-sm font-semibold rounded-md transition-colors ${chatMode === 'RESPONDER' ? 'bg-white dark:bg-dark-ui-hover shadow-sm' : 'text-light-text/70 dark:text-dark-text/70 hover:bg-light-background dark:hover:bg-dark-ui-hover'}`}
                         >
                            Service Responder
+                        </button>
+                         <button
+                            onClick={() => handleModeChange('AMAZON')}
+                            className={`px-3 py-1.5 text-sm font-semibold rounded-md transition-colors ${chatMode === 'AMAZON' ? 'bg-white dark:bg-dark-ui-hover shadow-sm' : 'text-light-text/70 dark:text-dark-text/70 hover:bg-light-background dark:hover:bg-dark-ui-hover'}`}
+                        >
+                           Amazon Optimizer
                         </button>
                         <button
                             onClick={() => handleModeChange('GENERAL')}

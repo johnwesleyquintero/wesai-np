@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { ChatMessage, Note, ChatMode, ChatStatus } from '../types';
-import { getStreamingChatResponse, semanticSearchNotes, generateCustomerResponse, getGeneralChatSession, resetGeneralChat } from '../services/geminiService';
+import { getStreamingChatResponse, semanticSearchNotes, generateCustomerResponse, getGeneralChatSession, resetGeneralChat, generateAmazonListingCopy } from '../services/geminiService';
 import { useStoreContext } from '../context/AppContext';
 import { useDebounce } from './useDebounce';
 
@@ -16,18 +16,19 @@ export const useChatProviderLogic = () => {
     const [chatHistories, setChatHistories] = useState<Record<ChatMode, ChatMessage[]>>(() => {
         try {
             const saved = localStorage.getItem(CHAT_HISTORIES_STORAGE_KEY);
-            const initial = { ASSISTANT: [], RESPONDER: [], GENERAL: [] };
+            const initial = { ASSISTANT: [], RESPONDER: [], GENERAL: [], AMAZON: [] };
             if (saved) {
                 const parsed = JSON.parse(saved);
                 return {
                     ASSISTANT: Array.isArray(parsed.ASSISTANT) ? parsed.ASSISTANT : [],
                     RESPONDER: Array.isArray(parsed.RESPONDER) ? parsed.RESPONDER : [],
                     GENERAL: Array.isArray(parsed.GENERAL) ? parsed.GENERAL : [],
+                    AMAZON: Array.isArray(parsed.AMAZON) ? parsed.AMAZON : [],
                 };
             }
             return initial;
         } catch {
-            return { ASSISTANT: [], RESPONDER: [], GENERAL: [] };
+            return { ASSISTANT: [], RESPONDER: [], GENERAL: [], AMAZON: [] };
         }
     });
 
@@ -131,6 +132,23 @@ export const useChatProviderLogic = () => {
             setChatStatus('idle');
         }
     }, [chatMode, getNoteById, notes]);
+    
+    const onGenerateAmazonCopy = useCallback(async (productInfo: string, image?: string) => {
+        setChatError(null);
+        const newUserMessage: ChatMessage = { role: 'user', content: productInfo, image };
+        setChatHistories(prev => ({ ...prev, [chatMode]: [...prev[chatMode], newUserMessage] }));
+        setChatStatus('replying'); // No search phase for this mode
+        try {
+            const responseText = await generateAmazonListingCopy(productInfo, image);
+            setChatHistories(prev => ({ ...prev, [chatMode]: [...prev[chatMode], { role: 'ai', content: responseText }] }));
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+            setChatError(errorMessage);
+            setChatHistories(prev => ({ ...prev, [chatMode]: [...prev[chatMode], { role: 'ai', content: `Sorry, I ran into an error: ${errorMessage}` }] }));
+        } finally {
+            setChatStatus('idle');
+        }
+    }, [chatMode]);
 
     const onSendGeneralMessage = useCallback(async (query: string, image?: string) => {
         setChatError(null);
@@ -303,10 +321,10 @@ export const useChatProviderLogic = () => {
     const chatValue = useMemo(() => ({
         chatMessages: chatHistories[chatMode] || [], 
         chatStatus, chatMode, setChatMode, 
-        onSendMessage, onGenerateServiceResponse, onSendGeneralMessage, clearChat
+        onSendMessage, onGenerateServiceResponse, onSendGeneralMessage, onGenerateAmazonCopy, clearChat
     }), [
         chatHistories, chatMode, chatStatus, setChatMode,
-        onSendMessage, onGenerateServiceResponse, onSendGeneralMessage, clearChat
+        onSendMessage, onGenerateServiceResponse, onSendGeneralMessage, onGenerateAmazonCopy, clearChat
     ]);
 
     return chatValue;

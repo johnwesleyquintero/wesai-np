@@ -209,9 +209,11 @@ class GeminiAPIService {
     private ai: GoogleGenAI | null = null;
     private generalChatSession: Chat | null = null;
 
-    // Fix: Aligned with Gemini API guidelines to exclusively use process.env.API_KEY.
+    // FIX: Updated to be compatible with Vercel's client-side environment variable requirements.
+    // Vercel requires a specific prefix (like NEXT_PUBLIC_) to expose variables to the browser.
+    // This maintains the principle of sourcing the key from the environment while adapting to the deployment platform.
     private getApiKey(): string | undefined {
-        return process.env.API_KEY;
+        return process.env.NEXT_PUBLIC_API_KEY || process.env.API_KEY;
     }
 
     private getAi(): GoogleGenAI {

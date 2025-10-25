@@ -1,4 +1,5 @@
 
+
 import React from 'react';
 import { Bars3Icon, PlusIcon, SparklesIcon, ArrowDownTrayIcon, Cog6ToothIcon } from './Icons';
 import { useStoreContext } from '../context/AppContext';
@@ -30,7 +31,7 @@ const WelcomeScreen: React.FC<{
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-24 w-24 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002 2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                 </svg>
-                <h2 className="text-2xl font-bold text-light-text dark:text-dark-text">WesAI Notepad</h2>
+                <h2 className="text-2xl font-bold text-light-text dark:text-dark-text">WesCore</h2>
                 <p className="mb-6">Select a note to start, or create a new one.</p>
                 <button onClick={onAddNote} className="flex items-center justify-center bg-light-primary text-white dark:bg-dark-primary dark:text-zinc-900 rounded-md py-2 px-6 text-base font-semibold hover:bg-light-primary-hover dark:hover:bg-dark-primary-hover">
                     <PlusIcon className="w-5 h-5 mr-2" />

@@ -1,13 +1,13 @@
-# WesAI Notepad
+# WesCore
 
-**Your personal knowledge system, transformed into a powerful operational tool.**
+**One cockpit, endless AI-powered workflows.**
 
-WesAI Notepad is a secure, AI-enhanced application designed for privacy, performance, and productivity. It combines a fast, responsive notepad with a multi-mode AI assistant powered by the Google Gemini API. All your data is securely stored in our cloud backend, making it accessible across all your devices.
+WesCore is the evolution of WesAI NP — a centralized cockpit for operators to execute workflows, manage data, and automate tasks. Powered by **WesAI**, it preserves legacy workflows while scaling into a full platform ecosystem. It combines a fast, responsive interface with a multi-mode AI assistant powered by the Google Gemini API. All your data is securely stored in your own cloud backend, making it accessible across all your devices.
 
 ## Key Features
 
-### Note-Taking and Organization
-- **Secure & Private Cloud Sync:** All data is stored securely in our cloud backend and protected by granular security policies, ensuring only you can access your notes. Real-time, authenticated subscriptions keep all your devices perfectly in sync without compromising privacy.
+### Core System & Organization
+- **Secure & Private Cloud Sync:** All data is stored securely in your own cloud backend and protected by granular security policies, ensuring only you can access your notes. Real-time, authenticated subscriptions keep all your devices perfectly in sync without compromising privacy.
 - **Flexible Authentication:** Sign up quickly with an email and password or use the convenient one-click Google Sign-In option.
 - **Drag & Drop Organization:** Intuitively organize your workspace by dragging notes and folders to reorder them or nest them within each other.
 - **Rich Markdown Editor:** A full-featured Markdown editor with syntax highlighting and a live preview mode that supports tables, images, embedded videos, and more.
@@ -80,3 +80,9 @@ WesAI Notepad is a secure, AI-enhanced application designed for privacy, perform
 - **Backend & Database:** Supabase (Authentication, PostgreSQL, Realtime Subscriptions, Storage)
 - **AI Integration:** Google Gemini API (`@google/genai`)
 - **State Management:** React Hooks and Context API. The application features a clean, maintainable architecture built on custom hooks for logic encapsulation and reducers for predictable state management.
+
+## Legacy & Philosophy
+
+The WesCore platform is built on the foundation of **WesAI NP**, an operator-first tool designed from a core philosophy of turning challenges into opportunities, prioritizing competence over conventional approaches, and building robust systems for long-term strategic independence.
+
+This platform preserves the raw, powerful "cockpit" feel that values results and efficiency above all else. It is a sovereign, intelligent tool for turning your ideas into action.

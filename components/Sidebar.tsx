@@ -308,7 +308,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         <>
             <div className="p-4 flex-shrink-0 border-b border-light-border dark:border-dark-border">
                 <div className="flex justify-between items-center mb-4">
-                    <h1 className="text-xl font-bold">WesAI Notepad</h1>
+                    <h1 className="text-xl font-bold">WesCore</h1>
                     {!isMobileView ? (
                         <button onClick={onToggleCollapsed} className="p-2 -mr-2 rounded-md hover:bg-light-ui-hover dark:hover:bg-dark-ui-hover" aria-label="Collapse sidebar">
                             <ChevronDoubleLeftIcon />
@@ -441,11 +441,20 @@ const Sidebar: React.FC<SidebarProps> = ({
         {/* Logo at top */}
         <div className="relative group mb-4 flex-shrink-0 pt-2">
             <button onClick={onToggleCollapsed} className="p-1 rounded-md transition-colors hover:bg-light-ui-hover dark:hover:bg-dark-ui-hover" aria-label="Expand sidebar">
-                <svg width="32" height="32" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <rect width="64" height="64" rx="12" fill="#60a5fa"/>
-                  <path d="M20 18C20 15.7909 21.7909 14 24 14H44C46.2091 14 48 15.7909 48 18V46C48 48.2091 46.2091 50 44 50H24C21.7909 50 20 48.2091 20 46V18Z" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
-                  <path d="M24 14V50" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
+                <div className="w-8 h-8">
+                    <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <g className="stroke-light-primary dark:stroke-dark-primary">
+                            <path d="M32 14L16 23V41L32 50L48 41V23L32 14Z" strokeWidth="4"/>
+                            <path d="M32 24L22 29.5V40.5L32 46L42 40.5V29.5L32 24Z" strokeWidth="2"/>
+                            <path d="M16 23L22 29.5" strokeWidth="2"/>
+                            <path d="M48 23L42 29.5" strokeWidth="2"/>
+                            <path d="M16 41L22 40.5" strokeWidth="2"/>
+                            <path d="M48 41L42 40.5" strokeWidth="2"/>
+                            <path d="M32 14V24" strokeWidth="2"/>
+                            <path d="M32 50V46" strokeWidth="2"/>
+                        </g>
+                    </svg>
+                </div>
             </button>
             <div className="absolute left-full ml-2 px-2 py-1 bg-zinc-800 dark:bg-zinc-700 text-white dark:text-dark-text text-xs font-semibold rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
                 Expand

@@ -1,5 +1,5 @@
 {
-  "name": "WesAI Notepad",
-  "description": "A secure, AI-enhanced notepad with real-time cloud sync via Supabase, featuring a multi-mode Gemini assistant for powerful note creation and management.",
+  "name": "WesCore",
+  "description": "The operator-first platform for building, executing, and automating high-value workflows. Powered by a modular AI engine and real-time cloud sync.",
   "requestFramePermissions": []
 }

@@ -1,5 +1,6 @@
 
 
+
 import { GoogleGenAI, HarmCategory, HarmBlockThreshold, Type, FunctionDeclaration, Content, GenerateContentResponse, Chat, Part } from "@google/genai";
 import { Note, ChatMessage, InlineAction, SpellingError } from '../types';
 
@@ -164,23 +165,13 @@ ${note2.content}`,
 
 
 // --- Chat ---
-const buildChatContext = (sourceNotes: Note[]): Content => {
-    return {
-        role: 'system',
-        parts: [{
-            text: `You are a helpful AI assistant integrated into a note-taking app. Use the provided "Source Notes" to answer the user's query. If the sources are relevant, synthesize them in your answer. If they are not relevant, ignore them. Be concise and helpful.
-
-Source Notes:
-${sourceNotes.length > 0 ? sourceNotes.map(n => `--- NOTE: ${n.title} ---\n${n.content}\n`).join('') : 'No source notes provided.'}`
-        }]
-    };
-};
-
-export const getStreamingChatResponse = async (query: string, sourceNotes: Note[], image?: string) => {
+export const generateChatStream = async (
+    query: string,
+    systemInstruction: string,
+    image?: string
+) => {
     try {
         const ai = getGenAI();
-
-        const contents: Content[] = [buildChatContext(sourceNotes)];
         const userParts: Part[] = [{ text: query }];
         if (image) {
             userParts.push({
@@ -190,11 +181,11 @@ export const getStreamingChatResponse = async (query: string, sourceNotes: Note[
                 },
             });
         }
-        contents.push({ role: 'user', parts: userParts });
 
         return ai.models.generateContentStream({
             model: 'gemini-2.5-flash',
-            contents,
+            contents: { role: 'user', parts: userParts },
+            config: { systemInstruction },
             safetySettings,
         });
 
@@ -204,57 +195,6 @@ export const getStreamingChatResponse = async (query: string, sourceNotes: Note[
         throw new Error("Failed to get streaming response. Please check your API key.");
     }
 };
-
-export const generateCustomerResponseStream = async (customerQuery: string, sourceNotes: Note[], image?: string) => {
-     try {
-        const ai = getGenAI();
-        const systemInstruction = `You are a professional and empathetic customer service agent. Your goal is to resolve the customer's issue using the provided knowledge base. If the knowledge base doesn't have the answer, apologize and explain that you will escalate the issue.
-Knowledge Base:
-${sourceNotes.length > 0 ? sourceNotes.map(n => `--- DOC: ${n.title} ---\n${n.content}\n`).join('') : 'No knowledge provided.'}`;
-
-        const userParts: Part[] = [{ text: `Customer Query: ${customerQuery}` }];
-         if (image) {
-             userParts.push({ inlineData: { mimeType: 'image/jpeg', data: image } });
-         }
-
-        return ai.models.generateContentStream({
-            model: 'gemini-2.5-flash',
-            contents: { role: 'user', parts: userParts },
-            config: { systemInstruction },
-            safetySettings
-        });
-    } catch (e) {
-        console.error("Error in generateCustomerResponseStream:", e);
-        fireRateLimitEvent(e);
-        throw new Error("Failed to generate streaming customer response.");
-    }
-};
-
-export const generateAmazonListingCopyStream = async (productInfo: string, sourceNotes: Note[], image?: string) => {
-    try {
-        const ai = getGenAI();
-        const systemInstruction = `You are an expert Amazon copywriter. Create a compelling, SEO-optimized product listing based on the provided information. Follow Amazon's style guidelines. The output should be well-structured Markdown, including a title, bullet points, and a product description. Use information from the provided research notes if available.
-Research Notes:
-${sourceNotes.length > 0 ? sourceNotes.map(n => `--- NOTE: ${n.title} ---\n${n.content}\n`).join('') : 'No research notes provided.'}`;
-        
-        const userParts: Part[] = [{ text: `Product Info: ${productInfo}` }];
-        if (image) {
-            userParts.push({ inlineData: { mimeType: 'image/jpeg', data: image } });
-        }
-        
-        return ai.models.generateContentStream({
-            model: 'gemini-2.5-flash',
-            contents: { role: 'user', parts: userParts },
-            config: { systemInstruction },
-            safetySettings
-        });
-    } catch (e) {
-        console.error("Error in generateAmazonListingCopyStream:", e);
-        fireRateLimitEvent(e);
-        throw new Error("Failed to generate streaming Amazon copy.");
-    }
-};
-
 
 // --- General Chat with Tools ---
 let generalChat: Chat | null = null;

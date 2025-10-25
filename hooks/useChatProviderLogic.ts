@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { ChatMessage, Note, ChatMode, ChatStatus } from '../types';
-import { getStreamingChatResponse, semanticSearchNotes, generateCustomerResponseStream, getGeneralChatSession, resetGeneralChat, generateAmazonListingCopyStream } from '../services/geminiService';
+import { generateChatStream, semanticSearchNotes, getGeneralChatSession, resetGeneralChat } from '../services/geminiService';
 import { useStoreContext } from '../context/AppContext';
 import { useDebounce } from './useDebounce';
 
@@ -65,21 +65,25 @@ export const useChatProviderLogic = () => {
             window.removeEventListener('beforeunload', handleBeforeUnload);
         };
     }, []);
-    
-    const onSendMessage = useCallback(async (query: string, image?: string) => {
+
+    const _handleStreamedChat = useCallback(async (query: string, image: string | undefined, getSystemInstruction: (sourceNotes: Note[]) => string) => {
         const currentSessionId = ++streamSessionIdRef.current;
         setChatError(null);
         const newUserMessage: ChatMessage = { role: 'user', content: query, image };
         setChatHistories(prev => ({ ...prev, [chatMode]: [...prev[chatMode], newUserMessage] }));
         setChatStatus('searching');
+
         try {
             const sourceNoteIds = await semanticSearchNotes(query, notes);
             const sourceNotes = sourceNoteIds.map(id => getNoteById(id)).filter((n): n is Note => !!n);
-            
+
             if (currentSessionId !== streamSessionIdRef.current) return;
             
             setChatStatus('replying');
-            const stream = await getStreamingChatResponse(query, sourceNotes, image);
+            
+            const systemInstruction = getSystemInstruction(sourceNotes);
+            const stream = await generateChatStream(query, systemInstruction, image);
+
             const newAiMessage: ChatMessage = { role: 'ai', content: '', sources: sourceNotes };
             
             if (currentSessionId !== streamSessionIdRef.current) return;
@@ -93,8 +97,8 @@ export const useChatProviderLogic = () => {
                     const currentModeHistory = [...prev[chatMode]];
                     if (currentModeHistory.length > 0) {
                         const lastMessage = currentModeHistory[currentModeHistory.length - 1];
-                        if(lastMessage.role === 'ai') {
-                             currentModeHistory[currentModeHistory.length - 1] = { ...lastMessage, content: fullResponse };
+                        if (lastMessage.role === 'ai') {
+                            currentModeHistory[currentModeHistory.length - 1] = { ...lastMessage, content: fullResponse };
                         }
                     }
                     return { ...prev, [chatMode]: currentModeHistory };
@@ -112,94 +116,31 @@ export const useChatProviderLogic = () => {
             }
         }
     }, [chatMode, getNoteById, notes]);
+    
+    const onSendMessage = useCallback(async (query: string, image?: string) => {
+        const getSystemInstruction = (sourceNotes: Note[]) => `You are a helpful AI assistant integrated into a note-taking app. Use the provided "Source Notes" to answer the user's query. If the sources are relevant, synthesize them in your answer. If they are not relevant, ignore them. Be concise and helpful.
+
+Source Notes:
+${sourceNotes.length > 0 ? sourceNotes.map(n => `--- NOTE: ${n.title} ---\n${n.content}\n`).join('') : 'No source notes provided.'}`;
+        
+        await _handleStreamedChat(query, image, getSystemInstruction);
+    }, [_handleStreamedChat]);
 
     const onGenerateServiceResponse = useCallback(async (customerQuery: string, image?: string) => {
-        const currentSessionId = ++streamSessionIdRef.current;
-        setChatError(null);
-        const newUserMessage: ChatMessage = { role: 'user', content: customerQuery, image };
-        setChatHistories(prev => ({ ...prev, [chatMode]: [...prev[chatMode], newUserMessage] }));
-        setChatStatus('searching');
-        try {
-            const sourceNoteIds = await semanticSearchNotes(customerQuery, notes);
-            const sourceNotes = sourceNoteIds.map(id => getNoteById(id)).filter((n): n is Note => !!n);
-            
-            if (currentSessionId !== streamSessionIdRef.current) return;
+        const getSystemInstruction = (sourceNotes: Note[]) => `You are a professional and empathetic customer service agent. Your goal is to resolve the customer's issue using the provided knowledge base. If the knowledge base doesn't have the answer, apologize and explain that you will escalate the issue.
+Knowledge Base:
+${sourceNotes.length > 0 ? sourceNotes.map(n => `--- DOC: ${n.title} ---\n${n.content}\n`).join('') : 'No knowledge provided.'}`;
 
-            setChatStatus('replying');
-            const stream = await generateCustomerResponseStream(customerQuery, sourceNotes, image);
-            const newAiMessage: ChatMessage = { role: 'ai', content: '', sources: sourceNotes };
-
-            if (currentSessionId !== streamSessionIdRef.current) return;
-            setChatHistories(prev => ({ ...prev, [chatMode]: [...prev[chatMode], newAiMessage] }));
-
-            let fullResponse = '';
-            for await (const chunk of stream) {
-                if (currentSessionId !== streamSessionIdRef.current) break;
-                fullResponse += chunk.text;
-                setChatHistories(prev => {
-                    const currentModeHistory = [...prev[chatMode]];
-                    const lastMessage = currentModeHistory[currentModeHistory.length - 1];
-                    if (lastMessage?.role === 'ai') {
-                        currentModeHistory[currentModeHistory.length - 1] = { ...lastMessage, content: fullResponse };
-                    }
-                    return { ...prev, [chatMode]: currentModeHistory };
-                });
-            }
-        } catch (error) {
-            if (currentSessionId !== streamSessionIdRef.current) return;
-            const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-            setChatError(errorMessage);
-            setChatHistories(prev => ({ ...prev, [chatMode]: [...prev[chatMode], { role: 'ai', content: `Sorry, I ran into an error: ${errorMessage}` }] }));
-        } finally {
-            if (currentSessionId === streamSessionIdRef.current) {
-                setChatStatus('idle');
-            }
-        }
-    }, [chatMode, getNoteById, notes]);
+        await _handleStreamedChat(customerQuery, image, getSystemInstruction);
+    }, [_handleStreamedChat]);
     
     const onGenerateAmazonCopy = useCallback(async (productInfo: string, image?: string) => {
-        const currentSessionId = ++streamSessionIdRef.current;
-        setChatError(null);
-        const newUserMessage: ChatMessage = { role: 'user', content: productInfo, image };
-        setChatHistories(prev => ({ ...prev, [chatMode]: [...prev[chatMode], newUserMessage] }));
-        setChatStatus('searching');
-        try {
-            const sourceNoteIds = await semanticSearchNotes(productInfo, notes);
-            const sourceNotes = sourceNoteIds.map(id => getNoteById(id)).filter((n): n is Note => !!n);
-
-            if (currentSessionId !== streamSessionIdRef.current) return;
-            
-            setChatStatus('replying');
-            const stream = await generateAmazonListingCopyStream(productInfo, sourceNotes, image);
-            const newAiMessage: ChatMessage = { role: 'ai', content: '', sources: sourceNotes };
-            
-            if (currentSessionId !== streamSessionIdRef.current) return;
-            setChatHistories(prev => ({ ...prev, [chatMode]: [...prev[chatMode], newAiMessage] }));
-
-            let fullResponse = '';
-            for await (const chunk of stream) {
-                if (currentSessionId !== streamSessionIdRef.current) break;
-                fullResponse += chunk.text;
-                setChatHistories(prev => {
-                    const currentModeHistory = [...prev[chatMode]];
-                    const lastMessage = currentModeHistory[currentModeHistory.length - 1];
-                    if (lastMessage?.role === 'ai') {
-                        currentModeHistory[currentModeHistory.length - 1] = { ...lastMessage, content: fullResponse };
-                    }
-                    return { ...prev, [chatMode]: currentModeHistory };
-                });
-            }
-        } catch (error) {
-            if (currentSessionId !== streamSessionIdRef.current) return;
-            const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-            setChatError(errorMessage);
-            setChatHistories(prev => ({ ...prev, [chatMode]: [...prev[chatMode], { role: 'ai', content: `Sorry, I ran into an error: ${errorMessage}` }] }));
-        } finally {
-            if (currentSessionId === streamSessionIdRef.current) {
-                setChatStatus('idle');
-            }
-        }
-    }, [chatMode, getNoteById, notes]);
+        const getSystemInstruction = (sourceNotes: Note[]) => `You are an expert Amazon copywriter. Create a compelling, SEO-optimized product listing based on the provided information. Follow Amazon's style guidelines. The output should be well-structured Markdown, including a title, bullet points, and a product description. Use information from the provided research notes if available.
+Research Notes:
+${sourceNotes.length > 0 ? sourceNotes.map(n => `--- NOTE: ${n.title} ---\n${n.content}\n`).join('') : 'No research notes provided.'}`;
+        
+        await _handleStreamedChat(productInfo, image, getSystemInstruction);
+    }, [_handleStreamedChat]);
 
     const onSendGeneralMessage = useCallback(async (query: string, image?: string) => {
         setChatError(null);

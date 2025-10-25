@@ -8,7 +8,7 @@ import {
     TrashIcon,
     ChartBarIcon,
     TrendingUpIcon,
-    NetworkIcon,
+    GraphIcon,
     DocumentTextIcon
 } from './Icons';
 import SidebarNode from './SidebarNode';
@@ -399,7 +399,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                         tooltip="Graph View"
                         isActive={view === 'GRAPH'}
                     >
-                        <NetworkIcon />
+                        <GraphIcon />
                     </FooterButton>
 
                     <FooterButton
@@ -491,7 +491,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                 <DocumentTextIcon />
             </FooterButton>
             <FooterButton onClick={() => setView('GRAPH')} tooltip="Graph View" isActive={view === 'GRAPH'}>
-                <NetworkIcon />
+                <GraphIcon />
             </FooterButton>
             <FooterButton onClick={() => setView('TREND_ANALYSIS')} tooltip="Trend Analysis" isActive={view === 'TREND_ANALYSIS'}>
                 <TrendingUpIcon />

@@ -263,9 +263,9 @@ export const MoonIcon: React.FC<IconProps> = (props) => (
     </svg>
 );
 
-export const NetworkIcon: React.FC<IconProps> = (props) => (
+export const GraphIcon: React.FC<IconProps> = (props) => (
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5" {...props}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M12.75 19.5v-5.25m0 0a3.375 3.375 0 00-3.375-3.375h-1.5a3.375 3.375 0 00-3.375 3.375v5.25m3.375-3.375h1.5a3.375 3.375 0 013.375 3.375M9 6.75v-5.25a3.375 3.375 0 013.375-3.375h1.5A3.375 3.375 0 0118.75 3v5.25m-6.375 3.375v-5.25a3.375 3.375 0 013.375-3.375h1.5a3.375 3.375 0 013.375 3.375v5.25m0 3.375h-1.5a3.375 3.375 0 01-3.375-3.375v-5.25a3.375 3.375 0 013.375-3.375h1.5" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M7.217 10.907a2.25 2.25 0 100 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186l9.566-5.314m-9.566 7.5l9.566 5.314m0 0a2.25 2.25 0 100-2.186m0 2.186c-.18.324-.283.696-.283 1.093s.103.77.283 1.093m0-2.186l-9.566-5.314" />
     </svg>
 );
 

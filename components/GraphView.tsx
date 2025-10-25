@@ -1,7 +1,7 @@
 import React, { useMemo, useCallback, useRef, useEffect, useState } from 'react';
 import ForceGraph2D from 'react-force-graph-2d';
 import { useStoreContext, useUIContext } from '../context/AppContext';
-import { NetworkIcon } from './Icons';
+import { GraphIcon } from './Icons';
 
 const noteLinkRegex = /\[\[([a-zA-Z0-9-]+)(?:\|.*?)?\]\]/g;
 
@@ -75,7 +75,7 @@ const GraphView: React.FC = () => {
     if (notes.length === 0) {
         return (
             <div className="flex-1 flex flex-col items-center justify-center text-center text-light-text/60 dark:text-dark-text/60 p-4">
-                <NetworkIcon className="w-16 h-16 mb-4" />
+                <GraphIcon className="w-16 h-16 mb-4" />
                 <h2 className="text-xl font-semibold text-light-text dark:text-dark-text">Your Knowledge Graph is Empty</h2>
                 <p className="mt-1">Create some notes and link them together using `[[...]]` syntax to see your ideas connect.</p>
             </div>

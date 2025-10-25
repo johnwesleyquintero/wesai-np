@@ -10,9 +10,6 @@ interface NoteInfoPopoverProps {
 
 const NoteInfoPopover: React.FC<NoteInfoPopoverProps> = ({ note, wordCount, charCount }) => {
     
-    // Simple reading time calculation
-    const readingTime = Math.ceil(wordCount / 200);
-
     return (
         <div className="absolute right-0 mt-2 w-64 bg-light-background dark:bg-dark-background rounded-md shadow-lg border border-light-border dark:border-dark-border z-10 p-4 text-sm">
             <h3 className="font-bold text-base mb-3">Note Information</h3>
@@ -33,10 +30,6 @@ const NoteInfoPopover: React.FC<NoteInfoPopoverProps> = ({ note, wordCount, char
                 <div className="flex justify-between">
                     <span className="font-semibold">Character Count:</span>
                     <span>{charCount}</span>
-                </div>
-                <div className="flex justify-between">
-                    <span className="font-semibold">Reading Time:</span>
-                    <span>~{readingTime} min</span>
                 </div>
             </div>
         </div>

@@ -30,7 +30,7 @@ interface NoteEditorProps {
 
 type NoteState = { title: string; content: string; tags: string[] };
 
-const StatusBar: React.FC<{ wordCount: number; charCount: number; isCheckingSpelling: boolean }> = ({ wordCount, charCount, isCheckingSpelling }) => (
+const StatusBar: React.FC<{ wordCount: number; charCount: number; readingTime: number; isCheckingSpelling: boolean }> = ({ wordCount, charCount, readingTime, isCheckingSpelling }) => (
     <div className="flex-shrink-0 px-4 sm:px-8 py-1.5 border-t border-light-border dark:border-dark-border text-xs text-light-text/60 dark:text-dark-text/60 flex items-center justify-end space-x-4">
         {isCheckingSpelling && (
             <div className="flex items-center space-x-1.5 animate-pulse">
@@ -38,6 +38,7 @@ const StatusBar: React.FC<{ wordCount: number; charCount: number; isCheckingSpel
                 <span className="text-blue-500">Checking...</span>
             </div>
         )}
+        <span>~{readingTime} min read</span>
         <span>Words: {wordCount}</span>
         <span>Characters: {charCount}</span>
     </div>
@@ -108,11 +109,12 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
     const displayedContent = previewVersion ? previewVersion.content : editorState.content;
     const displayedTags = previewVersion ? previewVersion.tags : editorState.tags;
     
-    const { wordCount, charCount } = useMemo(() => {
+    const { wordCount, charCount, readingTime } = useMemo(() => {
         const content = editorState.content;
         const words = content.trim().split(/\s+/).filter(Boolean).length;
         const finalWordCount = content.trim() === '' ? 0 : words;
-        return { wordCount: finalWordCount, charCount: content.length };
+        const finalReadingTime = Math.ceil(finalWordCount / 200);
+        return { wordCount: finalWordCount, charCount: content.length, readingTime: finalReadingTime };
     }, [editorState.content]);
 
     // Auto-resize textarea
@@ -499,7 +501,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
                 </div>
             </div>
             
-            <StatusBar wordCount={wordCount} charCount={charCount} isCheckingSpelling={isCheckingSpelling} />
+            <StatusBar wordCount={wordCount} charCount={charCount} readingTime={readingTime} isCheckingSpelling={isCheckingSpelling} />
 
             {(noteLinker || noteLinkerForSelection) && <NoteLinker query={noteLinker?.query || ''} onSelect={handleInsertLink} onClose={() => { dispatch({ type: 'SET_NOTE_LINKER', payload: null }); dispatch({ type: 'SET_NOTE_LINKER_FOR_SELECTION', payload: null }); }} position={noteLinker?.position || { top: noteLinkerForSelection!.rect.bottom, left: noteLinkerForSelection!.rect.left }} />}
             {slashCommand && <SlashCommandMenu query={slashCommand.query} position={slashCommand.position} onSelect={handleSelectCommand} onClose={() => dispatch({ type: 'SET_SLASH_COMMAND', payload: null })} textareaRef={textareaRef} />}

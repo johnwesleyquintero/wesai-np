@@ -243,7 +243,11 @@ const Sidebar: React.FC<SidebarProps> = ({
                 favoriteNotes.map(note => (
                     <NoteCard
                         key={note.id}
-                        note={note}
+                        id={note.id}
+                        title={note.title}
+                        contentPreview={note.content.substring(0, 160)}
+                        updatedAt={note.updatedAt}
+                        isFavorite={note.isFavorite}
                         isActive={note.id === activeNoteId}
                         onClick={() => onSelectNote(note.id)}
                         searchTerm={searchTerm}
@@ -389,20 +393,22 @@ const Sidebar: React.FC<SidebarProps> = ({
                     <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-light-text/50 dark:text-dark-text/50" />
                 </div>
                 <div className="flex items-center mt-2 text-xs">
-                     <button
-                        onClick={() => setSearchMode('KEYWORD')}
-                        className={`px-3 py-1 rounded-l-md ${searchMode === 'KEYWORD' ? 'bg-light-primary/80 text-white dark:bg-dark-primary/80 dark:text-zinc-900' : 'bg-light-background dark:bg-dark-background'}`}
-                    >
-                        Keyword
-                    </button>
-                    <button
-                        onClick={() => setSearchMode('AI')}
-                        className={`px-3 py-1 rounded-r-md flex items-center ${searchMode === 'AI' ? 'bg-light-primary/80 text-white dark:bg-dark-primary/80 dark:text-zinc-900' : 'bg-light-background dark:bg-dark-background'}`}
-                        disabled={isAiRateLimited}
-                    >
-                        <SparklesIcon className="w-3 h-3 mr-1" />
-                        AI Search
-                    </button>
+                    <div className="flex w-full bg-light-background dark:bg-dark-background p-0.5 rounded-md border border-light-border dark:border-dark-border">
+                         <button
+                            onClick={() => setSearchMode('KEYWORD')}
+                            className={`flex-1 px-2 py-1 text-xs rounded-md transition-colors ${searchMode === 'KEYWORD' ? 'bg-light-primary text-white dark:bg-dark-primary dark:text-zinc-900' : 'hover:bg-light-ui dark:hover:bg-dark-ui'}`}
+                        >
+                            Keyword
+                        </button>
+                        <button
+                            onClick={() => setSearchMode('AI')}
+                            className={`flex-1 px-2 py-1 flex items-center justify-center gap-1 text-xs rounded-md transition-colors ${searchMode === 'AI' ? 'bg-light-primary text-white dark:bg-dark-primary dark:text-zinc-900' : 'hover:bg-light-ui dark:hover:bg-dark-ui'}`}
+                            disabled={isAiRateLimited}
+                        >
+                            <SparklesIcon className="w-3 h-3" />
+                            AI Search
+                        </button>
+                    </div>
                      {isAiRateLimited && <span className="text-red-500 ml-2 text-xs">Paused</span>}
                 </div>
                  {aiSearchError && <p className="text-red-500 text-xs mt-1">{aiSearchError}</p>}

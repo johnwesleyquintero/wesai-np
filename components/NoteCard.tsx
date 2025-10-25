@@ -5,15 +5,22 @@ import Highlight from './Highlight';
 import { formatDate } from '../lib/dateUtils';
 
 interface NoteCardProps {
-    note: Note;
+    id: string;
+    title: string;
+    contentPreview: string;
+    updatedAt: string;
+    isFavorite: boolean;
     isActive: boolean;
     onClick: () => void;
     searchTerm: string;
     onContextMenu?: (event: React.MouseEvent) => void;
 }
 
-const NoteCard: React.FC<NoteCardProps> = ({ note, isActive, onClick, searchTerm, onContextMenu }) => {
-    const preview = note.content.substring(0, 160) + (note.content.length > 160 ? '...' : '');
+const NoteCard: React.FC<NoteCardProps> = ({ 
+    id, title, contentPreview, updatedAt, isFavorite, 
+    isActive, onClick, searchTerm, onContextMenu 
+}) => {
+    const preview = contentPreview + (contentPreview.length >= 160 ? '...' : '');
 
     return (
         <div
@@ -26,27 +33,15 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, isActive, onClick, searchTerm
             }`}
         >
             <h3 className="font-semibold truncate flex justify-between items-center">
-                <Highlight text={note.title} highlight={searchTerm} />
-                {note.isFavorite && <StarIcon className="w-4 h-4 text-yellow-500" filled />}
+                <Highlight text={title} highlight={searchTerm} />
+                {isFavorite && <StarIcon className="w-4 h-4 text-yellow-500" filled />}
             </h3>
             <p className="text-sm text-light-text/70 dark:text-dark-text/70 note-card-preview">
                  <Highlight text={preview || 'No content'} highlight={searchTerm} />
             </p>
-            <p className="text-xs text-light-text/50 dark:text-dark-text/50 mt-1">{formatDate(note.updatedAt)}</p>
+            <p className="text-xs text-light-text/50 dark:text-dark-text/50 mt-1">{formatDate(updatedAt)}</p>
         </div>
     );
 };
 
-const noteCardPropsAreEqual = (prevProps: NoteCardProps, nextProps: NoteCardProps) => {
-    return (
-        prevProps.isActive === nextProps.isActive &&
-        prevProps.searchTerm === nextProps.searchTerm &&
-        prevProps.note.id === nextProps.note.id &&
-        prevProps.note.title === nextProps.note.title &&
-        prevProps.note.isFavorite === nextProps.note.isFavorite &&
-        prevProps.note.updatedAt === nextProps.note.updatedAt &&
-        prevProps.note.content.substring(0, 160) === nextProps.note.content.substring(0, 160)
-    );
-};
-
-export default React.memo(NoteCard, noteCardPropsAreEqual);
+export default React.memo(NoteCard);

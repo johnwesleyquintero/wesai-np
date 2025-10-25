@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Collection, Note, TreeNode } from '../types';
-import { ChevronDownIcon, ChevronRightIcon, DocumentTextIcon, FolderIcon, TrashIcon, PencilSquareIcon, DocumentDuplicateIcon, ClipboardDocumentIcon, GripVerticalIcon } from './Icons';
+import { ChevronDownIcon, ChevronRightIcon, DocumentTextIcon, FolderIcon, TrashIcon, PencilSquareIcon, DocumentDuplicateIcon, ClipboardDocumentIcon, GripVerticalIcon, LinkIcon } from './Icons';
 import { ContextMenuItem } from '../types';
 import { useStoreContext, useUIContext } from '../context/AppContext';
 import { useToast } from '../context/ToastContext';
@@ -161,6 +161,16 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
                             .catch((err) => showToast({ message: `Failed to duplicate note: ${err.message}`, type: 'error'}));
                     }, 
                     icon: <DocumentDuplicateIcon /> 
+                },
+                { 
+                    label: 'Copy Note Link', 
+                    action: () => {
+                        const linkText = `[[${noteAsNote.id}|${noteAsNote.title}]]`;
+                        navigator.clipboard.writeText(linkText)
+                            .then(() => showToast({ message: 'Note link copied!', type: 'success' }))
+                            .catch(() => showToast({ message: 'Failed to copy link.', type: 'error' }));
+                    }, 
+                    icon: <LinkIcon /> 
                 },
                 { 
                     label: 'Copy as Markdown', 

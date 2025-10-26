@@ -88,6 +88,7 @@ export const useChatProviderLogic = () => {
         const newUserMessage: ChatMessage = { id: crypto.randomUUID(), role: 'user', content: query, image };
         setChatHistories(prev => ({ ...prev, [chatMode]: [...prev[chatMode], newUserMessage] }));
         setChatStatus('searching');
+        let newAiMessage: ChatMessage | null = null;
 
         try {
             const sourceNoteIds = await semanticSearchNotes(query, notes);
@@ -100,10 +101,10 @@ export const useChatProviderLogic = () => {
             const systemInstruction = getSystemInstruction(sourceNotes);
             const stream = await generateChatStream(query, systemInstruction, image);
 
-            const newAiMessage: ChatMessage = { id: crypto.randomUUID(), role: 'ai', content: '', sources: sourceNotes };
+            newAiMessage = { id: crypto.randomUUID(), role: 'ai', content: '', sources: sourceNotes, status: 'processing' };
             
             if (currentSessionId !== streamSessionIdRef.current) return;
-            setChatHistories(prev => ({ ...prev, [chatMode]: [...prev[chatMode], newAiMessage] }));
+            setChatHistories(prev => ({ ...prev, [chatMode]: [...prev[chatMode], newAiMessage!] }));
 
             let fullResponse = '';
             for await (const chunk of stream) {
@@ -111,7 +112,7 @@ export const useChatProviderLogic = () => {
                 fullResponse += chunk.text;
                 setChatHistories(prev => {
                     const currentModeHistory = [...prev[chatMode]];
-                    const messageIndex = currentModeHistory.findIndex(m => m.id === newAiMessage.id);
+                    const messageIndex = currentModeHistory.findIndex(m => m.id === newAiMessage!.id);
                     if (messageIndex > -1) {
                          currentModeHistory[messageIndex] = { ...currentModeHistory[messageIndex], content: fullResponse };
                     }
@@ -127,6 +128,16 @@ export const useChatProviderLogic = () => {
         } finally {
             if (currentSessionId === streamSessionIdRef.current) {
                 setChatStatus('idle');
+                if (newAiMessage) {
+                    setChatHistories(prev => {
+                        const currentModeHistory = [...prev[chatMode]];
+                        const messageIndex = currentModeHistory.findIndex(m => m.id === newAiMessage!.id);
+                        if (messageIndex > -1) {
+                            currentModeHistory[messageIndex] = { ...currentModeHistory[messageIndex], status: 'complete' };
+                        }
+                        return { ...prev, [chatMode]: currentModeHistory };
+                    });
+                }
             }
         }
     }, [chatMode, getNoteById, notes]);

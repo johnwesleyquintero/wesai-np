@@ -6,6 +6,7 @@ import { semanticSearchNotes } from '../services/geminiService';
 import { useAuthContext, useUIContext } from '../context/AppContext';
 import { useToast } from '../context/ToastContext';
 import { useLocalNotes } from './useLocalNotes';
+import { useRecentQueries } from './useRecentQueries';
 
 const buildTree = (notes: Note[], collections: Collection[]): TreeNode[] => {
     const noteMap = new Map(notes.map(note => [note.id, { ...note, children: [] as TreeNode[] }]));
@@ -58,12 +59,19 @@ export const useStoreProviderLogic = () => {
     const [aiSearchResultIds, setAiSearchResultIds] = useState<string[] | null>(null);
     const [activeSmartCollectionId, setActiveSmartCollectionId] = useState<string | null>(null);
     const debouncedSearchTerm = useDebounce(searchTerm, 500);
+    const { queries: recentQueries, addQuery: addRecentQuery } = useRecentQueries();
 
     useEffect(() => {
         if (isDemoMode && notes.length > 0 && !activeNoteId) {
             setActiveNoteId(notes[0].id);
         }
     }, [isDemoMode, notes, activeNoteId]);
+
+    useEffect(() => {
+        if (debouncedSearchTerm.trim() && !activeSmartCollectionId) {
+            addRecentQuery(debouncedSearchTerm.trim());
+        }
+    }, [debouncedSearchTerm, addRecentQuery, activeSmartCollectionId]);
     
     useEffect(() => {
         if (searchMode === 'AI' && debouncedSearchTerm.trim()) {
@@ -165,11 +173,13 @@ export const useStoreProviderLogic = () => {
         handleSearchTermChange, searchMode, setSearchMode, isAiSearching, aiSearchError,
         activeSmartCollection, handleActivateSmartCollection, handleClearActiveSmartCollection,
         handleDeleteNoteConfirm, handleDeleteCollectionConfirm, handleDeleteSmartCollectionConfirm,
+        recentQueries,
     }), [
         store, onAddNote, onAddNoteFromFile, fileTree,
         activeNoteId, activeNote, favoriteNotes, searchData, searchTerm,
         handleSearchTermChange, searchMode, isAiSearching, aiSearchError,
         activeSmartCollection, handleActivateSmartCollection, handleClearActiveSmartCollection,
         handleDeleteNoteConfirm, handleDeleteCollectionConfirm, handleDeleteSmartCollectionConfirm,
+        recentQueries,
     ]);
 };

@@ -116,6 +116,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         handleClearActiveSmartCollection: onClearActiveSmartCollection,
         setActiveNoteId,
         handleDeleteNoteConfirm, handleDeleteSmartCollectionConfirm,
+        recentQueries,
     } = useStoreContext();
     
     const {
@@ -125,6 +126,8 @@ const Sidebar: React.FC<SidebarProps> = ({
         showConfirmation, openHelpModal,
     } = useUIContext();
     const { showToast } = useToast();
+    
+    const [isSearchFocused, setIsSearchFocused] = useState(false);
     
     const handleMoveItem = useCallback(async (draggedItemId: string, targetItemId: string | null, position: 'top' | 'bottom' | 'inside') => {
         try {
@@ -419,10 +422,29 @@ const Sidebar: React.FC<SidebarProps> = ({
                         placeholder={activeSmartCollection ? activeSmartCollection.query : "Search notes..."}
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
+                        onFocus={() => setIsSearchFocused(true)}
+                        onBlur={() => setTimeout(() => setIsSearchFocused(false), 200)}
                         className="w-full pl-9 pr-16 py-2 text-sm bg-light-background dark:bg-dark-background rounded-md border border-light-border dark:border-dark-border focus:ring-1 focus:ring-light-primary focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
                         disabled={!!activeSmartCollection}
                     />
                     <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-light-text/50 dark:text-dark-text/50" />
+                     {isSearchFocused && !searchTerm && recentQueries && recentQueries.length > 0 && (
+                        <div className="absolute top-full mt-2 w-full bg-light-background dark:bg-dark-background rounded-md shadow-lg border border-light-border dark:border-dark-border z-10 py-1">
+                            <h4 className="px-3 pt-2 pb-1 text-xs font-semibold text-light-text/60 dark:text-dark-text/60">Recent Searches</h4>
+                            {recentQueries.map((query) => (
+                                <button
+                                    key={query}
+                                    onMouseDown={(e) => {
+                                        e.preventDefault();
+                                        setSearchTerm(query);
+                                    }}
+                                    className="w-full text-left px-3 py-2 text-sm hover:bg-light-ui dark:hover:bg-dark-ui truncate"
+                                >
+                                    {query}
+                                </button>
+                            ))}
+                        </div>
+                    )}
                     <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center space-x-1">
                         {isAiSearching && (
                             <SparklesIcon className="w-4 h-4 text-light-primary dark:text-dark-primary animate-spin" />

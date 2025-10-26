@@ -86,9 +86,10 @@ interface MarkdownPreviewProps {
     title: string;
     content: string;
     onToggleTask: (lineNumber: number) => void;
+    isStreaming?: boolean;
 }
 
-const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({ title, content, onToggleTask }) => {
+const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({ title, content, onToggleTask, isStreaming }) => {
     const { getNoteById, setActiveNoteId } = useStoreContext();
     const { setView } = useUIContext();
     const { theme } = useUIContext();
@@ -226,6 +227,7 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({ title, content, onTog
                 >
                     {preprocessedContent}
                 </ReactMarkdown>
+                {isStreaming && <span className="blinking-cursor"></span>}
             </div>
         </div>
     );

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { PlusIcon } from './Icons';
+import { PlusIcon, EyeIcon, EyeSlashIcon } from './Icons';
 import TemplateEditorModal from './TemplateEditorModal';
 import { Template } from '../types';
 import { useStoreContext } from '../context/AppContext';
@@ -26,6 +26,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
     const [templateToEdit, setTemplateToEdit] = useState<Template | null>(null);
     const [isImportConfirmOpen, setIsImportConfirmOpen] = useState(false);
     const [dataToImport, setDataToImport] = useState<any | null>(null);
+    
+    const [isKeyVisible, setIsKeyVisible] = useState(false);
+    const [apiKeyError, setApiKeyError] = useState<string | null>(null);
 
     const apiKeyInputRef = useRef<HTMLInputElement>(null);
     const saveButtonRef = useRef<HTMLButtonElement>(null);
@@ -36,6 +39,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
     useEffect(() => {
         if (isOpen) {
             setLocalApiKey(apiKey || '');
+            setIsKeyVisible(false);
             setTimeout(() => {
                 if (!apiKey) {
                     apiKeyInputRef.current?.focus();
@@ -45,6 +49,21 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
             }, 100);
         }
     }, [isOpen, apiKey]);
+    
+    useEffect(() => {
+        const validateApiKey = (key: string) => {
+            if (!key) {
+                setApiKeyError(null);
+                return;
+            }
+            if (key.length < 35 || key.length > 45 || !/^[A-Za-z0-9_-]+$/.test(key)) {
+                setApiKeyError('Invalid API key format. Please check your key.');
+            } else {
+                setApiKeyError(null);
+            }
+        };
+        validateApiKey(localApiKey);
+    }, [localApiKey]);
 
     const handleOpenTemplateEditor = (template: Template | null) => {
         setTemplateToEdit(template);
@@ -140,6 +159,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
     };
     
     const handleSaveSettings = () => {
+        if (apiKeyError) {
+            showToast({ message: apiKeyError, type: 'error' });
+            return;
+        }
         setIsSaving(true);
         saveApiKey(localApiKey);
         setTimeout(() => {
@@ -167,14 +190,25 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                                 <p className="text-sm text-light-text/60 dark:text-dark-text/60 mb-3">
                                     Your personal API key for Google Gemini is required for all AI features. Your key is stored securely in your browser's local storage and is never sent to our servers.
                                 </p>
-                                <input
-                                    ref={apiKeyInputRef}
-                                    type="password"
-                                    value={localApiKey}
-                                    onChange={(e) => setLocalApiKey(e.target.value)}
-                                    placeholder="Enter your Gemini API key"
-                                    className="w-full p-2 bg-light-ui dark:bg-dark-ui rounded-md border border-light-border dark:border-dark-border focus:ring-2 focus:ring-light-primary focus:outline-none"
-                                />
+                                <div className="relative">
+                                    <input
+                                        ref={apiKeyInputRef}
+                                        type={isKeyVisible ? 'text' : 'password'}
+                                        value={localApiKey}
+                                        onChange={(e) => setLocalApiKey(e.target.value)}
+                                        placeholder="Enter your Gemini API key"
+                                        className="w-full p-2 pr-10 bg-light-ui dark:bg-dark-ui rounded-md border border-light-border dark:border-dark-border focus:ring-2 focus:ring-light-primary focus:outline-none"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsKeyVisible(!isKeyVisible)}
+                                        className="absolute inset-y-0 right-0 flex items-center px-3 text-light-text/60 dark:text-dark-text/60"
+                                        aria-label={isKeyVisible ? 'Hide API key' : 'Show API key'}
+                                    >
+                                        {isKeyVisible ? <EyeSlashIcon /> : <EyeIcon />}
+                                    </button>
+                                </div>
+                                {apiKeyError && <p className="text-xs text-red-500 mt-1">{apiKeyError}</p>}
                                 <a href="https://ai.google.dev/" target="_blank" rel="noopener noreferrer" className="text-xs text-light-primary dark:text-dark-primary hover:underline mt-2 block">
                                     Get an API key from Google AI Studio &rarr;
                                 </a>
@@ -221,7 +255,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
 
                     <div className="flex justify-end items-center space-x-4 p-6 border-t border-light-border dark:border-dark-border flex-shrink-0">
                         <button onClick={onClose} className="px-4 py-2 rounded-md hover:bg-light-ui dark:hover:bg-dark-ui">Cancel</button>
-                        <button ref={saveButtonRef} onClick={handleSaveSettings} disabled={isSaving} className="px-4 py-2 bg-light-primary text-white rounded-md hover:bg-light-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover disabled:opacity-50">
+                        <button ref={saveButtonRef} onClick={handleSaveSettings} disabled={isSaving || !!apiKeyError} className="px-4 py-2 bg-light-primary text-white rounded-md hover:bg-light-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover disabled:opacity-50">
                             {isSaving ? 'Saving...' : 'Save Settings'}
                         </button>
                     </div>

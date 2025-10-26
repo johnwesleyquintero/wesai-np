@@ -159,7 +159,7 @@ const Message: React.FC<MessageProps> = ({ message, onDelete, onToggleSources, i
 
     const renderContent = () => {
         if (typeof message.content === 'string') {
-            return <MarkdownPreview title="" content={message.content} onToggleTask={() => {}} />;
+            return <MarkdownPreview title="" content={message.content} onToggleTask={() => {}} isStreaming={message.role === 'ai' && message.status === 'processing'} />;
         }
         if (typeof message.content === 'object' && message.content.name) {
             const { name, args, result, status } = message.content;

@@ -181,6 +181,19 @@
     }
     .highlight-source { animation: highlight-source-anim-light 1.5s ease-in-out; }
     .dark .highlight-source { animation: highlight-source-anim-dark 1.5s ease-in-out; }
+
+    @keyframes blink-cursor-anim {
+      50% { opacity: 0; }
+    }
+    .blinking-cursor {
+      display: inline-block;
+      width: 0.5rem;
+      height: 1.1rem;
+      background-color: currentColor;
+      animation: blink-cursor-anim 1s step-end infinite;
+      margin-left: 0.125rem;
+      vertical-align: text-bottom;
+    }
   </style>
   <script type="importmap">
 {

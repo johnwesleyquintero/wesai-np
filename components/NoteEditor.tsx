@@ -218,6 +218,21 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
             const userHasStoppedTyping = JSON.stringify(editorState) === JSON.stringify(debouncedEditorState);
             if (isDebouncedDirty && userHasStoppedTyping) {
                 dispatch({ type: 'SET_SAVE_STATUS', payload: 'saving' });
+                
+                // Wiki-link validation
+                const noteLinkRegex = /\[\[([a-zA-Z0-9-]+)(?:\|.*?)?\]\]/g;
+                const matches = [...editorState.content.matchAll(noteLinkRegex)];
+                if (matches.length > 0) {
+                    const allNoteIds = new Set(notes.map(n => n.id));
+                    const hasInvalidLink = matches.some(match => !allNoteIds.has(match[1]));
+                    if (hasInvalidLink) {
+                        showToast({
+                            message: `Warning: This note contains broken links to other notes.`,
+                            type: 'error',
+                        });
+                    }
+                }
+
                 updateNote(note.id, editorState)
                     .catch(error => {
                         console.error("Auto-save failed:", error);
@@ -236,7 +251,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
                 dispatch({ type: 'SET_SAVE_STATUS', payload: 'saved' });
             }
         }
-    }, [editorState, debouncedEditorState, note, updateNote, showToast, dispatch, previewVersion, saveStatus]);
+    }, [editorState, debouncedEditorState, note, notes, updateNote, showToast, dispatch, previewVersion, saveStatus]);
 
     // Robust saving on navigation/unmount
     useEffect(() => {

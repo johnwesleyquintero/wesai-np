@@ -27,8 +27,8 @@ const processNote = (noteData: any): Note => {
     const note = fromSupabase(noteData) as Note;
     note.content = note.content || '';
     note.tags = note.tags || [];
-    // The notes table doesn't have a history column by default, but we safeguard it here
-    // in case it's added by joins or other logic in the future.
+    // When fetching via RPC, history will be a JSONB array.
+    // When a note is updated via subscription, it won't have history, so we default to [].
     note.history = (note as any).history || [];
     return note;
 };
@@ -53,7 +53,7 @@ export const useStore = (user: User | undefined) => {
         setLoading(true);
         try {
             const [notesRes, collectionsRes, smartCollectionsRes, templatesRes] = await Promise.all([
-                supabase.from('notes').select('*').eq('user_id', user.id),
+                supabase.rpc('get_notes_with_history', { p_user_id: user.id }),
                 supabase.from('collections').select('*').eq('user_id', user.id),
                 supabase.from('smart_collections').select('*').eq('user_id', user.id),
                 supabase.from('templates').select('*').eq('user_id', user.id),

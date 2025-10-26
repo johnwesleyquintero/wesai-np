@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useChatContext, useStoreContext, useUIContext } from '../context/AppContext';
 import { ChatMessage, ChatMode, ChatStatus, Note } from '../types';
 import MarkdownPreview from './MarkdownPreview';
-import { PaperAirplaneIcon, SparklesIcon, XCircleIcon, DocumentPlusIcon, PaperClipIcon, ClipboardDocumentIcon, EllipsisHorizontalIcon, TrashIcon, ThumbsUpIcon, ThumbsDownIcon } from './Icons';
+import { PaperAirplaneIcon, SparklesIcon, XCircleIcon, DocumentPlusIcon, PaperClipIcon, ClipboardDocumentIcon, EllipsisHorizontalIcon, TrashIcon, ThumbsUpIcon, ThumbsDownIcon, DocumentTextIcon, XMarkIcon } from './Icons';
 import { useToast } from '../context/ToastContext';
 import ChatViewSkeleton from './ChatViewSkeleton';
 
@@ -53,30 +53,32 @@ const ChatHeader: React.FC = () => {
 };
 
 const SourceNotes: React.FC<{ sources: Note[] }> = ({ sources }) => {
-    const { setActiveNoteId } = useStoreContext();
-    const { setView } = useUIContext();
-
-    const handleNoteClick = (id: string) => {
-        setActiveNoteId(id);
-        setView('NOTES');
-    };
-
     if (!sources || sources.length === 0) return null;
+
+    const handleSourceClick = (index: number) => {
+        const sourceEl = document.getElementById(`pinned-source-${index + 1}`);
+        if (sourceEl) {
+            sourceEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            sourceEl.classList.add('highlight-source');
+            setTimeout(() => sourceEl.classList.remove('highlight-source'), 1500);
+        }
+    };
 
     return (
         <div className="mt-2">
             <p className="text-xs font-semibold text-light-text/60 dark:text-dark-text/60 mb-1">Sources:</p>
-            <div className="flex flex-wrap gap-2">
-                {sources.map(note => (
-                    <button
-                        key={note.id}
-                        onClick={() => handleNoteClick(note.id)}
-                        className="px-2 py-1 text-xs bg-light-ui dark:bg-dark-ui rounded-md hover:bg-light-ui-hover dark:hover:bg-dark-ui-hover"
-                    >
-                        {note.title}
-                    </button>
+            <ol className="list-decimal list-inside text-xs space-y-1">
+                {sources.map((note, index) => (
+                    <li key={note.id}>
+                        <button
+                            onClick={() => handleSourceClick(index)}
+                            className="hover:underline text-light-primary dark:text-dark-primary"
+                        >
+                            {note.title}
+                        </button>
+                    </li>
                 ))}
-            </div>
+            </ol>
         </div>
     );
 };
@@ -107,7 +109,14 @@ const MessageActions: React.FC<{ onDelete: () => void }> = ({ onDelete }) => {
     );
 };
 
-const Message: React.FC<{ message: ChatMessage; onDelete: () => void }> = ({ message, onDelete }) => {
+interface MessageProps {
+    message: ChatMessage;
+    onDelete: () => void;
+    onToggleSources: (sources: Note[]) => void;
+    isSourcesPinned: boolean;
+}
+
+const Message: React.FC<MessageProps> = ({ message, onDelete, onToggleSources, isSourcesPinned }) => {
     const { showToast } = useToast();
     const { onAddNote, setActiveNoteId } = useStoreContext();
     const { handleFeedback } = useChatContext();
@@ -173,7 +182,7 @@ const Message: React.FC<{ message: ChatMessage; onDelete: () => void }> = ({ mes
             <div className={`p-3 rounded-lg max-w-full md:max-w-2xl w-fit ${isUser ? 'bg-light-ui dark:bg-dark-ui' : 'bg-light-background dark:bg-dark-background'}`}>
                 {message.image && <img src={`data:image/jpeg;base64,${message.image}`} alt="User upload" className="max-w-xs rounded-lg mb-2" />}
                 {renderContent()}
-                {isAi && <SourceNotes sources={message.sources || []} />}
+                {isAi && message.sources && message.sources.length > 0 && <SourceNotes sources={message.sources} />}
                 {isAi && message.noteId && (
                      <button onClick={() => handleNoteClick(message.noteId!)} className="text-xs font-semibold text-light-primary dark:text-dark-primary mt-2">
                         View touched note &rarr;
@@ -181,6 +190,11 @@ const Message: React.FC<{ message: ChatMessage; onDelete: () => void }> = ({ mes
                 )}
                 {isAi && (
                     <div className="flex items-center gap-2 mt-2 pt-2 border-t border-light-border/50 dark:border-dark-border/50">
+                        {message.sources && message.sources.length > 0 && (
+                            <button onClick={() => onToggleSources(message.sources!)} className="flex items-center gap-1 text-xs font-semibold text-light-text/60 dark:text-dark-text/60 hover:text-light-text dark:hover:text-dark-text">
+                                <DocumentTextIcon className="w-4 h-4" /> {isSourcesPinned ? 'Hide Sources' : 'Show Sources'}
+                            </button>
+                        )}
                         <button onClick={handleSaveAsNote} className="flex items-center gap-1 text-xs font-semibold text-light-text/60 dark:text-dark-text/60 hover:text-light-text dark:hover:text-dark-text">
                             <DocumentPlusIcon className="w-4 h-4" /> Save as Note
                         </button>
@@ -321,10 +335,11 @@ const ChatInput: React.FC = () => {
 const ChatView: React.FC = () => {
     const { chatMessages, chatStatus, activeToolName, deleteMessage } = useChatContext();
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const [pinnedSourcesInfo, setPinnedSourcesInfo] = useState<{ messageId: string; sources: Note[] } | null>(null);
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [chatMessages]);
+    }, [chatMessages, pinnedSourcesInfo]);
     
     if (!chatMessages) {
         return <ChatViewSkeleton />;
@@ -342,21 +357,61 @@ const ChatView: React.FC = () => {
     return (
         <div className="flex-1 flex flex-col h-full bg-light-background dark:bg-dark-background">
             <ChatHeader />
-            <div className="flex-1 overflow-y-auto p-4 sm:p-8">
-                <div className="max-w-3xl mx-auto w-full space-y-6">
-                    {chatMessages.map(msg => <Message key={msg.id} message={msg} onDelete={() => deleteMessage(msg.id)} />)}
-                    {chatStatus !== 'idle' && (
-                        <div className="flex items-start gap-4">
-                             <div className="w-8 h-8 rounded-full bg-light-primary dark:bg-dark-primary flex items-center justify-center text-white flex-shrink-0 mt-1 animate-pulse"><SparklesIcon className="w-5 h-5"/></div>
-                             <div className="p-3 rounded-lg bg-light-background dark:bg-dark-background">
-                                 <p className="text-sm font-semibold italic text-light-text/80 dark:text-dark-text/80">
-                                     {getStatusMessage()}
-                                </p>
+            <div className="flex flex-1 min-h-0">
+                <div className="flex-1 overflow-y-auto p-4 sm:p-8">
+                    <div className="max-w-3xl mx-auto w-full space-y-6">
+                        {chatMessages.map(msg => 
+                            <Message 
+                                key={msg.id} 
+                                message={msg} 
+                                onDelete={() => deleteMessage(msg.id)}
+                                onToggleSources={(sources) => {
+                                    if (pinnedSourcesInfo?.messageId === msg.id) {
+                                        setPinnedSourcesInfo(null);
+                                    } else {
+                                        setPinnedSourcesInfo({ messageId: msg.id, sources });
+                                    }
+                                }}
+                                isSourcesPinned={pinnedSourcesInfo?.messageId === msg.id}
+                            />
+                        )}
+                        {chatStatus !== 'idle' && (
+                            <div className="flex items-start gap-4">
+                                 <div className="w-8 h-8 rounded-full bg-light-primary dark:bg-dark-primary flex items-center justify-center text-white flex-shrink-0 mt-1 animate-pulse"><SparklesIcon className="w-5 h-5"/></div>
+                                 <div className="p-3 rounded-lg bg-light-background dark:bg-dark-background">
+                                     <p className="text-sm font-semibold italic text-light-text/80 dark:text-dark-text/80">
+                                         {getStatusMessage()}
+                                    </p>
+                                </div>
                             </div>
-                        </div>
-                    )}
-                    <div ref={messagesEndRef} />
+                        )}
+                        <div ref={messagesEndRef} />
+                    </div>
                 </div>
+
+                {pinnedSourcesInfo && (
+                    <div className="w-full md:w-1/2 lg:w-1/3 max-w-md h-full flex flex-col border-l border-light-border dark:border-dark-border bg-light-ui/50 dark:bg-dark-ui/50">
+                        <div className="p-4 flex justify-between items-center border-b border-light-border dark:border-dark-border flex-shrink-0">
+                            <h2 className="font-bold">Cited Sources</h2>
+                            <button onClick={() => setPinnedSourcesInfo(null)} className="p-1 rounded-full hover:bg-light-background dark:hover:bg-dark-background">
+                                <XMarkIcon />
+                            </button>
+                        </div>
+                        <div className="overflow-y-auto flex-1 p-4 space-y-4">
+                            {pinnedSourcesInfo.sources.map((source, index) => (
+                                <div key={source.id} id={`pinned-source-${index + 1}`} className="bg-light-background dark:bg-dark-background rounded-lg p-4 border border-light-border dark:border-dark-border">
+                                    <h3 className="font-bold mb-2 flex items-center gap-2">
+                                        <span className="flex items-center justify-center w-5 h-5 text-xs font-bold rounded-full bg-light-ui dark:bg-dark-ui">{index + 1}</span>
+                                        {source.title}
+                                    </h3>
+                                    <div className="text-sm max-h-64 overflow-y-auto">
+                                        <MarkdownPreview title="" content={source.content} onToggleTask={() => {}} />
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
             </div>
             <ChatInput />
         </div>

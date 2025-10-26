@@ -93,13 +93,18 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({ title, content, onTog
     const { setView } = useUIContext();
     const { theme } = useUIContext();
 
-    const preprocessedContent = content.replace(
-        /\[\[([a-zA-Z0-9-]+)(?:\|(.*?))?\]\]/g,
-        (match, noteId, noteText) => {
-            const displayText = noteText || noteId; // Placeholder, title is fetched in component
-            return `<a href="note://${noteId}">${displayText}</a>`;
-        }
-    );
+    const preprocessedContent = content
+        .replace(
+            /\[\[([a-zA-Z0-9-]+)(?:\|(.*?))?\]\]/g,
+            (match, noteId, noteText) => {
+                const displayText = noteText || noteId; // Placeholder, title is fetched in component
+                return `<a href="note://${noteId}">${displayText}</a>`;
+            }
+        )
+        .replace(
+            /\[(\d+)\]/g,
+            '<a href="source://$1">[$1]</a>'
+        );
 
     const components: any = {
         code({ node, className, children, ...props }: any) {
@@ -116,6 +121,24 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({ title, content, onTog
         },
         a({ node, children, href, ...props }: any) {
             const url = href || '';
+
+            if (url.startsWith('source://')) {
+                const sourceNum = url.substring(9);
+                const handleClick = (e: React.MouseEvent) => {
+                    e.preventDefault();
+                    const sourceEl = document.getElementById(`pinned-source-${sourceNum}`);
+                    if (sourceEl) {
+                        sourceEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        sourceEl.classList.add('highlight-source');
+                        setTimeout(() => sourceEl.classList.remove('highlight-source'), 1500);
+                    }
+                };
+                return (
+                    <button onClick={handleClick} className="source-citation">
+                        {children}
+                    </button>
+                );
+            }
 
             if (url.startsWith('note://')) {
                 const noteId = url.substring(7);

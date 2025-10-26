@@ -132,26 +132,36 @@ export const useChatProviderLogic = () => {
     }, [chatMode, getNoteById, notes]);
     
     const onSendMessage = useCallback(async (query: string, image?: string) => {
-        const getSystemInstruction = (sourceNotes: Note[]) => `You are a helpful AI assistant integrated into a note-taking app. Use the provided "Source Notes" to answer the user's query. If the sources are relevant, synthesize them in your answer. If they are not relevant, ignore them. Be concise and helpful.
+        const getSystemInstruction = (sourceNotes: Note[]) => `You are a helpful AI assistant integrated into a note-taking app. Use the provided "Source Notes" to answer the user's query.
+- When you use information from a source, you MUST cite it by number, like this: [1].
+- Place citations at the end of the sentence or clause they support.
+- If the sources are not relevant, ignore them and answer from your general knowledge without citing any sources.
+- Be concise and helpful.
 
 Source Notes:
-${sourceNotes.length > 0 ? sourceNotes.map(n => `--- NOTE: ${n.title} ---\n${n.content}\n`).join('') : 'No source notes provided.'}`;
+${sourceNotes.length > 0 ? sourceNotes.map((n, i) => `--- SOURCE [${i + 1}]: ${n.title} ---\n${n.content}\n`).join('') : 'No source notes provided.'}`;
         
         await _handleStreamedChat(query, image, getSystemInstruction);
     }, [_handleStreamedChat]);
 
     const onGenerateServiceResponse = useCallback(async (customerQuery: string, image?: string) => {
-        const getSystemInstruction = (sourceNotes: Note[]) => `You are a professional and empathetic customer service agent. Your goal is to resolve the customer's issue using the provided knowledge base. If the knowledge base doesn't have the answer, apologize and explain that you will escalate the issue.
+        const getSystemInstruction = (sourceNotes: Note[]) => `You are a professional and empathetic customer service agent. Your goal is to resolve the customer's issue using the provided knowledge base.
+- When you use information from the knowledge base, you MUST cite it by number, like this: [1].
+- Place citations at the end of the sentence or clause they support.
+- If the knowledge base doesn't have the answer, apologize and explain that you will escalate the issue, without citing any sources.
 Knowledge Base:
-${sourceNotes.length > 0 ? sourceNotes.map(n => `--- DOC: ${n.title} ---\n${n.content}\n`).join('') : 'No knowledge provided.'}`;
+${sourceNotes.length > 0 ? sourceNotes.map((n, i) => `--- DOC [${i + 1}]: ${n.title} ---\n${n.content}\n`).join('') : 'No knowledge provided.'}`;
 
         await _handleStreamedChat(customerQuery, image, getSystemInstruction);
     }, [_handleStreamedChat]);
     
     const onGenerateAmazonCopy = useCallback(async (productInfo: string, image?: string) => {
-        const getSystemInstruction = (sourceNotes: Note[]) => `You are an expert Amazon copywriter. Create a compelling, SEO-optimized product listing based on the provided information. Follow Amazon's style guidelines. The output should be well-structured Markdown, including a title, bullet points, and a product description. Use information from the provided research notes if available.
+        const getSystemInstruction = (sourceNotes: Note[]) => `You are an expert Amazon copywriter. Create a compelling, SEO-optimized product listing based on the provided information.
+- Use information from the provided research notes if available. When you do, you MUST cite it by number, like this: [1].
+- Place citations where appropriate within the text.
+- Follow Amazon's style guidelines. The output should be well-structured Markdown, including a title, bullet points, and a product description.
 Research Notes:
-${sourceNotes.length > 0 ? sourceNotes.map(n => `--- NOTE: ${n.title} ---\n${n.content}\n`).join('') : 'No research notes provided.'}`;
+${sourceNotes.length > 0 ? sourceNotes.map((n, i) => `--- NOTE [${i + 1}]: ${n.title} ---\n${n.content}\n`).join('') : 'No research notes provided.'}`;
         
         await _handleStreamedChat(productInfo, image, getSystemInstruction);
     }, [_handleStreamedChat]);

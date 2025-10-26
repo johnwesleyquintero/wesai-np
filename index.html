@@ -146,6 +146,41 @@
       box-shadow: 0 1px 0 #4b5563;
       color: #d1d5db;
     }
+    .source-citation {
+      display: inline-block;
+      vertical-align: super;
+      font-size: 0.75em;
+      line-height: 1;
+      padding: 0.1em 0.3em;
+      margin: 0 0.1em;
+      border-radius: 4px;
+      background-color: #e2e8f0; /* slate-200 */
+      color: #475569; /* slate-600 */
+      font-weight: 600;
+      text-decoration: none;
+      cursor: pointer;
+    }
+    .dark .source-citation {
+      background-color: #334155; /* slate-700 */
+      color: #cbd5e1; /* slate-300 */
+    }
+    .source-citation:hover {
+      background-color: #cbd5e1; /* slate-300 */
+    }
+    .dark .source-citation:hover {
+      background-color: #475569; /* slate-600 */
+    }
+
+    @keyframes highlight-source-anim-light {
+      0%, 100% { background-color: transparent; }
+      50% { background-color: rgba(6, 182, 212, 0.2); } /* cyan-500 with alpha */
+    }
+    @keyframes highlight-source-anim-dark {
+      0%, 100% { background-color: transparent; }
+      50% { background-color: rgba(34, 211, 238, 0.2); } /* cyan-400 with alpha */
+    }
+    .highlight-source { animation: highlight-source-anim-light 1.5s ease-in-out; }
+    .dark .highlight-source { animation: highlight-source-anim-dark 1.5s ease-in-out; }
   </style>
   <script type="importmap">
 {

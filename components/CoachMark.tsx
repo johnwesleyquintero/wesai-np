@@ -1,4 +1,4 @@
-import React, { useLayoutEffect, useRef, useState, useEffect } from 'react';
+import React, { useLayoutEffect, useRef, useState } from 'react';
 import { XMarkIcon } from './Icons';
 
 interface CoachMarkProps {
@@ -9,32 +9,26 @@ interface CoachMarkProps {
 }
 
 const CoachMark: React.FC<CoachMarkProps> = ({ targetSelector, title, content, onDismiss }) => {
-    const [position, setPosition] = useState<{ top: number; left: number; width: number, height: number, pos: 'top' | 'bottom' | 'left' | 'right' } | null>(null);
+    const [position, setPosition] = useState<{ top: number; left: number; pos: 'top' | 'bottom' | 'left' | 'right' } | null>(null);
     const popoverRef = useRef<HTMLDivElement>(null);
-    const targetRef = useRef<Element | null>(null);
 
     useLayoutEffect(() => {
-        const updatePosition = () => {
-            if (!targetRef.current) {
-                targetRef.current = document.querySelector(targetSelector);
-            }
-            const target = targetRef.current;
-            if (!target) {
+        // A small delay allows the target element to be mounted in the DOM, especially with lazy loading.
+        const timer = setTimeout(() => {
+            const target = document.querySelector(targetSelector);
+            const popover = popoverRef.current;
+            if (!target || !popover) {
                 console.warn(`CoachMark target not found: ${targetSelector}`);
                 return;
             }
 
-            const popover = popoverRef.current;
-            if (!popover) return;
-            
             const targetRect = target.getBoundingClientRect();
+            // Since the popover is rendered off-screen, getBoundingClientRect gives us its true dimensions.
             const popoverRect = popover.getBoundingClientRect();
             const { innerWidth, innerHeight } = window;
             const margin = 12;
 
-            let top: number, left: number, pos: 'top' | 'bottom' | 'left' | 'right';
-
-            // Define all possible positions
+            // Define all possible positions for the popover
             const positions = {
                 top: {
                     top: targetRect.top - popoverRect.height - margin,
@@ -58,94 +52,71 @@ const CoachMark: React.FC<CoachMarkProps> = ({ targetSelector, title, content, o
                 }
             };
 
-            // Check if a position fits within the viewport
-            const checkFit = (p: { top: number; left: number; }) => {
-                return (
-                    p.top >= margin &&
-                    p.left >= margin &&
-                    p.top + popoverRect.height <= innerHeight - margin &&
-                    p.left + popoverRect.width <= innerWidth - margin
-                );
-            };
-
-            // Try positions in order of preference
+            // Function to check if a given position fits within the viewport
+            const checkFit = (p: { top: number; left: number; }) => (
+                p.top >= margin &&
+                p.left >= margin &&
+                p.top + popoverRect.height <= innerHeight - margin &&
+                p.left + popoverRect.width <= innerWidth - margin
+            );
+            
+            // Try positions in a preferred order to find the best fit
             const order: ('top' | 'bottom' | 'right' | 'left')[] = ['top', 'bottom', 'right', 'left'];
-            let chosenPosition = null;
+            // FIX: Explicitly type chosenPosition to allow assignment of different position objects.
+            let chosenPosition: { top: number; left: number; pos: 'top' | 'bottom' | 'right' | 'left' } = positions.top; // Default to top
 
-            for (const p of order) {
-                if (checkFit(positions[p])) {
-                    chosenPosition = positions[p];
+            for (const posKey of order) {
+                if (checkFit(positions[posKey])) {
+                    chosenPosition = positions[posKey];
                     break;
                 }
             }
 
-            // If no position fits perfectly, fallback to the first option and clamp it
-            if (chosenPosition) {
-                top = chosenPosition.top;
-                left = chosenPosition.left;
-                pos = chosenPosition.pos;
-            } else {
-                // Fallback to top and let clamping handle it
-                const fallback = positions.top;
-                top = fallback.top;
-                left = fallback.left;
-                pos = fallback.pos;
+            // Clamp the chosen position to ensure it's always on screen
+            let finalTop = Math.max(margin, chosenPosition.top);
+            let finalLeft = Math.max(margin, chosenPosition.left);
+
+            if (finalLeft + popoverRect.width > innerWidth - margin) {
+                finalLeft = innerWidth - popoverRect.width - margin;
+            }
+            if (finalTop + popoverRect.height > innerHeight - margin) {
+                finalTop = innerHeight - popoverRect.height - margin;
             }
             
-            // Final clamping to guarantee visibility
-            if (left < margin) left = margin;
-            if (left + popoverRect.width > innerWidth - margin) left = innerWidth - popoverRect.width - margin;
-            if (top < margin) top = margin;
-            if (top + popoverRect.height > innerHeight - margin) top = innerHeight - popoverRect.height - margin;
+            setPosition({ top: finalTop, left: finalLeft, pos: chosenPosition.pos });
+        }, 50);
 
-            setPosition({
-                top,
-                left,
-                width: targetRect.width,
-                height: targetRect.height,
-                pos
-            });
-        };
-        
-        const timeoutId = setTimeout(updatePosition, 100);
-        
-        window.addEventListener('resize', updatePosition);
-        window.addEventListener('scroll', updatePosition, true);
+        return () => clearTimeout(timer);
+    }, [targetSelector, title, content]); // Rerun if content changes, as that affects height
 
-        return () => {
-            clearTimeout(timeoutId);
-            window.removeEventListener('resize', updatePosition);
-            window.removeEventListener('scroll', updatePosition, true);
-        };
-    }, [targetSelector]);
-    
-    if (!position) {
-        // Render invisibly first to measure dimensions
-        return <div ref={popoverRef} className="fixed opacity-0 pointer-events-none w-64"></div>;
-    }
-    
+    const style: React.CSSProperties = position
+        ? { top: position.top, left: position.left, opacity: 1, transition: 'opacity 0.2s ease-in-out' }
+        : { top: '-9999px', left: '-9999px', opacity: 0 };
+
     let pointerClasses = '';
-    switch (position.pos) {
-        case 'top': pointerClasses = 'top-full left-1/2 -translate-x-1/2 border-x-8 border-x-transparent border-t-8 border-t-inherit'; break;
-        case 'bottom': pointerClasses = 'bottom-full left-1/2 -translate-x-1/2 border-x-8 border-x-transparent border-b-8 border-b-inherit'; break;
-        case 'left': pointerClasses = 'top-1/2 -translate-y-1/2 left-full border-y-8 border-y-transparent border-l-8 border-l-inherit'; break;
-        case 'right': pointerClasses = 'top-1/2 -translate-y-1/2 right-full border-y-8 border-y-transparent border-r-8 border-r-inherit'; break;
+    if (position) {
+        switch (position.pos) {
+            case 'top': pointerClasses = 'top-full left-1/2 -translate-x-1/2 border-x-8 border-x-transparent border-t-8 border-t-inherit'; break;
+            case 'bottom': pointerClasses = 'bottom-full left-1/2 -translate-x-1/2 border-x-8 border-x-transparent border-b-8 border-b-inherit'; break;
+            case 'left': pointerClasses = 'top-1/2 -translate-y-1/2 left-full border-y-8 border-y-transparent border-l-8 border-l-inherit'; break;
+            case 'right': pointerClasses = 'top-1/2 -translate-y-1/2 right-full border-y-8 border-y-transparent border-r-8 border-r-inherit'; break;
+        }
     }
-
 
     return (
-        <div className="fixed inset-0 z-40 bg-black/30 animate-fade-in-down" onClick={onDismiss}>
+        <div className="fixed inset-0 z-40 bg-black/30 animate-fade-in" onClick={onDismiss}>
             <div
                 ref={popoverRef}
-                className="fixed bg-light-background dark:bg-dark-background rounded-lg shadow-2xl w-64 p-4 border-inherit border-light-border dark:border-dark-border animate-fade-in-down text-light-text dark:text-dark-text"
-                style={{ top: position.top, left: position.left }}
+                className="fixed bg-light-background dark:bg-dark-background rounded-lg shadow-2xl w-64 p-4 border-inherit border-light-border dark:border-dark-border text-light-text dark:text-dark-text"
+                style={style}
                 onClick={(e) => e.stopPropagation()}
             >
-                <div className={`absolute w-0 h-0 ${pointerClasses}`} />
+                {position && <div className={`absolute w-0 h-0 ${pointerClasses}`} />}
+                
                 <button onClick={onDismiss} className="absolute top-2 right-2 p-1 rounded-full hover:bg-light-ui dark:hover:bg-dark-ui">
                     <XMarkIcon className="w-4 h-4" />
                 </button>
-                <h3 className="font-bold mb-2">{title}</h3>
+                <h3 className="font-bold mb-2 pr-6">{title}</h3>
                 <p className="text-sm text-light-text/80 dark:text-dark-text/80">{content}</p>
                 <button
                     onClick={onDismiss}

@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useChatContext, useStoreContext, useUIContext } from '../context/AppContext';
 import { ChatMessage, ChatMode, ChatStatus, Note } from '../types';
 import MarkdownPreview from './MarkdownPreview';
-import { PaperAirplaneIcon, SparklesIcon, XCircleIcon, DocumentPlusIcon, PaperClipIcon, ClipboardDocumentIcon, EllipsisHorizontalIcon, TrashIcon, ThumbsUpIcon, ThumbsDownIcon, DocumentTextIcon, XMarkIcon } from './Icons';
+import { PaperAirplaneIcon, SparklesIcon, XCircleIcon, DocumentPlusIcon, PaperClipIcon, ClipboardDocumentIcon, EllipsisHorizontalIcon, TrashIcon, ThumbsUpIcon, ThumbsDownIcon, DocumentTextIcon, XMarkIcon, ChevronDownIcon, BookmarkIcon } from './Icons';
 import { useToast } from '../context/ToastContext';
 import ChatViewSkeleton from './ChatViewSkeleton';
 
@@ -127,9 +127,11 @@ const Message: React.FC<MessageProps> = ({ message, onDelete, onToggleSources, i
     const [isProvidingFeedback, setIsProvidingFeedback] = useState(false);
 
 
-    const handleSaveAsNote = () => {
+    const handleSaveAsNote = async () => {
         if (typeof message.content === 'string') {
-            onAddNote('AI Chat Response', message.content);
+            const newNoteId = await onAddNote('AI Chat Response', message.content);
+            setActiveNoteId(newNoteId);
+            setView('NOTES');
             showToast({ message: 'Saved as new note!', type: 'success' });
         }
     };
@@ -249,10 +251,13 @@ const ChatInput: React.FC = () => {
     const [image, setImage] = useState<string | null>(null);
     const { 
         chatMode, chatStatus, onSendMessage, onGenerateServiceResponse, onSendGeneralMessage, onGenerateAmazonCopy,
-        chatMessages, deleteMessage,
+        chatMessages, deleteMessage, responders, addResponder, deleteResponder,
     } = useChatContext();
+    const { showToast } = useToast();
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const [showResponders, setShowResponders] = useState(false);
+    const responderMenuRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         const textarea = textareaRef.current;
@@ -262,6 +267,16 @@ const ChatInput: React.FC = () => {
             textarea.style.height = `${scrollHeight}px`;
         }
     }, [input]);
+    
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (responderMenuRef.current && !responderMenuRef.current.contains(event.target as Node)) {
+                setShowResponders(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
     const handleSend = () => {
         if (!input.trim() || chatStatus !== 'idle') return;
@@ -313,9 +328,17 @@ const ChatInput: React.FC = () => {
         }
     };
     
+    const handleSaveResponder = () => {
+        if (input.trim()) {
+            addResponder(input.trim());
+            showToast({ message: 'Responder saved!', type: 'success' });
+            setInput('');
+        }
+    };
+
     const placeholderText = {
         ASSISTANT: 'Ask a question about your notes...',
-        RESPONDER: 'Paste customer query here...',
+        RESPONDER: 'Paste customer query or select a responder...',
         WESCORE_COPILOT: "Command your co-pilot... (e.g., 'create a note about Q4 planning')",
         AMAZON: 'Paste product info here...',
     }[chatMode];
@@ -330,6 +353,33 @@ const ChatInput: React.FC = () => {
                     </div>
                 )}
                  <div className="relative flex items-center p-2 rounded-lg bg-light-ui dark:bg-dark-ui border border-light-border/50 dark:border-dark-border/50 focus-within:border-light-primary dark:focus-within:border-dark-primary">
+                    {chatMode === 'RESPONDER' && (
+                        <div ref={responderMenuRef} className="relative mr-1">
+                            <button
+                                onClick={() => setShowResponders(p => !p)}
+                                disabled={chatStatus !== 'idle'}
+                                className="p-2 rounded-md hover:bg-light-background dark:hover:bg-dark-background disabled:opacity-50 flex items-center gap-1 text-sm font-semibold"
+                            >
+                                <BookmarkIcon className="w-4 h-4" /> <ChevronDownIcon className="w-4 h-4" />
+                            </button>
+                            {showResponders && (
+                                <div className="absolute bottom-full left-0 mb-2 w-72 max-h-60 overflow-y-auto bg-light-background dark:bg-dark-background rounded-lg shadow-xl border border-light-border dark:border-dark-border z-10 p-2">
+                                    {responders.length > 0 ? (
+                                        responders.map((responder, index) => (
+                                            <div key={index} className="group flex items-center justify-between p-2 rounded-md hover:bg-light-ui dark:hover:bg-dark-ui">
+                                                <button onClick={() => { setInput(responder); setShowResponders(false); }} className="text-left text-sm truncate flex-1">
+                                                    {responder}
+                                                </button>
+                                                <button onClick={() => deleteResponder(index)} className="p-1 opacity-0 group-hover:opacity-100 text-red-500"><TrashIcon className="w-4 h-4"/></button>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <p className="text-sm text-center text-light-text/60 dark:text-dark-text/60 p-4">No saved responders. Type a prompt and click "Save" to create one.</p>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    )}
                     <textarea
                         ref={textareaRef}
                         value={input}
@@ -337,10 +387,15 @@ const ChatInput: React.FC = () => {
                         onKeyDown={handleKeyDown}
                         placeholder={placeholderText}
                         rows={1}
-                        className="flex-1 bg-transparent focus:outline-none resize-none max-h-48 pr-20"
+                        className="flex-1 bg-transparent focus:outline-none resize-none max-h-48 pr-28"
                         disabled={chatStatus !== 'idle'}
                     />
                     <div className="absolute right-2 bottom-2 flex items-center gap-1">
+                        {chatMode === 'RESPONDER' && (
+                             <button onClick={handleSaveResponder} className="p-2 rounded-md hover:bg-light-background dark:hover:bg-dark-background disabled:opacity-50 text-sm font-semibold flex items-center gap-1" disabled={chatStatus !== 'idle' || !input.trim()}>
+                                <BookmarkIcon className="w-4 h-4"/> Save
+                            </button>
+                        )}
                         <button onClick={() => fileInputRef.current?.click()} className="p-2 rounded-md hover:bg-light-background dark:hover:bg-dark-background disabled:opacity-50" disabled={chatStatus !== 'idle'}><PaperClipIcon /></button>
                         <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/jpeg,image/png" className="hidden" />
                         <button onClick={handleSend} className="p-2 rounded-md bg-light-primary text-white dark:bg-dark-primary dark:text-zinc-900 disabled:opacity-50" disabled={chatStatus !== 'idle'}><PaperAirplaneIcon /></button>

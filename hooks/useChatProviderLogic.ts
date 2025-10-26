@@ -6,6 +6,8 @@ import { useDebounce } from './useDebounce';
 import { Chat } from '@google/genai';
 
 const CHAT_HISTORIES_STORAGE_KEY = 'wesai-chat-histories';
+const RESPONDERS_STORAGE_KEY = 'wesai-chat-responders';
+
 
 export const useChatProviderLogic = () => {
     const { 
@@ -37,6 +39,14 @@ export const useChatProviderLogic = () => {
             return { ASSISTANT: [], RESPONDER: [], WESCORE_COPILOT: [], AMAZON: [] };
         }
     });
+    const [responders, setResponders] = useState<string[]>(() => {
+        try {
+            const saved = localStorage.getItem(RESPONDERS_STORAGE_KEY);
+            return saved ? JSON.parse(saved) : [];
+        } catch {
+            return [];
+        }
+    });
 
     const debouncedChatHistories = useDebounce(chatHistories, 1000);
     const [chatError, setChatError] = useState<string | null>(null);
@@ -65,6 +75,14 @@ export const useChatProviderLogic = () => {
             console.error("Failed to save chat history to localStorage", error);
         }
     }, [debouncedChatHistories]);
+    
+    useEffect(() => {
+        try {
+            localStorage.setItem(RESPONDERS_STORAGE_KEY, JSON.stringify(responders));
+        } catch (error) {
+            console.error("Failed to save responders to localStorage", error);
+        }
+    }, [responders]);
 
     useEffect(() => {
         const handleBeforeUnload = () => {
@@ -452,6 +470,14 @@ ${s.length > 0 ? s.map((n, i) => `--- NOTE [${i + 1}]: ${n.title} ---\n${n.conte
             return { ...prev, [chatMode]: updatedHistory };
         });
     }, [chatMode]);
+    
+    const addResponder = useCallback((prompt: string) => {
+        setResponders(prev => [prompt, ...prev.filter(p => p !== prompt)]);
+    }, []);
+
+    const deleteResponder = useCallback((index: number) => {
+        setResponders(prev => prev.filter((_, i) => i !== index));
+    }, []);
 
 
     const chatValue = useMemo(() => ({
@@ -459,11 +485,13 @@ ${s.length > 0 ? s.map((n, i) => `--- NOTE [${i + 1}]: ${n.title} ---\n${n.conte
         chatStatus, chatMode, setChatMode, 
         onSendMessage, onGenerateServiceResponse, onSendGeneralMessage, onGenerateAmazonCopy, clearChat,
         activeToolName, deleteMessage, handleFeedback,
+        responders, addResponder, deleteResponder,
     }), [
         chatHistories, chatMode, chatStatus, setChatMode,
         onSendMessage, onGenerateServiceResponse, onSendGeneralMessage, onGenerateAmazonCopy, clearChat,
         activeToolName, deleteMessage, handleFeedback,
+        responders, addResponder, deleteResponder,
     ]);
 
     return chatValue;
-}
+};

@@ -1,4 +1,5 @@
 
+
 import React, { useState, useLayoutEffect } from 'react';
 
 interface UseDynamicPositionOptions {
@@ -52,9 +53,8 @@ export const useDynamicPosition = ({ anchorRect, isOpen, align = 'bottom', menuR
             }
             if (newLeft < 10) newLeft = 10;
             
-            // Final check to prevent vertical overflow
+            // Final check to prevent vertical overflow from the top
             if (newTop < 10) newTop = 10;
-            if (newTop + menuHeight > innerHeight) newTop = innerHeight - menuHeight - 10;
 
             setStyle({
                 position: 'fixed',

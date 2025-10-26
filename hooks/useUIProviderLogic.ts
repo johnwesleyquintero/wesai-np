@@ -40,10 +40,10 @@ export const useUIProviderLogic = () => {
 
     useEffect(() => {
         const hasSeenWelcome = localStorage.getItem('wesai-seen-welcome');
-        if (!hasSeenWelcome && !isDemoMode) {
+        if (!hasSeenWelcome && !isDemoMode && !apiKey) {
             setIsWelcomeModalOpen(true);
         }
-    }, [isDemoMode]);
+    }, [isDemoMode, apiKey]);
 
     useEffect(() => {
         if (theme === 'dark') document.documentElement.classList.add('dark');
@@ -108,7 +108,7 @@ export const useUIProviderLogic = () => {
         setConfirmation(prev => ({ ...initialConfirmationState, isOpen: false }));
     }, []);
 
-    const uiValue = useMemo(() => ({
+    return useMemo(() => ({
         theme, toggleTheme, view, setView, isMobileView, isSidebarOpen, setIsSidebarOpen,
         onToggleSidebar, isSidebarCollapsed, toggleSidebarCollapsed,
         isAiRateLimited, renamingItemId, setRenamingItemId, isSettingsOpen, setIsSettingsOpen,
@@ -121,17 +121,15 @@ export const useUIProviderLogic = () => {
         initialSmartFolderQuery,
         isDemoMode, setIsDemoMode,
     }), [
-        theme, toggleTheme, view, setView, isMobileView, isSidebarOpen, setIsSidebarOpen,
+        theme, toggleTheme, view, isMobileView, isSidebarOpen,
         onToggleSidebar, isSidebarCollapsed, toggleSidebarCollapsed,
-        isAiRateLimited, renamingItemId, setRenamingItemId, isSettingsOpen, setIsSettingsOpen,
-        openSettings, isCommandPaletteOpen, setIsCommandPaletteOpen, isSmartFolderModalOpen,
-        setIsSmartFolderModalOpen, smartFolderToEdit, openSmartFolderModal, contextMenu,
-        setContextMenu, onOpenContextMenu, isWelcomeModalOpen, closeWelcomeModal, apiKey,
-        draggingItemId, setDraggingItemId,
+        isAiRateLimited, renamingItemId, isSettingsOpen,
+        openSettings, isCommandPaletteOpen, isSmartFolderModalOpen,
+        smartFolderToEdit, openSmartFolderModal, contextMenu,
+        onOpenContextMenu, isWelcomeModalOpen, closeWelcomeModal, apiKey,
+        draggingItemId,
         confirmation, showConfirmation, hideConfirmation,
-        isHelpModalOpen, setIsHelpModalOpen, openHelpModal,
-        initialSmartFolderQuery, isDemoMode, setIsDemoMode
+        isHelpModalOpen, openHelpModal,
+        initialSmartFolderQuery, isDemoMode
     ]);
-    
-    return uiValue;
-}
+};

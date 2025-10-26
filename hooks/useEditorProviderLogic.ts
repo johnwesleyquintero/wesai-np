@@ -7,9 +7,5 @@ export const useEditorProviderLogic = () => {
     const registerEditorActions = useCallback((actions: EditorActions) => setEditorActions(actions), []);
     const unregisterEditorActions = useCallback(() => setEditorActions(null), []);
 
-    const editorValue = useMemo(() => ({
-        editorActions, registerEditorActions, unregisterEditorActions
-    }), [editorActions, registerEditorActions, unregisterEditorActions]);
-
-    return editorValue;
+    return useMemo(() => ({ editorActions, registerEditorActions, unregisterEditorActions }), [editorActions, registerEditorActions, unregisterEditorActions]);
 };

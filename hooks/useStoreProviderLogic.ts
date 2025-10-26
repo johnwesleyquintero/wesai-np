@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Note, Collection, SmartCollection, SearchMode, TreeNode } from '../types';
 import { useStore as useSupabaseStore } from './useStore';
 import { useDebounce } from './useDebounce';
@@ -10,46 +10,31 @@ import { useLocalNotes } from './useLocalNotes';
 const buildTree = (notes: Note[], collections: Collection[]): TreeNode[] => {
     const noteMap = new Map(notes.map(note => [note.id, { ...note, children: [] as TreeNode[] }]));
     const collectionMap = new Map(collections.map(c => [c.id, { ...c, type: 'collection' as const, children: [] as TreeNode[] }]));
-    
     const tree: TreeNode[] = [];
-    
-    const allItemsMap: Map<string, TreeNode> = new Map<string, TreeNode>([...noteMap.entries(), ...collectionMap.entries()]);
-
+    const allItemsMap: Map<string, TreeNode> = new Map([...noteMap, ...collectionMap] as [string, TreeNode][]);
     allItemsMap.forEach(item => {
-        if (item.parentId === null) {
-            tree.push(item);
-        } else {
+        if (item.parentId === null) tree.push(item);
+        else {
             const parent = collectionMap.get(item.parentId);
-            if (parent) {
-                parent.children.push(item);
-            } else {
-                tree.push(item);
-            }
+            if (parent) parent.children.push(item);
+            else tree.push(item);
         }
     });
-
     const sortNodes = (nodes: TreeNode[]) => {
         nodes.sort((a, b) => {
             const aIsCollection = 'type' in a && a.type === 'collection';
             const bIsCollection = 'type' in b && b.type === 'collection';
-
             if (aIsCollection && !bIsCollection) return -1;
             if (!aIsCollection && bIsCollection) return 1;
-
-            const aName = aIsCollection ? (a as Collection).name : (a as Note).title;
-            const bName = bIsCollection ? (b as Collection).name : (b as Note).title;
+            const aName = aIsCollection ? (a as any).name : (a as any).title;
+            const bName = bIsCollection ? (b as any).name : (b as any).title;
             return aName.localeCompare(bName);
         });
-
         nodes.forEach(node => {
-            if ('children' in node && node.children.length > 0) {
-                sortNodes(node.children);
-            }
+            if ('children' in node && node.children.length > 0) sortNodes(node.children);
         });
     };
-    
     sortNodes(tree);
-
     return tree;
 };
 
@@ -75,11 +60,11 @@ export const useStoreProviderLogic = () => {
     const debouncedSearchTerm = useDebounce(searchTerm, 500);
 
     useEffect(() => {
-        if (isDemoMode && notes.length > 0) {
+        if (isDemoMode && notes.length > 0 && !activeNoteId) {
             setActiveNoteId(notes[0].id);
         }
-    }, [isDemoMode]);
-
+    }, [isDemoMode, notes, activeNoteId]);
+    
     useEffect(() => {
         if (searchMode === 'AI' && debouncedSearchTerm.trim()) {
             const performAiSearch = async () => {
@@ -103,44 +88,25 @@ export const useStoreProviderLogic = () => {
         }
     }, [debouncedSearchTerm, searchMode, notes]);
 
-    const favoriteNotes = useMemo(() => {
-        return notes
-            .filter(n => n.isFavorite)
-            .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
-    }, [notes]);
+    const favoriteNotes = useMemo(() => notes.filter(n => n.isFavorite).sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()), [notes]);
+
+    const fileTree = useMemo(() => buildTree(notes, collections), [notes, collections]);
 
     const searchData = useMemo(() => {
         const isSearching = !!searchTerm.trim() || !!activeSmartCollectionId;
         if (!isSearching) return { isSearching: false, visibleIds: null, matchIds: null };
-
         const query = activeSmartCollectionId ? store.smartCollections.find(sc => sc.id === activeSmartCollectionId)?.query || '' : searchTerm;
         const currentSearchMode = activeSmartCollectionId ? 'AI' : searchMode;
-
         const matchIds = new Set<string>();
-        
         if (currentSearchMode === 'KEYWORD') {
             const lowercasedQuery = query.toLowerCase();
-            notes.forEach(note => {
-                if (
-                    note.title.toLowerCase().includes(lowercasedQuery) ||
-                    note.content.toLowerCase().includes(lowercasedQuery) ||
-                    note.tags.some(tag => tag.toLowerCase().includes(lowercasedQuery))
-                ) {
-                    matchIds.add(note.id);
-                }
-            });
-            collections.forEach(collection => {
-                if (collection.name.toLowerCase().includes(lowercasedQuery)) {
-                    matchIds.add(collection.id);
-                }
-            });
+            notes.forEach(note => { if (note.title.toLowerCase().includes(lowercasedQuery) || note.content.toLowerCase().includes(lowercasedQuery) || note.tags.some(tag => tag.toLowerCase().includes(lowercasedQuery))) matchIds.add(note.id); });
+            collections.forEach(collection => { if (collection.name.toLowerCase().includes(lowercasedQuery)) matchIds.add(collection.id); });
         } else if (currentSearchMode === 'AI' && aiSearchResultIds) {
             aiSearchResultIds.forEach(id => matchIds.add(id));
         }
-
         const visibleIds = new Set<string>(matchIds);
         const itemMap = new Map([...notes, ...collections].map(item => [item.id, item]));
-
         matchIds.forEach(id => {
             let current = itemMap.get(id);
             while (current && current.parentId) {
@@ -148,17 +114,11 @@ export const useStoreProviderLogic = () => {
                 current = itemMap.get(current.parentId);
             }
         });
-        
         return { isSearching, visibleIds, matchIds };
-
     }, [searchTerm, searchMode, aiSearchResultIds, notes, collections, activeSmartCollectionId, store.smartCollections]);
 
     const activeNote = useMemo(() => activeNoteId ? getNoteById(activeNoteId) : null, [activeNoteId, getNoteById]);
     const activeSmartCollection = useMemo(() => activeSmartCollectionId ? store.smartCollections.find(sc => sc.id === activeSmartCollectionId) : null, [activeSmartCollectionId, store.smartCollections]);
-    
-    const fileTree = useMemo(() => {
-        return buildTree(notes, collections);
-    }, [notes, collections]);
 
     const onAddNote = useCallback(async (parentId: string | null = null, title: string = "Untitled Note", content: string = "") => {
         const newNoteId = await createNote(parentId, title, content);
@@ -167,7 +127,7 @@ export const useStoreProviderLogic = () => {
         if (isMobileView) setIsSidebarOpen(false);
         showToast({ message: `Note "${title}" created!`, type: 'success' });
         return newNoteId;
-    }, [createNote, isMobileView, showToast, setActiveNoteId, setView, setIsSidebarOpen]);
+    }, [createNote, isMobileView, showToast, setView, setIsSidebarOpen]);
 
     const onAddNoteFromFile = useCallback(async (title: string, content: string, parentId: string | null) => {
         const newNoteId = await addNoteFromFile(title, content, parentId);
@@ -176,26 +136,11 @@ export const useStoreProviderLogic = () => {
         if (isMobileView) setIsSidebarOpen(false);
         showToast({ message: `Imported "${title}"`, type: 'success'});
         return newNoteId;
-    }, [addNoteFromFile, isMobileView, showToast, setActiveNoteId, setView, setIsSidebarOpen]);
+    }, [addNoteFromFile, isMobileView, showToast, setView, setIsSidebarOpen]);
 
-    const handleDeleteNoteConfirm = useCallback(async (note: Note) => {
-        await deleteNote(note.id);
-        if (activeNoteId === note.id) setActiveNoteId(null);
-        hideConfirmation();
-    }, [deleteNote, activeNoteId, hideConfirmation]);
-
-    const handleDeleteCollectionConfirm = useCallback(async (collection: Collection) => {
-        await deleteCollection(collection.id);
-        // The active note will be cleared automatically by the effect in App.tsx
-        // that monitors the notes array, thanks to real-time updates.
-        hideConfirmation();
-    }, [deleteCollection, hideConfirmation]);
-
-    const handleDeleteSmartCollectionConfirm = useCallback(async (smartCollection: SmartCollection) => {
-        await deleteSmartCollection(smartCollection.id);
-        hideConfirmation();
-    }, [deleteSmartCollection, hideConfirmation]);
-
+    const handleDeleteNoteConfirm = useCallback(async (note: Note) => { await deleteNote(note.id); if (activeNoteId === note.id) setActiveNoteId(null); hideConfirmation(); }, [deleteNote, activeNoteId, hideConfirmation]);
+    const handleDeleteCollectionConfirm = useCallback(async (collection: any) => { await deleteCollection(collection.id); hideConfirmation(); }, [deleteCollection, hideConfirmation]);
+    const handleDeleteSmartCollectionConfirm = useCallback(async (smartCollection: SmartCollection) => { await deleteSmartCollection(smartCollection.id); hideConfirmation(); }, [deleteSmartCollection, hideConfirmation]);
     const handleActivateSmartCollection = useCallback((collection: SmartCollection) => {
         setActiveSmartCollectionId(collection.id);
         const performAiSearch = async () => {
@@ -207,24 +152,14 @@ export const useStoreProviderLogic = () => {
                 setAiSearchResultIds(resultIds);
             } catch (error) {
                 setAiSearchError(error instanceof Error ? error.message : "An unknown AI search error occurred.");
-            } finally {
-                setIsAiSearching(false);
-            }
+            } finally { setIsAiSearching(false); }
         };
         performAiSearch();
     }, [notes]);
+    const handleSearchTermChange = useCallback((term: string) => { if (activeSmartCollectionId) setActiveSmartCollectionId(null); setSearchTerm(term); }, [activeSmartCollectionId]);
+    const handleClearActiveSmartCollection = useCallback(() => { setActiveSmartCollectionId(null); setSearchTerm(''); }, []);
 
-    const handleSearchTermChange = useCallback((term: string) => {
-        if (activeSmartCollectionId) setActiveSmartCollectionId(null);
-        setSearchTerm(term);
-    }, [activeSmartCollectionId]);
-
-    const handleClearActiveSmartCollection = useCallback(() => {
-        setActiveSmartCollectionId(null);
-        setSearchTerm('');
-    }, []);
-
-    const storeValue = useMemo(() => ({
+    return useMemo(() => ({
         ...store, onAddNote, onAddNoteFromFile, fileTree,
         activeNoteId, setActiveNoteId, activeNote, favoriteNotes, searchData, searchTerm,
         handleSearchTermChange, searchMode, setSearchMode, isAiSearching, aiSearchError,
@@ -232,11 +167,9 @@ export const useStoreProviderLogic = () => {
         handleDeleteNoteConfirm, handleDeleteCollectionConfirm, handleDeleteSmartCollectionConfirm,
     }), [
         store, onAddNote, onAddNoteFromFile, fileTree,
-        activeNoteId, setActiveNoteId, activeNote, favoriteNotes, searchData, searchTerm,
-        handleSearchTermChange, searchMode, setSearchMode, isAiSearching, aiSearchError,
+        activeNoteId, activeNote, favoriteNotes, searchData, searchTerm,
+        handleSearchTermChange, searchMode, isAiSearching, aiSearchError,
         activeSmartCollection, handleActivateSmartCollection, handleClearActiveSmartCollection,
         handleDeleteNoteConfirm, handleDeleteCollectionConfirm, handleDeleteSmartCollectionConfirm,
     ]);
-    
-    return storeValue;
-}
+};

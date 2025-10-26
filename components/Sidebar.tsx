@@ -17,6 +17,7 @@ import Highlight from './Highlight';
 import { useStoreContext, useUIContext, useChatContext } from '../context/AppContext';
 import { useDragAndDrop } from '../hooks/useDragAndDrop';
 import OnboardingChecklist from './OnboardingChecklist';
+import { useToast } from '../context/ToastContext';
 
 interface OnboardingStep {
     id: string;
@@ -123,12 +124,22 @@ const Sidebar: React.FC<SidebarProps> = ({
         isSidebarCollapsed, toggleSidebarCollapsed: onToggleCollapsed, setIsCommandPaletteOpen,
         showConfirmation, openHelpModal,
     } = useUIContext();
+    const { showToast } = useToast();
     
+    const handleMoveItem = useCallback(async (draggedItemId: string, targetItemId: string | null, position: 'top' | 'bottom' | 'inside') => {
+        try {
+            await moveItem(draggedItemId, targetItemId, position);
+        } catch (error) {
+            console.error("Failed to move item:", error);
+            showToast({ message: 'Failed to move item. The change has been reverted.', type: 'error' });
+        }
+    }, [moveItem, showToast]);
+
     const rootDropRef = useRef<HTMLDivElement>(null);
     const { isFileOver: isRootFileOver, dragAndDropProps: rootDragAndDropProps } = useDragAndDrop(rootDropRef, {
         id: null,
         type: 'root',
-        onMoveItem: moveItem,
+        onMoveItem: handleMoveItem,
         onDropFile: (file, parentId) => {
             const reader = new FileReader();
             reader.onload = (loadEvent) => {

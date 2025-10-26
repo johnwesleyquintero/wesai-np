@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Collection, Note, TreeNode } from '../types';
 import { ChevronDownIcon, ChevronRightIcon, DocumentTextIcon, FolderIcon, TrashIcon, PencilSquareIcon, DocumentDuplicateIcon, ClipboardDocumentIcon, GripVerticalIcon, LinkIcon, HashtagIcon } from './Icons';
 import { ContextMenuItem } from '../types';
@@ -57,11 +57,20 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
         reader.readAsText(file);
     };
 
+    const handleMoveItem = useCallback(async (draggedItemId: string, targetItemId: string | null, position: 'top' | 'bottom' | 'inside') => {
+        try {
+            await moveItem(draggedItemId, targetItemId, position);
+        } catch (error) {
+            console.error("Failed to move item:", error);
+            showToast({ message: 'Failed to move item. The change has been reverted.', type: 'error' });
+        }
+    }, [moveItem, showToast]);
+
     const { isDragOver, isFileOver, dropPosition, dragAndDropProps } = useDragAndDrop(nodeRef, {
         id: node.id,
         parentId: node.parentId,
         type: isCollection ? 'collection' : 'note',
-        onMoveItem: moveItem,
+        onMoveItem: handleMoveItem,
         onDropFile: isCollection ? handleDropFile : undefined,
         collections,
         isDisabled: isRenaming,
@@ -148,7 +157,7 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
                 {
                     label: 'Move to...',
                     icon: <FolderIcon />,
-                    children: generateMoveToMenuItems(noteAsNote, collections, moveItem),
+                    children: generateMoveToMenuItems(noteAsNote, collections, handleMoveItem),
                 },
                 { 
                     label: 'Duplicate Note', 

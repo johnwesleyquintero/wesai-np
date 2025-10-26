@@ -246,26 +246,40 @@ export const useStore = (user: User | undefined) => {
 
     const moveItem = useCallback(async (draggedItemId: string, targetItemId: string | null, position: 'top' | 'bottom' | 'inside') => {
         if (!user) throw new Error("User must be logged in to move items.");
-        const isNote = notes.some(n => n.id === draggedItemId);
+        
+        const originalNotes = [...notes];
+        const originalCollections = [...collections];
+
+        const isNote = originalNotes.some(n => n.id === draggedItemId);
         
         let newParentId: string | null;
-
         if (position === 'inside') {
             newParentId = targetItemId;
         } else {
             if (targetItemId === null) {
                 newParentId = null;
             } else {
-                 const allItems = [...notes, ...collections];
+                 const allItems = [...originalNotes, ...originalCollections];
                  const targetItem = allItems.find(item => item.id === targetItemId);
                  if (!targetItem) return;
                  newParentId = targetItem.parentId;
             }
         }
         
+        if (isNote) {
+            setNotes(prev => prev.map(n => n.id === draggedItemId ? { ...n, parentId: newParentId } : n));
+        } else {
+            setCollections(prev => prev.map(c => c.id === draggedItemId ? { ...c, parentId: newParentId } : c));
+        }
+
         const table = isNote ? 'notes' : 'collections';
         const { error } = await supabase.from(table).update({ parent_id: newParentId }).eq('id', draggedItemId).eq('user_id', user.id);
-        if (error) throw error;
+
+        if (error) {
+            setNotes(originalNotes);
+            setCollections(originalCollections);
+            throw error;
+        }
     }, [notes, collections, user]);
 
     const addSmartCollection = useCallback(async (name: string, query: string) => {

@@ -2,7 +2,7 @@ import React from 'react';
 import { SlashCommand } from '../types';
 import { 
     Heading1Icon, Heading2Icon, Heading3Icon, ListBulletIcon, CheckBadgeIcon, MinusIcon, 
-    SparklesIcon,
+    SparklesIcon, LinkIcon
 } from './Icons';
 
 export const slashCommands: SlashCommand[] = [
@@ -56,6 +56,14 @@ export const slashCommands: SlashCommand[] = [
         section: 'Insert',
         icon: React.createElement(MinusIcon),
         keywords: 'hr horizontal rule line',
+    },
+    {
+        id: 'synced-block',
+        name: 'Synced Block',
+        description: 'Embed reusable content from a template',
+        section: 'Insert',
+        icon: React.createElement(LinkIcon),
+        keywords: 'template sync embed reusable',
     },
     
     // AI Actions

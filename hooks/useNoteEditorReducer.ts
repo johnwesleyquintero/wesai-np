@@ -13,6 +13,7 @@ export interface NoteEditorUIState {
     viewMode: 'edit' | 'preview';
     selection: SelectionState;
     noteLinker: NoteLinkerState;
+    templateLinker: NoteLinkerState;
     noteLinkerForSelection: SelectionState;
     slashCommand: SlashCommandState;
     isDragOver: boolean;
@@ -28,6 +29,7 @@ export const initialNoteEditorUIState: NoteEditorUIState = {
     viewMode: 'edit',
     selection: null,
     noteLinker: null,
+    templateLinker: null,
     noteLinkerForSelection: null,
     slashCommand: null,
     isDragOver: false,
@@ -43,6 +45,7 @@ export type NoteEditorAction =
     | { type: 'SET_VIEW_MODE'; payload: 'edit' | 'preview' }
     | { type: 'SET_SELECTION'; payload: SelectionState }
     | { type: 'SET_NOTE_LINKER'; payload: NoteLinkerState }
+    | { type: 'SET_TEMPLATE_LINKER'; payload: NoteLinkerState }
     | { type: 'SET_NOTE_LINKER_FOR_SELECTION'; payload: SelectionState }
     | { type: 'SET_SLASH_COMMAND'; payload: SlashCommandState }
     | { type: 'SET_DRAG_OVER'; payload: boolean }
@@ -66,13 +69,15 @@ const reducer = (state: NoteEditorUIState, action: NoteEditorAction): NoteEditor
             return { ...state, selection: action.payload };
         case 'SET_NOTE_LINKER':
             // Note linker and slash command are mutually exclusive
-            return { ...state, noteLinker: action.payload, slashCommand: null };
+            return { ...state, noteLinker: action.payload, slashCommand: null, templateLinker: null };
+        case 'SET_TEMPLATE_LINKER':
+            return { ...state, templateLinker: action.payload, slashCommand: null, noteLinker: null };
         case 'SET_NOTE_LINKER_FOR_SELECTION':
              // When linking from selection, clear the main selection popup
             return { ...state, noteLinkerForSelection: action.payload, selection: null };
         case 'SET_SLASH_COMMAND':
             // Note linker and slash command are mutually exclusive
-            return { ...state, slashCommand: action.payload, noteLinker: null };
+            return { ...state, slashCommand: action.payload, noteLinker: null, templateLinker: null };
         case 'SET_DRAG_OVER':
             return { ...state, isDragOver: action.payload };
         case 'SET_AI_ACTION_LOADING':

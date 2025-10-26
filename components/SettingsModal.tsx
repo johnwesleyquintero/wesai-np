@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { PlusIcon, EyeIcon, EyeSlashIcon } from './Icons';
+import { PlusIcon, EyeIcon, EyeSlashIcon, ClipboardDocumentIcon } from './Icons';
 import TemplateEditorModal from './TemplateEditorModal';
 import { Template } from '../types';
 import { useStoreContext } from '../context/AppContext';
@@ -171,6 +171,13 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
             onClose();
         }, 500);
     };
+    
+    const handleCopySyncId = (templateId: string) => {
+        const syncText = `[[sync:${templateId}]]`;
+        navigator.clipboard.writeText(syncText)
+            .then(() => showToast({ message: 'Sync ID copied to clipboard!', type: 'success' }))
+            .catch(() => showToast({ message: 'Failed to copy Sync ID.', type: 'error' }));
+    };
 
 
     if (!isOpen) return null;
@@ -226,6 +233,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                                         <div key={template.id} className="flex items-center justify-between bg-light-ui/50 dark:bg-dark-ui/50 p-2 rounded-md">
                                             <span className="font-medium truncate pr-2">{template.title}</span>
                                             <div className="space-x-2 flex-shrink-0">
+                                                <button onClick={() => handleCopySyncId(template.id)} className="text-sm text-light-primary dark:text-dark-primary hover:underline" title="Copy Sync ID">Copy ID</button>
                                                 <button onClick={() => handleOpenTemplateEditor(template)} className="text-sm text-light-primary dark:text-dark-primary hover:underline">Edit</button>
                                                 <button onClick={() => handleDeleteTemplate(template.id)} className="text-sm text-red-500 hover:underline">Delete</button>
                                             </div>

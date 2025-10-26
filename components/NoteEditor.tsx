@@ -11,6 +11,7 @@ import InlineAiMenu from './InlineAiMenu';
 import SpellcheckMenu from './SpellcheckMenu';
 import { useEditorContext, useStoreContext, useUIContext, useAuthContext } from '../context/AppContext';
 import NoteLinker from './NoteLinker';
+import TemplateLinker from './TemplateLinker';
 import BacklinksDisplay from './BacklinksDisplay';
 import { useBacklinks } from '../hooks/useBacklinks';
 import SlashCommandMenu from './SlashCommandMenu';
@@ -45,7 +46,7 @@ const StatusBar: React.FC<{ wordCount: number; charCount: number; readingTime: n
 );
 
 const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
-    const { updateNote, toggleFavorite, notes, restoreNoteVersion } = useStoreContext();
+    const { updateNote, toggleFavorite, notes, restoreNoteVersion, allTags } = useStoreContext();
     const { isMobileView, onToggleSidebar, isAiRateLimited, isSettingsOpen, isCommandPaletteOpen, isSmartFolderModalOpen, isWelcomeModalOpen } = useUIContext();
     const { session } = useAuthContext();
     const { showToast } = useToast();
@@ -76,7 +77,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
 
     const [uiState, dispatch] = useNoteEditorReducer();
     const {
-        saveStatus, isHistoryOpen, previewVersion, viewMode, selection, noteLinker, noteLinkerForSelection,
+        saveStatus, isHistoryOpen, previewVersion, viewMode, selection, noteLinker, templateLinker, noteLinkerForSelection,
         slashCommand, isDragOver, isAiActionLoading, isFullAiActionLoading, aiActionError
     } = uiState;
 
@@ -208,50 +209,32 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
             tags: note.tags,
         });
 
-        const isDebouncedDirty = JSON.stringify(debouncedEditorState) !== JSON.stringify({
-            title: note.title,
-            content: note.content,
-            tags: note.tags,
-        });
-
-        if (isLiveDirty) {
-            const userHasStoppedTyping = JSON.stringify(editorState) === JSON.stringify(debouncedEditorState);
-            if (isDebouncedDirty && userHasStoppedTyping) {
-                dispatch({ type: 'SET_SAVE_STATUS', payload: 'saving' });
-                
-                // Wiki-link validation
-                const noteLinkRegex = /\[\[([a-zA-Z0-9-]+)(?:\|.*?)?\]\]/g;
-                const matches = [...editorState.content.matchAll(noteLinkRegex)];
-                if (matches.length > 0) {
-                    const allNoteIds = new Set(notes.map(n => n.id));
-                    const hasInvalidLink = matches.some(match => !allNoteIds.has(match[1]));
-                    if (hasInvalidLink) {
-                        showToast({
-                            message: `Warning: This note contains broken links to other notes.`,
-                            type: 'error',
-                        });
-                    }
-                }
-
-                updateNote(note.id, editorState)
-                    .catch(error => {
-                        console.error("Auto-save failed:", error);
-                        showToast({ message: `Auto-save failed. Your changes are safe here.`, type: 'error' });
-                        dispatch({ type: 'SET_SAVE_STATUS', payload: 'error' });
-                    });
-            } else {
-                // User is still typing, just show the unsaved status
-                if (saveStatus !== 'unsaved') {
-                    dispatch({ type: 'SET_SAVE_STATUS', payload: 'unsaved' });
-                }
-            }
-        } else {
-            // No difference between editor state and saved state
+        if (!isLiveDirty) {
             if (saveStatus !== 'saved') {
                 dispatch({ type: 'SET_SAVE_STATUS', payload: 'saved' });
             }
+            return;
         }
-    }, [editorState, debouncedEditorState, note, notes, updateNote, showToast, dispatch, previewVersion, saveStatus]);
+
+        // If it's dirty, it's at least 'unsaved'
+        if (saveStatus === 'saved') {
+            dispatch({ type: 'SET_SAVE_STATUS', payload: 'unsaved' });
+        }
+
+        const userHasStoppedTyping = JSON.stringify(editorState) === JSON.stringify(debouncedEditorState);
+
+        if (userHasStoppedTyping && saveStatus !== 'saving') {
+            dispatch({ type: 'SET_SAVE_STATUS', payload: 'saving' });
+            
+            updateNote(note.id, editorState).then(() => {
+                dispatch({ type: 'SET_SAVE_STATUS', payload: 'saved' });
+            }).catch(error => {
+                console.error("Auto-save failed:", error);
+                showToast({ message: `Auto-save failed. Your changes are safe here.`, type: 'error' });
+                dispatch({ type: 'SET_SAVE_STATUS', payload: 'error' });
+            });
+        }
+    }, [editorState, debouncedEditorState, note, updateNote, showToast, dispatch, previewVersion, saveStatus]);
 
     // Robust saving on navigation/unmount
     useEffect(() => {
@@ -298,6 +281,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         dispatch({ type: 'SET_SELECTION', payload: null });
         setActiveSpellingError(null);
         dispatch({ type: 'SET_NOTE_LINKER', payload: null });
+        dispatch({ type: 'SET_TEMPLATE_LINKER', payload: null });
         dispatch({ type: 'SET_NOTE_LINKER_FOR_SELECTION', payload: null });
         dispatch({ type: 'SET_SLASH_COMMAND', payload: null });
     }, [dispatch, setActiveSpellingError]);
@@ -468,9 +452,25 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         }
     };
     
+    const handleInsertSyncedBlock = (templateId: string) => {
+        if (!templateLinker) return;
+        const textarea = textareaRef.current;
+        if (!textarea) return;
+        const { selectionStart } = textarea;
+        const startIndex = selectionStart - templateLinker.query.length; // Assumes it was triggered from a slash command with no '/'
+        const newContent = `${editorState.content.substring(0, startIndex)}[[sync:${templateId}]]${editorState.content.substring(selectionStart)}`;
+        setEditorState({ ...editorState, content: newContent });
+        dispatch({ type: 'SET_TEMPLATE_LINKER', payload: null });
+        setTimeout(() => {
+            textarea.focus();
+            const pos = startIndex + `[[sync:${templateId}]]`.length;
+            textarea.selectionStart = textarea.selectionEnd = pos;
+        }, 0);
+    };
+
     const handleSelectCommand = (commandId: string) => {
         if (!slashCommand) return;
-        const { range } = slashCommand;
+        const { range, position } = slashCommand;
         const currentContent = editorState.content;
         const replaceCommandText = (replacement: string, cursorOffset = replacement.length) => {
             const newContent = currentContent.substring(0, range.start) + replacement + currentContent.substring(range.end);
@@ -486,6 +486,11 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
             case 'todo': replaceCommandText('- [ ] '); break; case 'divider': replaceCommandText('---\n'); break;
             case 'ai-summarize': summarizeAndFindActionForFullNote(); replaceCommandText('', 0); break;
             case 'ai-fix': applyAiActionToFullNote('fix'); replaceCommandText('', 0); break;
+            case 'synced-block':
+                const newContent = currentContent.substring(0, range.start) + currentContent.substring(range.end);
+                setEditorState({ ...editorState, content: newContent });
+                dispatch({ type: 'SET_TEMPLATE_LINKER', payload: { query: '', position }});
+                break;
             default: break;
         }
         dispatch({ type: 'SET_SLASH_COMMAND', payload: null });
@@ -564,7 +569,12 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
                         <BacklinksDisplay backlinks={backlinks} />
                         <RelatedNotes note={note} />
                          <div id="onboarding-tag-input" className={`pt-6 border-t border-light-border dark:border-dark-border ${isEffectivelyReadOnly ? 'opacity-60' : ''}`}>
-                            <TagInput tags={displayedTags} setTags={(tags) => setEditorState({ ...editorState, tags })} readOnly={isEffectivelyReadOnly} />
+                            <TagInput 
+                                tags={displayedTags} 
+                                setTags={(tags) => setEditorState({ ...editorState, tags })} 
+                                readOnly={isEffectivelyReadOnly} 
+                                allTags={allTags}
+                            />
                             {!isEffectivelyReadOnly && <TagSuggestions suggestions={suggestedTags} onAddTag={handleAddTag} isLoading={isSuggestingTags} error={tagSuggestionError} />}
                         </div>
                     </div>
@@ -574,6 +584,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
             <StatusBar wordCount={wordCount} charCount={charCount} readingTime={readingTime} isCheckingSpelling={isCheckingSpelling} />
 
             {(noteLinker || noteLinkerForSelection) && <NoteLinker query={noteLinker?.query || ''} onSelect={handleInsertLink} onClose={() => { dispatch({ type: 'SET_NOTE_LINKER', payload: null }); dispatch({ type: 'SET_NOTE_LINKER_FOR_SELECTION', payload: null }); }} position={noteLinker?.position || { top: noteLinkerForSelection!.rect.bottom, left: noteLinkerForSelection!.rect.left }} />}
+            {templateLinker && <TemplateLinker query={templateLinker.query} onSelect={handleInsertSyncedBlock} onClose={() => dispatch({ type: 'SET_TEMPLATE_LINKER', payload: null })} position={templateLinker.position} />}
             {slashCommand && <SlashCommandMenu query={slashCommand.query} position={slashCommand.position} onSelect={handleSelectCommand} onClose={() => dispatch({ type: 'SET_SLASH_COMMAND', payload: null })} textareaRef={textareaRef} />}
             <InlineAiMenu selection={selection} onAction={async (action) => { if (selection) { const newPos = await handleInlineAiAction(action, selection); if (newPos !== null && textareaRef.current) { textareaRef.current.focus(); setTimeout(() => textareaRef.current?.setSelectionRange(newPos, newPos), 0); } } }} onFormat={handleFormatSelection} isLoading={isAiActionLoading} onClose={() => dispatch({ type: 'SET_SELECTION', payload: null })} />
             <SpellcheckMenu activeError={activeSpellingError} suggestions={spellingSuggestions} onSelect={handleApplySuggestion} isLoading={isLoadingSuggestions} error={suggestionError} onClose={() => setActiveSpellingError(null)} />

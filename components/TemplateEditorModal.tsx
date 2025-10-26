@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Template } from '../types';
 import { useModalAccessibility } from '../hooks/useModalAccessibility';
+import { useToast } from '../context/ToastContext';
 
 interface TemplateEditorModalProps {
     isOpen: boolean;
@@ -14,6 +15,7 @@ const TemplateEditorModal: React.FC<TemplateEditorModalProps> = ({ isOpen, onClo
     const [content, setContent] = useState('');
     const titleInputRef = useRef<HTMLInputElement>(null);
     const modalRef = useRef<HTMLDivElement>(null);
+    const { showToast } = useToast();
 
     useModalAccessibility(isOpen, onClose, modalRef);
 
@@ -33,6 +35,15 @@ const TemplateEditorModal: React.FC<TemplateEditorModalProps> = ({ isOpen, onClo
     const handleSave = () => {
         onSave({ title, content });
         onClose();
+    };
+    
+    const handleCopySyncId = () => {
+        if (templateToEdit) {
+            const syncText = `[[sync:${templateToEdit.id}]]`;
+            navigator.clipboard.writeText(syncText)
+                .then(() => showToast({ message: 'Sync ID copied to clipboard!', type: 'success' }))
+                .catch(() => showToast({ message: 'Failed to copy Sync ID.', type: 'error' }));
+        }
     };
 
     if (!isOpen) return null;
@@ -74,11 +85,18 @@ const TemplateEditorModal: React.FC<TemplateEditorModalProps> = ({ isOpen, onClo
                     />
                 </div>
                 
-                <div className="flex justify-end items-center space-x-4">
-                    <button onClick={onClose} className="px-4 py-2 rounded-md hover:bg-light-ui dark:hover:bg-dark-ui">Cancel</button>
-                    <button onClick={handleSave} className="px-4 py-2 bg-light-primary text-white rounded-md hover:bg-light-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover">
-                        Save Template
-                    </button>
+                <div className="flex justify-between items-center">
+                    <div>
+                        {templateToEdit && (
+                            <button onClick={handleCopySyncId} className="px-4 py-2 rounded-md hover:bg-light-ui dark:hover:bg-dark-ui text-sm">Copy Sync ID</button>
+                        )}
+                    </div>
+                    <div className="flex items-center space-x-4">
+                        <button onClick={onClose} className="px-4 py-2 rounded-md hover:bg-light-ui dark:hover:bg-dark-ui">Cancel</button>
+                        <button onClick={handleSave} className="px-4 py-2 bg-light-primary text-white rounded-md hover:bg-light-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover">
+                            Save Template
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>

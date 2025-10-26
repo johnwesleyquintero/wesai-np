@@ -10,6 +10,7 @@ import json from 'react-syntax-highlighter/dist/esm/languages/prism/json';
 import bash from 'react-syntax-highlighter/dist/esm/languages/prism/bash';
 import markdown from 'react-syntax-highlighter/dist/esm/languages/prism/markdown';
 import { useStoreContext, useUIContext } from '../context/AppContext';
+import { InformationCircleIcon, LightBulbIcon, ExclamationTriangleIcon, ExclamationCircleIcon } from './Icons';
 
 SyntaxHighlighter.registerLanguage('jsx', jsx);
 SyntaxHighlighter.registerLanguage('tsx', typescript);
@@ -89,23 +90,79 @@ interface MarkdownPreviewProps {
     isStreaming?: boolean;
 }
 
+const alertTypes = {
+  NOTE: { icon: InformationCircleIcon, colorClass: 'blue' },
+  TIP: { icon: LightBulbIcon, colorClass: 'green' },
+  IMPORTANT: { icon: ExclamationCircleIcon, colorClass: 'purple' },
+  WARNING: { icon: ExclamationTriangleIcon, colorClass: 'yellow' },
+  CAUTION: { icon: ExclamationTriangleIcon, colorClass: 'red' },
+};
+
+
+const RecursiveRenderer: React.FC<{
+    content: string;
+    onToggleTask: (lineNumber: number) => void;
+    components: any;
+    recursionDepth?: number;
+}> = ({ content, onToggleTask, components, recursionDepth = 0 }) => {
+    const { templates } = useStoreContext();
+    const MAX_RECURSION = 5;
+
+    if (recursionDepth > MAX_RECURSION) {
+        return <div className="my-2 p-2 bg-red-100 dark:bg-red-900/30 border border-red-300 dark:border-red-500/50 rounded-md text-sm text-red-700 dark:text-red-200">[Sync loop detected. Maximum depth exceeded.]</div>;
+    }
+
+    const parts = content.split(/(\[\[sync:[\w-]+\]\])/g);
+
+    return (
+        <>
+            {parts.map((part, index) => {
+                const syncMatch = part.match(/\[\[sync:([\w-]+)\]\]/);
+                if (syncMatch) {
+                    const templateId = syncMatch[1];
+                    const template = templates.find(t => t.id === templateId);
+                    if (template) {
+                        return (
+                            <div key={`${templateId}-${index}`} className="my-2 p-4 border border-light-border dark:border-dark-border rounded-md bg-light-ui/30 dark:bg-dark-ui/30">
+                                <RecursiveRenderer
+                                    content={template.content}
+                                    onToggleTask={onToggleTask}
+                                    components={components}
+                                    recursionDepth={recursionDepth + 1}
+                                />
+                            </div>
+                        );
+                    }
+                    return <div key={index} className="my-2 p-2 bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-300 dark:border-yellow-500/50 rounded-md text-sm text-yellow-700 dark:text-yellow-200">[Synced block not found: {templateId}]</div>;
+                }
+
+                // Pre-process this part for note links and sources
+                const preprocessedPart = part
+                    .replace(/\[\[([a-zA-Z0-9-]+)(?:\|(.*?))?\]\]/g, (match, noteId, noteText) => {
+                        const displayText = noteText || noteId;
+                        return `<a href="note://${noteId}">${displayText}</a>`;
+                    })
+                    .replace(/\[(\d+)\]/g, '<a href="source://$1">[$1]</a>');
+
+                return (
+                    <ReactMarkdown
+                        key={index}
+                        remarkPlugins={[remarkGfm]}
+                        rehypePlugins={[rehypeRaw]}
+                        components={components}
+                    >
+                        {preprocessedPart}
+                    </ReactMarkdown>
+                );
+            })}
+        </>
+    );
+};
+
+
 const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({ title, content, onToggleTask, isStreaming }) => {
     const { getNoteById, setActiveNoteId } = useStoreContext();
     const { setView } = useUIContext();
-    const { theme } = useUIContext();
-
-    const preprocessedContent = content
-        .replace(
-            /\[\[([a-zA-Z0-9-]+)(?:\|(.*?))?\]\]/g,
-            (match, noteId, noteText) => {
-                const displayText = noteText || noteId; // Placeholder, title is fetched in component
-                return `<a href="note://${noteId}">${displayText}</a>`;
-            }
-        )
-        .replace(
-            /\[(\d+)\]/g,
-            '<a href="source://$1">[$1]</a>'
-        );
 
     const components: any = {
         code({ node, className, children, ...props }: any) {
@@ -172,9 +229,6 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({ title, content, onTog
 
             return <a href={url} target="_blank" rel="noopener noreferrer" className="text-light-primary dark:text-dark-primary underline" {...props}>{children}</a>;
         },
-        // FIX: The props passed to ImageRenderer were not correctly typed, causing an error.
-        // The original ImageRenderer was also not robust enough to handle missing `src` props from react-markdown.
-        // Updated ImageRenderer to handle optional/missing props and resolve the type error.
         img: ({node, ...props}) => <ImageRenderer {...props} />,
         input({ node, className, ...props }: any) {
             const { type, checked } = props;
@@ -190,13 +244,53 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({ title, content, onTog
             return <input className={className} {...props} />;
         },
         li({ node, children, ...props }: any) {
-            // Check if this is a task list item from remark-gfm
             if (props.className === 'task-list-item') {
                 return <li className="list-none my-1 flex items-center" {...props}>{children}</li>
             }
             return <li {...props}>{children}</li>
         },
-        // Apply tailwind prose classes for styling
+        blockquote: ({ node, children, ...props }: any) => {
+            try {
+                const p = children[0] as React.ReactElement<any>;
+                if (p && p.props && p.props.children) {
+                    let text = '';
+                    const childNodes = Array.isArray(p.props.children) ? p.props.children : [p.props.children];
+                    if (typeof childNodes[0] === 'string') {
+                        text = childNodes[0];
+                    }
+
+                    const match = text.match(/^\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]\s*/);
+
+                    if (match) {
+                        const type = match[1] as keyof typeof alertTypes;
+                        const { icon: IconComponent, colorClass } = alertTypes[type];
+                        
+                        const newText = text.substring(match[0].length);
+                        
+                        const newChildren = [...childNodes];
+                        newChildren[0] = newText;
+                        
+                        const newP = React.cloneElement(p, { children: newChildren });
+                        const finalChildren = [newP, ...(children as any[]).slice(1)];
+
+                        return (
+                            <div className={`callout callout-${colorClass}`}>
+                                <div className="callout-icon">
+                                    <IconComponent className="w-5 h-5" />
+                                </div>
+                                <div className="callout-content">
+                                    {finalChildren}
+                                </div>
+                            </div>
+                        );
+                    }
+                }
+            } catch (e) {
+                 console.warn("Could not parse blockquote for callout", e);
+            }
+            
+            return <blockquote className="border-l-4 border-light-border dark:border-dark-border pl-4 italic text-light-text/80 dark:text-dark-text/80 my-4" {...props}>{children}</blockquote>;
+        },
         h1: ({node, ...props}) => <h1 className="text-4xl font-bold mt-8 mb-4 border-b border-light-border dark:border-dark-border pb-2" {...props} />,
         h2: ({node, ...props}) => <h2 className="text-3xl font-bold mt-6 mb-3 border-b border-light-border dark:border-dark-border pb-2" {...props} />,
         h3: ({node, ...props}) => <h3 className="text-2xl font-bold mt-5 mb-2" {...props} />,
@@ -206,7 +300,6 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({ title, content, onTog
         p: ({node, ...props}) => <p className="my-4 leading-relaxed" {...props} />,
         ul: ({node, ...props}) => <ul className="list-disc pl-6 my-4 space-y-2" {...props} />,
         ol: ({node, ...props}) => <ol className="list-decimal pl-6 my-4 space-y-2" {...props} />,
-        blockquote: ({node, ...props}) => <blockquote className="border-l-4 border-light-border dark:border-dark-border pl-4 italic text-light-text/80 dark:text-dark-text/80 my-4" {...props} />,
         hr: ({node, ...props}) => <hr className="my-6 border-light-border dark:border-dark-border" {...props} />,
         table: ({node, ...props}) => <div className="overflow-x-auto my-4"><table className="min-w-full my-0 border-collapse border border-light-border dark:border-dark-border" {...props} /></div>,
         thead: ({node, ...props}) => <thead className="bg-light-ui dark:bg-dark-ui" {...props} />,
@@ -218,15 +311,9 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({ title, content, onTog
 
     return (
         <div className="max-w-none markdown-preview">
-            <h1 className="w-full bg-transparent text-3xl sm:text-4xl font-bold focus:outline-none mb-4">{title}</h1>
+            {title && <h1 className="w-full bg-transparent text-3xl sm:text-4xl font-bold focus:outline-none mb-4">{title}</h1>}
             <div className="text-base sm:text-lg">
-                <ReactMarkdown
-                    remarkPlugins={[remarkGfm]}
-                    rehypePlugins={[rehypeRaw]}
-                    components={components}
-                >
-                    {preprocessedContent}
-                </ReactMarkdown>
+                <RecursiveRenderer content={content} onToggleTask={onToggleTask} components={components} />
                 {isStreaming && <span className="blinking-cursor"></span>}
             </div>
         </div>

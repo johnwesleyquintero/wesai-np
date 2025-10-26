@@ -21,6 +21,9 @@ This is a **live, interactive demo** of WesCore. You can write, edit, create new
 - Link to another note by typing \`[[...]]\`. Here's a link to the marketing plan: [[demo-note-2|Q3 Marketing Plan]].
 - Explore the **Graph View** and other dashboards using the icons in the bottom-left.
 
+> [!NOTE]
+> This is a callout block! You can use \`[!NOTE]\`, \`[!TIP]\`, \`[!IMPORTANT]\`, \`[!WARNING]\`, and \`[!CAUTION]\` to highlight information.
+
 *Note: This is a demo environment. Your changes will not be saved when you refresh the page.*`,
     createdAt: twoDaysAgo.toISOString(),
     updatedAt: twoDaysAgo.toISOString(),
@@ -68,6 +71,25 @@ See the [[demo-note-3]] for a list of potential blog topics.
     history: [],
     parentId: 'demo-collection-1',
   },
+  {
+    id: 'demo-note-4',
+    title: 'QA for New Feature',
+    content: `### Pre-launch QA Checklist
+
+Here is the standard checklist for all new feature launches.
+
+[[sync:demo-template-2]]
+
+**Additional tests for this feature:**
+- Check performance with over 1000 notes.
+`,
+    createdAt: now.toISOString(),
+    updatedAt: now.toISOString(),
+    isFavorite: false,
+    tags: ['qa', 'process'],
+    history: [],
+    parentId: 'demo-collection-1',
+  }
 ];
 
 export const demoCollections: Collection[] = [
@@ -80,4 +102,5 @@ export const demoSmartCollections: SmartCollection[] = [
 
 export const demoTemplates: Template[] = [
     { id: 'demo-template-1', title: 'Meeting Minutes', content: '## Meeting Minutes\n\n**Date:**\n**Attendees:**\n\n### Agenda\n\n- \n\n### Discussion\n\n-\n\n### Action Items\n\n- [ ] ' },
+    { id: 'demo-template-2', title: 'Standard QA Checklist', content: '- [ ] Test on Chrome\n- [ ] Test on Mobile (iOS & Android)\n- [ ] Check for accessibility issues\n- [ ] Verify in both light and dark mode' },
 ];

@@ -100,6 +100,14 @@ export const useStoreProviderLogic = () => {
 
     const fileTree = useMemo(() => buildTree(notes, collections), [notes, collections]);
 
+    const allTags = useMemo(() => {
+        const tagSet = new Set<string>();
+        notes.forEach(note => {
+            note.tags.forEach(tag => tagSet.add(tag));
+        });
+        return Array.from(tagSet).sort((a, b) => a.localeCompare(b));
+    }, [notes]);
+
     const searchData = useMemo(() => {
         const isSearching = !!searchTerm.trim() || !!activeSmartCollectionId;
         if (!isSearching) return { isSearching: false, visibleIds: null, matchIds: null };
@@ -168,14 +176,14 @@ export const useStoreProviderLogic = () => {
     const handleClearActiveSmartCollection = useCallback(() => { setActiveSmartCollectionId(null); setSearchTerm(''); }, []);
 
     return useMemo(() => ({
-        ...store, onAddNote, onAddNoteFromFile, fileTree,
+        ...store, onAddNote, onAddNoteFromFile, fileTree, allTags,
         activeNoteId, setActiveNoteId, activeNote, favoriteNotes, searchData, searchTerm,
         handleSearchTermChange, searchMode, setSearchMode, isAiSearching, aiSearchError,
         activeSmartCollection, handleActivateSmartCollection, handleClearActiveSmartCollection,
         handleDeleteNoteConfirm, handleDeleteCollectionConfirm, handleDeleteSmartCollectionConfirm,
         recentQueries,
     }), [
-        store, onAddNote, onAddNoteFromFile, fileTree,
+        store, onAddNote, onAddNoteFromFile, fileTree, allTags,
         activeNoteId, activeNote, favoriteNotes, searchData, searchTerm,
         handleSearchTermChange, searchMode, isAiSearching, aiSearchError,
         activeSmartCollection, handleActivateSmartCollection, handleClearActiveSmartCollection,

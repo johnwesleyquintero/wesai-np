@@ -197,6 +197,45 @@ ${note2.content}`,
     );
 };
 
+export const suggestTitleAndTags = async (content: string): Promise<{ title: string, tags: string[] }> => {
+    return _callGemini(
+        (ai) => ai.models.generateContent({
+            model: MODEL_NAMES.FLASH,
+            contents: `Analyze the following note content. Suggest a concise, descriptive title (no more than 10 words) and up to 5 relevant, single-word or two-word tags.
+Content: ${content.substring(0, 1000)}`,
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: {
+                    type: Type.OBJECT,
+                    properties: {
+                        title: { 
+                            type: Type.STRING,
+                            description: "A concise, descriptive title, no more than 10 words."
+                        },
+                        tags: {
+                            type: Type.ARRAY,
+                            items: { type: Type.STRING },
+                            description: "Up to 5 relevant, single-word or two-word tags."
+                        }
+                    },
+                    required: ["title", "tags"]
+                }
+            },
+        }),
+        {
+            errorMessage: 'Error suggesting title and tags:',
+            processResponse: (res) => {
+                const result = JSON.parse(res.text.trim());
+                if (result.title) {
+                    result.title = result.title.replace(/["\.]/g, '');
+                }
+                return result;
+            },
+            onError: () => { throw new Error("Failed to suggest title and tags."); }
+        }
+    );
+};
+
 
 // --- Chat ---
 export const generateChatStream = async (

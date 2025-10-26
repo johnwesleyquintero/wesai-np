@@ -58,7 +58,7 @@ export const useStoreProviderLogic = () => {
     const [aiSearchError, setAiSearchError] = useState<string | null>(null);
     const [aiSearchResultIds, setAiSearchResultIds] = useState<string[] | null>(null);
     const [activeSmartCollectionId, setActiveSmartCollectionId] = useState<string | null>(null);
-    const debouncedSearchTerm = useDebounce(searchTerm, 500);
+    const debouncedSearchTerm = useDebounce(searchTerm, 1000);
     const { queries: recentQueries, addQuery: addRecentQuery } = useRecentQueries();
 
     useEffect(() => {

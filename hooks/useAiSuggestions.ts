@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useDebounce } from './useDebounce';
-import { suggestTags, suggestTitle } from '../services/geminiService';
+import { suggestTags, suggestTitle, suggestTitleAndTags } from '../services/geminiService';
 
 type EditorState = { title: string; content: string; tags: string[] };
 
@@ -23,28 +23,6 @@ export const useAiSuggestions = (
     const titleSuggestionIdRef = useRef(0);
     
     const debouncedEditorState = useDebounce(editorState, 5000);
-
-    // Effect for automatic suggestions on debounced state change
-    useEffect(() => {
-        if (isAiRateLimited) return;
-        
-        const contentForAnalysis = debouncedEditorState.content;
-        if (contentForAnalysis.length >= MIN_CONTENT_LENGTH_FOR_SUGGESTIONS) {
-            const isGenericTitle = debouncedEditorState.title.trim().toLowerCase() === 'untitled note';
-            
-            if (isGenericTitle && contentForAnalysis !== lastAnalyzedContentForTitleRef.current) {
-                // Call the manual trigger function
-                suggestTitleForFullNote(contentForAnalysis);
-            } else if (!isGenericTitle) {
-                setSuggestedTitle(null);
-            }
-            
-            if (contentForAnalysis !== lastAnalyzedContentForTagsRef.current && debouncedEditorState.tags.length === 0) {
-                 // Call the manual trigger function
-                suggestTagsForFullNote(debouncedEditorState.title, contentForAnalysis);
-            }
-        }
-    }, [debouncedEditorState, isAiRateLimited]);
 
     const suggestTagsForFullNote = useCallback((title: string, content: string) => {
         const currentSuggestionId = ++tagSuggestionIdRef.current;
@@ -82,6 +60,64 @@ export const useAiSuggestions = (
             if (currentSuggestionId === titleSuggestionIdRef.current) setIsSuggestingTitle(false);
         });
     }, []);
+
+    // Effect for automatic suggestions on debounced state change
+    useEffect(() => {
+        if (isAiRateLimited) return;
+        
+        const contentForAnalysis = debouncedEditorState.content;
+        if (contentForAnalysis.length < MIN_CONTENT_LENGTH_FOR_SUGGESTIONS) {
+            return;
+        }
+
+        const isGenericTitle = debouncedEditorState.title.trim().toLowerCase() === 'untitled note';
+        const hasNoTags = debouncedEditorState.tags.length === 0;
+        
+        const needsTitle = isGenericTitle && contentForAnalysis !== lastAnalyzedContentForTitleRef.current;
+        const needsTags = hasNoTags && contentForAnalysis !== lastAnalyzedContentForTagsRef.current;
+
+        if (!needsTitle && !needsTags) {
+            if (!isGenericTitle) setSuggestedTitle(null); // Clear title if user wrote one
+            return;
+        }
+
+        const currentSuggestionId = ++tagSuggestionIdRef.current; // Use one ref for both
+        titleSuggestionIdRef.current = currentSuggestionId;
+
+        if (needsTitle && needsTags) {
+            // Combined call
+            lastAnalyzedContentForTitleRef.current = contentForAnalysis;
+            lastAnalyzedContentForTagsRef.current = contentForAnalysis;
+            setIsSuggestingTitle(true);
+            setIsSuggestingTags(true);
+            setTitleSuggestionError(null);
+            setTagSuggestionError(null);
+            
+            suggestTitleAndTags(contentForAnalysis).then(({ title, tags }) => {
+                if (currentSuggestionId === titleSuggestionIdRef.current) {
+                    setSuggestedTitle(title);
+                    const newTagSuggestions = tags.filter(tag => !editorState.tags.includes(tag));
+                    setSuggestedTags(newTagSuggestions);
+                }
+            }).catch(err => {
+                if (currentSuggestionId === titleSuggestionIdRef.current) {
+                    const errorMsg = err.message || 'Failed to generate suggestions.';
+                    setTitleSuggestionError(errorMsg);
+                    setTagSuggestionError(errorMsg);
+                }
+            }).finally(() => {
+                if (currentSuggestionId === titleSuggestionIdRef.current) {
+                    setIsSuggestingTitle(false);
+                    setIsSuggestingTags(false);
+                }
+            });
+        } else if (needsTitle) {
+            suggestTitleForFullNote(contentForAnalysis);
+        } else if (needsTags) {
+            suggestTagsForFullNote(debouncedEditorState.title, contentForAnalysis);
+        }
+
+    }, [debouncedEditorState, isAiRateLimited, editorState.tags, suggestTitleForFullNote, suggestTagsForFullNote]);
 
     // Function to reset state for a new note
     const resetAiSuggestions = useCallback(() => {

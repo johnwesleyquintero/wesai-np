@@ -18,6 +18,7 @@ import TrendAnalysisDashboardSkeleton from './components/TrendAnalysisDashboardS
 import GraphViewSkeleton from './components/GraphViewSkeleton';
 import LandingPage from './components/LandingPage';
 import WelcomeScreen from './components/WelcomeScreen';
+import { useOnboarding } from './hooks/useOnboarding';
 
 const NoteEditor = React.lazy(() => import('./components/NoteEditor'));
 const ChatView = React.lazy(() => import('./components/ChatView'));
@@ -29,11 +30,30 @@ const AnalyticsDashboard = React.lazy(() => import('./components/AnalyticsDashbo
 const TrendAnalysisDashboard = React.lazy(() => import('./components/TrendAnalysisDashboard'));
 const GraphView = React.lazy(() => import('./components/GraphView'));
 const HelpModal = React.lazy(() => import('./components/HelpModal'));
+const CoachMark = React.lazy(() => import('./components/CoachMark'));
 
 
 const WELCOME_SCREEN_SIDEBAR_WIDTH_KEY = 'wesai-sidebar-width';
 const MIN_SIDEBAR_WIDTH = 280;
 const MAX_SIDEBAR_WIDTH = 500;
+
+const coachMarkData = {
+    note: {
+        targetSelector: '#onboarding-new-note-btn',
+        title: 'Start Here',
+        content: 'Create your first note to begin capturing your ideas.',
+    },
+    tag: {
+        targetSelector: '#onboarding-tag-input',
+        title: 'Organize with Tags',
+        content: 'Add tags to your notes to easily find and categorize them later.',
+    },
+    ai: {
+        targetSelector: '#onboarding-ask-ai-btn',
+        title: 'Unlock AI Power',
+        content: 'Switch to the AI Chat view to ask questions about your notes or generate new content.',
+    },
+};
 
 function AppContent() {
     const {
@@ -53,6 +73,8 @@ function AppContent() {
         toggleSidebarCollapsed,
         confirmation, hideConfirmation,
     } = useUIContext();
+    
+    const { onboardingSteps, isOnboardingComplete, activeCoachMark, dismissCoachMark } = useOnboarding();
 
     const isResizing = useRef(false);
 
@@ -162,7 +184,11 @@ function AppContent() {
 
     return (
         <div className="flex h-screen w-screen font-sans text-light-text dark:text-dark-text bg-light-background dark:bg-dark-background overflow-hidden">
-            <Sidebar width={sidebarWidth} />
+            <Sidebar
+                width={sidebarWidth}
+                onboardingSteps={onboardingSteps}
+                isOnboardingComplete={isOnboardingComplete}
+            />
             {!isMobileView && <SidebarResizer onResizeStart={handleResizeStart} />}
             <main className="flex-1 flex flex-col h-full min-w-0">
                 {isApiKeyMissing && <ApiKeyIndicator />}
@@ -195,6 +221,14 @@ function AppContent() {
                 <WelcomeModal isOpen={isWelcomeModalOpen} onClose={closeWelcomeModal} />
 
                 <HelpModal isOpen={isHelpModalOpen} onClose={() => setIsHelpModalOpen(false)} />
+
+                 {activeCoachMark && coachMarkData[activeCoachMark] && (
+                    <CoachMark
+                        key={activeCoachMark}
+                        {...coachMarkData[activeCoachMark]}
+                        onDismiss={dismissCoachMark}
+                    />
+                )}
             </Suspense>
 
             <ConfirmationModal

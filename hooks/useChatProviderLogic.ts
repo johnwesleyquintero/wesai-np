@@ -342,15 +342,28 @@ ${sourceNotes.length > 0 ? sourceNotes.map(n => `--- NOTE: ${n.title} ---\n${n.c
         }
     }, [chatMode]);
     
+    const handleFeedback = useCallback((messageId: string, feedback: 'up' | 'down') => {
+        setChatHistories(prev => {
+            const currentHistory = prev[chatMode];
+            const updatedHistory = currentHistory.map(msg => {
+                if (msg.id === messageId) {
+                    return { ...msg, feedback };
+                }
+                return msg;
+            });
+            return { ...prev, [chatMode]: updatedHistory };
+        });
+    }, [chatMode]);
+
     const chatValue = useMemo(() => ({
         chatMessages: chatHistories[chatMode] || [], 
         chatStatus, chatMode, setChatMode, 
         onSendMessage, onGenerateServiceResponse, onSendGeneralMessage, onGenerateAmazonCopy, clearChat,
-        activeToolName, deleteMessage,
+        activeToolName, deleteMessage, handleFeedback,
     }), [
         chatHistories, chatMode, chatStatus, setChatMode,
         onSendMessage, onGenerateServiceResponse, onSendGeneralMessage, onGenerateAmazonCopy, clearChat,
-        activeToolName, deleteMessage,
+        activeToolName, deleteMessage, handleFeedback,
     ]);
 
     return chatValue;

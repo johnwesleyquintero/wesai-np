@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useChatContext, useStoreContext, useUIContext } from '../context/AppContext';
 import { ChatMessage, ChatMode, ChatStatus, Note } from '../types';
 import MarkdownPreview from './MarkdownPreview';
-import { PaperAirplaneIcon, SparklesIcon, XCircleIcon, DocumentPlusIcon, PaperClipIcon, ClipboardDocumentIcon, EllipsisHorizontalIcon, TrashIcon } from './Icons';
+import { PaperAirplaneIcon, SparklesIcon, XCircleIcon, DocumentPlusIcon, PaperClipIcon, ClipboardDocumentIcon, EllipsisHorizontalIcon, TrashIcon, ThumbsUpIcon, ThumbsDownIcon } from './Icons';
 import { useToast } from '../context/ToastContext';
 import ChatViewSkeleton from './ChatViewSkeleton';
 
@@ -110,6 +110,7 @@ const MessageActions: React.FC<{ onDelete: () => void }> = ({ onDelete }) => {
 const Message: React.FC<{ message: ChatMessage; onDelete: () => void }> = ({ message, onDelete }) => {
     const { showToast } = useToast();
     const { onAddNote, setActiveNoteId } = useStoreContext();
+    const { handleFeedback } = useChatContext();
     const { setView } = useUIContext();
     const [isHovered, setIsHovered] = useState(false);
 
@@ -179,12 +180,27 @@ const Message: React.FC<{ message: ChatMessage; onDelete: () => void }> = ({ mes
                     </button>
                 )}
                 {isAi && (
-                    <div className="flex items-center gap-4 mt-2">
+                    <div className="flex items-center gap-2 mt-2 pt-2 border-t border-light-border/50 dark:border-dark-border/50">
                         <button onClick={handleSaveAsNote} className="flex items-center gap-1 text-xs font-semibold text-light-text/60 dark:text-dark-text/60 hover:text-light-text dark:hover:text-dark-text">
                             <DocumentPlusIcon className="w-4 h-4" /> Save as Note
                         </button>
                         <button onClick={handleCopyToClipboard} className="flex items-center gap-1 text-xs font-semibold text-light-text/60 dark:text-dark-text/60 hover:text-light-text dark:hover:text-dark-text">
                             <ClipboardDocumentIcon className="w-4 h-4" /> Copy
+                        </button>
+                        <div className="flex-1" />
+                        <button 
+                            onClick={() => handleFeedback(message.id, 'up')}
+                            disabled={!!message.feedback}
+                            className={`p-1 rounded-md disabled:opacity-70 ${message.feedback === 'up' ? 'text-green-500 bg-green-500/10' : 'text-light-text/60 dark:text-dark-text/60 hover:bg-light-ui dark:hover:bg-dark-ui'}`}
+                        >
+                            <ThumbsUpIcon filled={message.feedback === 'up'} />
+                        </button>
+                         <button 
+                            onClick={() => handleFeedback(message.id, 'down')}
+                            disabled={!!message.feedback}
+                            className={`p-1 rounded-md disabled:opacity-70 ${message.feedback === 'down' ? 'text-red-500 bg-red-500/10' : 'text-light-text/60 dark:text-dark-text/60 hover:bg-light-ui dark:hover:bg-dark-ui'}`}
+                         >
+                            <ThumbsDownIcon filled={message.feedback === 'down'} />
                         </button>
                     </div>
                 )}

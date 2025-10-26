@@ -14,11 +14,20 @@ import {
 } from './Icons';
 import SidebarNode from './SidebarNode';
 import Highlight from './Highlight';
-import { useStoreContext, useUIContext } from '../context/AppContext';
+import { useStoreContext, useUIContext, useChatContext } from '../context/AppContext';
 import { useDragAndDrop } from '../hooks/useDragAndDrop';
+import OnboardingChecklist from './OnboardingChecklist';
+
+interface OnboardingStep {
+    id: string;
+    text: string;
+    isComplete: boolean;
+}
 
 interface SidebarProps {
     width: number;
+    onboardingSteps: OnboardingStep[];
+    isOnboardingComplete: boolean;
 }
 
 const FooterButton: React.FC<{
@@ -29,7 +38,8 @@ const FooterButton: React.FC<{
     className?: string;
     hasIndicator?: boolean;
     tooltipPosition?: 'top' | 'right';
-}> = ({ onClick, tooltip, children, isActive = false, className = '', hasIndicator = false, tooltipPosition = 'right' }) => {
+    id?: string;
+}> = ({ onClick, tooltip, children, isActive = false, className = '', hasIndicator = false, tooltipPosition = 'right', id }) => {
     const tooltipContainerClasses = tooltipPosition === 'right'
         ? 'left-full ml-2'
         : 'bottom-full mb-2 left-1/2 -translate-x-1/2';
@@ -41,6 +51,7 @@ const FooterButton: React.FC<{
     return (
         <div className="relative group">
             <button
+                id={id}
                 onClick={onClick}
                 className={`p-2 rounded-md transition-colors text-light-text/70 dark:text-dark-text/70 hover:text-light-text dark:hover:text-dark-text ${className} ${
                     isActive
@@ -90,7 +101,9 @@ const COLLAPSED_WIDTH = 56;
 const EXPANDED_FOLDERS_KEY = 'wesai-sidebar-expanded-folders';
 
 const Sidebar: React.FC<SidebarProps> = ({
-    width
+    width,
+    onboardingSteps,
+    isOnboardingComplete,
 }) => {
     const {
         collections, smartCollections, onAddNote, addCollection, moveItem,
@@ -380,15 +393,16 @@ const Sidebar: React.FC<SidebarProps> = ({
                     )}
                 </div>
                 <div className="flex space-x-2">
-                    <button onClick={() => onAddNote()} className="flex-1 flex items-center justify-center bg-light-primary text-white dark:bg-dark-primary dark:text-zinc-900 rounded-md py-2 text-sm font-semibold hover:bg-light-primary-hover dark:hover:bg-dark-primary-hover">
+                    <button id="onboarding-new-note-btn" onClick={() => onAddNote()} className="flex-1 flex items-center justify-center bg-light-primary text-white dark:bg-dark-primary dark:text-zinc-900 rounded-md py-2 text-sm font-semibold hover:bg-light-primary-hover dark:hover:bg-dark-primary-hover">
                         <PencilSquareIcon className="w-4 h-4 mr-2" />
                         New Note
                     </button>
                 </div>
             </div>
-            
+
             <div className="px-4 py-3 border-b border-light-border dark:border-dark-border flex-shrink-0">
-                <div className="relative">
+                 {!isOnboardingComplete && <OnboardingChecklist steps={onboardingSteps} />}
+                <div className="relative mt-3">
                     <input
                         type="text"
                         placeholder={activeSmartCollection ? activeSmartCollection.query : "Search notes..."}
@@ -503,6 +517,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                     </FooterButton>
 
                     <FooterButton
+                        id="onboarding-ask-ai-btn"
                         onClick={() => setView('CHAT')}
                         tooltip="Ask AI"
                         isActive={view === 'CHAT'}

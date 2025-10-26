@@ -548,7 +548,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
                     <div className="mt-12 space-y-8">
                         <BacklinksDisplay backlinks={backlinks} />
                         <RelatedNotes note={note} />
-                         <div className={`pt-6 border-t border-light-border dark:border-dark-border ${isEffectivelyReadOnly ? 'opacity-60' : ''}`}>
+                         <div id="onboarding-tag-input" className={`pt-6 border-t border-light-border dark:border-dark-border ${isEffectivelyReadOnly ? 'opacity-60' : ''}`}>
                             <TagInput tags={displayedTags} setTags={(tags) => setEditorState({ ...editorState, tags })} readOnly={isEffectivelyReadOnly} />
                             {!isEffectivelyReadOnly && <TagSuggestions suggestions={suggestedTags} onAddTag={handleAddTag} isLoading={isSuggestingTags} error={tagSuggestionError} />}
                         </div>

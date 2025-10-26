@@ -47,13 +47,14 @@ export interface Template {
 }
 
 export interface ChatMessage {
-    id: string;
+    id:string;
     role: 'user' | 'ai' | 'tool';
     content: string | { name: string; args: any; result?: any; status: 'pending' | 'complete' | 'error' };
     sources?: Note[];
     image?: string;
     status?: 'processing' | 'complete';
     noteId?: string;
+    feedback?: 'up' | 'down';
 }
 
 export type SearchMode = 'KEYWORD' | 'AI';

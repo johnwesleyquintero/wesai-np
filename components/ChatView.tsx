@@ -116,12 +116,16 @@ interface MessageProps {
     isSourcesPinned: boolean;
 }
 
+const feedbackReasons = ['Incorrect', 'Not Helpful', 'Off-topic'];
+
 const Message: React.FC<MessageProps> = ({ message, onDelete, onToggleSources, isSourcesPinned }) => {
     const { showToast } = useToast();
     const { onAddNote, setActiveNoteId } = useStoreContext();
     const { handleFeedback } = useChatContext();
     const { setView } = useUIContext();
     const [isHovered, setIsHovered] = useState(false);
+    const [isProvidingFeedback, setIsProvidingFeedback] = useState(false);
+
 
     const handleSaveAsNote = () => {
         if (typeof message.content === 'string') {
@@ -148,6 +152,11 @@ const Message: React.FC<MessageProps> = ({ message, onDelete, onToggleSources, i
         setView('NOTES');
     };
 
+    const handleSelectReason = (reason: string) => {
+        handleFeedback(message.id, { rating: 'down', tags: [reason] });
+        setIsProvidingFeedback(false);
+    };
+
     const renderContent = () => {
         if (typeof message.content === 'string') {
             return <MarkdownPreview title="" content={message.content} onToggleTask={() => {}} />;
@@ -168,7 +177,6 @@ const Message: React.FC<MessageProps> = ({ message, onDelete, onToggleSources, i
 
     const isUser = message.role === 'user';
     const isAi = message.role === 'ai';
-    const isTool = message.role === 'tool';
     
     return (
         <div 
@@ -190,32 +198,44 @@ const Message: React.FC<MessageProps> = ({ message, onDelete, onToggleSources, i
                 )}
                 {isAi && (
                     <div className="flex items-center gap-2 mt-2 pt-2 border-t border-light-border/50 dark:border-dark-border/50">
-                        {message.sources && message.sources.length > 0 && (
-                            <button onClick={() => onToggleSources(message.sources!)} className="flex items-center gap-1 text-xs font-semibold text-light-text/60 dark:text-dark-text/60 hover:text-light-text dark:hover:text-dark-text">
-                                <DocumentTextIcon className="w-4 h-4" /> {isSourcesPinned ? 'Hide Sources' : 'Show Sources'}
-                            </button>
+                        {isProvidingFeedback ? (
+                            <>
+                                <span className="text-xs font-semibold text-light-text/70 dark:text-dark-text/70">Why?</span>
+                                {feedbackReasons.map(reason => (
+                                    <button key={reason} onClick={() => handleSelectReason(reason)} className="px-2 py-0.5 text-xs rounded-full bg-light-ui dark:bg-dark-ui hover:bg-light-ui-hover dark:hover:bg-dark-ui-hover">{reason}</button>
+                                ))}
+                                <button onClick={() => setIsProvidingFeedback(false)} className="text-xs font-semibold hover:underline">Cancel</button>
+                            </>
+                        ) : (
+                            <>
+                                {message.sources && message.sources.length > 0 && (
+                                    <button onClick={() => onToggleSources(message.sources!)} className="flex items-center gap-1 text-xs font-semibold text-light-text/60 dark:text-dark-text/60 hover:text-light-text dark:hover:text-dark-text">
+                                        <DocumentTextIcon className="w-4 h-4" /> {isSourcesPinned ? 'Hide Sources' : 'Show Sources'}
+                                    </button>
+                                )}
+                                <button onClick={handleSaveAsNote} className="flex items-center gap-1 text-xs font-semibold text-light-text/60 dark:text-dark-text/60 hover:text-light-text dark:hover:text-dark-text">
+                                    <DocumentPlusIcon className="w-4 h-4" /> Save as Note
+                                </button>
+                                <button onClick={handleCopyToClipboard} className="flex items-center gap-1 text-xs font-semibold text-light-text/60 dark:text-dark-text/60 hover:text-light-text dark:hover:text-dark-text">
+                                    <ClipboardDocumentIcon className="w-4 h-4" /> Copy
+                                </button>
+                                <div className="flex-1" />
+                                <button 
+                                    onClick={() => handleFeedback(message.id, { rating: 'up' })}
+                                    disabled={!!message.feedback}
+                                    className={`p-1 rounded-md disabled:opacity-70 ${message.feedback?.rating === 'up' ? 'text-green-500 bg-green-500/10' : 'text-light-text/60 dark:text-dark-text/60 hover:bg-light-ui dark:hover:bg-dark-ui'}`}
+                                >
+                                    <ThumbsUpIcon filled={message.feedback?.rating === 'up'} />
+                                </button>
+                                 <button 
+                                    onClick={() => !message.feedback && setIsProvidingFeedback(true)}
+                                    disabled={!!message.feedback}
+                                    className={`p-1 rounded-md disabled:opacity-70 ${message.feedback?.rating === 'down' ? 'text-red-500 bg-red-500/10' : 'text-light-text/60 dark:text-dark-text/60 hover:bg-light-ui dark:hover:bg-dark-ui'}`}
+                                 >
+                                    <ThumbsDownIcon filled={message.feedback?.rating === 'down'} />
+                                </button>
+                            </>
                         )}
-                        <button onClick={handleSaveAsNote} className="flex items-center gap-1 text-xs font-semibold text-light-text/60 dark:text-dark-text/60 hover:text-light-text dark:hover:text-dark-text">
-                            <DocumentPlusIcon className="w-4 h-4" /> Save as Note
-                        </button>
-                        <button onClick={handleCopyToClipboard} className="flex items-center gap-1 text-xs font-semibold text-light-text/60 dark:text-dark-text/60 hover:text-light-text dark:hover:text-dark-text">
-                            <ClipboardDocumentIcon className="w-4 h-4" /> Copy
-                        </button>
-                        <div className="flex-1" />
-                        <button 
-                            onClick={() => handleFeedback(message.id, 'up')}
-                            disabled={!!message.feedback}
-                            className={`p-1 rounded-md disabled:opacity-70 ${message.feedback === 'up' ? 'text-green-500 bg-green-500/10' : 'text-light-text/60 dark:text-dark-text/60 hover:bg-light-ui dark:hover:bg-dark-ui'}`}
-                        >
-                            <ThumbsUpIcon filled={message.feedback === 'up'} />
-                        </button>
-                         <button 
-                            onClick={() => handleFeedback(message.id, 'down')}
-                            disabled={!!message.feedback}
-                            className={`p-1 rounded-md disabled:opacity-70 ${message.feedback === 'down' ? 'text-red-500 bg-red-500/10' : 'text-light-text/60 dark:text-dark-text/60 hover:bg-light-ui dark:hover:bg-dark-ui'}`}
-                         >
-                            <ThumbsDownIcon filled={message.feedback === 'down'} />
-                        </button>
                     </div>
                 )}
             </div>

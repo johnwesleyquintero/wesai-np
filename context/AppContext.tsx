@@ -500,8 +500,8 @@ const useChatProviderLogic = () => {
         setActiveToolName(null);
         if (chatMode === 'WESCORE_COPILOT') generalChatRef.current = null;
     }, [chatMode]);
-    const handleFeedback = useCallback((id: string, feedback: 'up' | 'down') => {
-        setChatHistories(prev => ({ ...prev, [chatMode]: prev[chatMode].map(msg => msg.id === id ? { ...msg, feedback } : msg) }));
+    const handleFeedback = useCallback((id: string, feedbackData: { rating: 'up' | 'down'; tags?: string[] }) => {
+        setChatHistories(prev => ({ ...prev, [chatMode]: prev[chatMode].map(msg => msg.id === id ? { ...msg, feedback: feedbackData } : msg) }));
     }, [chatMode]);
     
     return useMemo(() => ({

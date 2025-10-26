@@ -9,6 +9,7 @@ WesCore is a centralized cockpit for operators to execute workflows, manage data
 ### Core System & Organization
 - **Secure & Private Cloud Sync:** All data is stored securely in your own Supabase backend and protected by granular security policies. Real-time, authenticated subscriptions keep all your devices perfectly in sync.
 - **Flexible Authentication:** Sign up quickly with an email and password or use the convenient one-click Google Sign-In option.
+- **Comprehensive Onboarding:** A first-session checklist and contextual coach marks guide new users through core features, ensuring a smooth start.
 - **Drag & Drop Organization:** Intuitively organize your workspace by dragging notes and folders to reorder them or nest them within each other. Drop files directly onto folders to import them.
 - **Rich Markdown Editor:** A full-featured Markdown editor with syntax highlighting and a live preview mode that supports tables, images, embedded YouTube/Vimeo videos, and more.
 - **Cloud Image Storage:** Images are uploaded to secure cloud storage, keeping your note content clean and your database lean.
@@ -22,7 +23,7 @@ WesCore is a centralized cockpit for operators to execute workflows, manage data
     - **Knowledge Assistant:** Engage in a conversation with your notes. Ask complex questions and receive synthesized answers with direct links to the source notes.
     - **Service Responder:** Transform your notes into an operational playbook. Paste a customer inquiry, and the AI will use your knowledge base to draft a professional, compliant response.
     - **Amazon Copywriter:** Generates compelling, SEO-optimized Amazon product listing copy based on product info and research notes.
-    - **General Assistant (with Tools):** Your operational co-pilot. This assistant uses **Function Calling** to understand natural language commands and interact with your workspace. It can create, find, read, update, delete, and organize notes and folders on your behalf.
+    - **WesCore Co-pilot (with Tools):** Your operational co-pilot. This assistant uses **Function Calling** to understand natural language commands and interact with your workspace. It can create, find, read, update, delete, and organize notes; manage templates; and even perform bulk find-and-replace operations across your entire workspace.
 - **Proactive Related Notes (AI Co-Pilot):** As you write, the AI analyzes your content in real-time to proactively surface semantically related notes from your knowledge base, helping you discover hidden connections without breaking your flow.
 - **Knowledge Graph Visualization:** A dynamic, interactive force-directed graph that visually represents the connections between your notes, allowing you to explore your web of ideas.
 - **Self-Improving Intelligence & Analytics:**
@@ -39,6 +40,7 @@ WesCore is a centralized cockpit for operators to execute workflows, manage data
 
 ### Productivity and Workflow
 - **Optimized for Performance & Scale:** A highly-optimized Supabase backend with custom database indexing ensures data retrieval is instantaneous. The frontend is built with lazy-loading components for a fast initial load.
+- **Frictionless Demo Mode:** Explore a fully-featured demo workspace instantly, without needing to sign up or provide an API key.
 - **Full Keyboard Navigation:** Navigate the entire sidebar, select notes, and expand folders using only your keyboard for maximum efficiency.
 - **Robust Editing Experience:** A reliable undo/redo system that covers all note attributes (title, content, tags) ensures you never lose an idea.
 - **Command Palette:** Press `Ctrl/Cmd + K` to access nearly every application feature, from creating notes to executing AI actions.
@@ -48,6 +50,7 @@ WesCore is a centralized cockpit for operators to execute workflows, manage data
 - **Full Data Portability:** Export your entire notepad—including all notes, folders, and templates—to a single JSON file for backup. Import a backup file to restore your data.
 - **Note Templates:** Create and save reusable templates for frequently created documents.
 - **Version History:** Automatically saves previous versions of your notes, allowing you to preview or restore them at any time.
+- **In-App Help Center:** A dedicated modal for FAQs and a running changelog to keep users informed.
 - **Light and Dark Themes:** Choose between a light or dark interface for optimal viewing comfort.
 - **Responsive Design:** A seamless experience across desktop, tablet, and mobile devices.
 
@@ -56,14 +59,16 @@ WesCore is a centralized cockpit for operators to execute workflows, manage data
 ### For Users (Hosted App)
 
 1.  **Open the Application:** Navigate to the live application URL.
-2.  **Sign Up / Sign In:** Create an account using your email and password or by signing in with your Google account.
-3.  **Obtain a Gemini API Key:** The AI features require a free API key from Google.
-    - Go to [Google AI Studio](https://ai.google.dev/).
-    - Click "Get API key" and follow the on-screen instructions.
+2.  **Choose Your Path:**
+    *   **Get Started:** Click "Launch Cockpit" and sign up with an email/password or Google to create your own private workspace.
+    *   **Explore:** Click "Explore a Demo" to instantly access a pre-populated workspace with all features enabled, no sign-up required.
+3.  **Obtain a Gemini API Key (if not in Demo):** The AI features in your private workspace require a free API key from Google.
+    *   Go to [Google AI Studio](https://ai.google.dev/).
+    *   Click "Get API key" and follow the on-screen instructions.
 4.  **Configure the Application:**
-    - After logging in, you will be greeted by a welcome screen. Follow the prompt to open Settings.
-    - Click the Settings icon (gear) in the bottom-left corner of the sidebar.
-    - Paste your API key into the "Gemini API Key" field and click "Save Settings".
+    *   You will be guided by a welcome modal to open Settings.
+    *   Click the Settings icon (gear) in the sidebar.
+    *   Paste your API key into the "Gemini API Key" field and click "Save Settings".
 5.  **Begin Writing:** Your API key is saved securely in your browser's local storage, and all AI features are now available for use.
 
 ### For Developers (Running Locally)

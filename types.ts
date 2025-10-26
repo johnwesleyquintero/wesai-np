@@ -54,7 +54,10 @@ export interface ChatMessage {
     image?: string;
     status?: 'processing' | 'complete';
     noteId?: string;
-    feedback?: 'up' | 'down';
+    feedback?: {
+        rating: 'up' | 'down';
+        tags?: string[];
+    };
 }
 
 export type SearchMode = 'KEYWORD' | 'AI';

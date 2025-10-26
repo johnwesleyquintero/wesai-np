@@ -26,6 +26,12 @@ const AccordionItem: React.FC<{ title: string; children: ReactNode }> = ({ title
 const ChangelogContent = () => (
     <div className="space-y-6 text-sm">
         <div>
+            <h3 className="font-bold text-base mb-2">July 27, 2024</h3>
+            <ul className="list-disc pl-5 space-y-1">
+                <li><strong className="font-semibold">Enhanced AI Feedback:</strong> Added one-click reason tags (e.g., "Incorrect") when downvoting an AI chat response to provide more detailed feedback for model improvement.</li>
+            </ul>
+        </div>
+        <div>
             <h3 className="font-bold text-base mb-2">July 26, 2024</h3>
             <ul className="list-disc pl-5 space-y-1">
                 <li><strong className="font-semibold">Help Center Added:</strong> You're looking at it! A new central place for help and to see what's new.</li>

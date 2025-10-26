@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useMemo, useCallback } from 'react';
+import React, { useEffect, useRef, useMemo, useCallback, useState } from 'react';
 import { Note, NoteVersion, Template } from '../types';
 import Toolbar from './Toolbar';
 import TagInput from './TagInput';
@@ -74,6 +74,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
     }, [editorState]);
     
     const prevNoteRef = useRef(note);
+    const [lastWarnedTimestamp, setLastWarnedTimestamp] = useState<string | null>(null);
 
     const [uiState, dispatch] = useNoteEditorReducer();
     const {
@@ -152,6 +153,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         resetAiSuggestions();
         setActiveSpellingError(null);
         hasAutoTitledRef.current = false;
+        setLastWarnedTimestamp(null);
         
         if (note.title === 'Untitled Note' && note.content === '') {
             setTimeout(() => titleInputRef.current?.focus(), 100);
@@ -178,6 +180,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
             });
 
             if (isSelfUpdate) {
+                setLastWarnedTimestamp(null); // Reset warning on self-update
                 prevNoteRef.current = note; // Update ref and continue
                 return;
             }
@@ -192,13 +195,18 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
 
             if (hasLocalChanges) {
                 // User is actively editing. Warn them but preserve their work.
-                showToast({
-                    message: `"${note.title}" was updated in another tab. Your next save will overwrite.`,
-                    type: 'info',
-                });
+                // Only show toast if we haven't already warned for this specific update.
+                if (lastWarnedTimestamp !== note.updatedAt) {
+                    showToast({
+                        message: `"${note.title}" was updated in another tab. Your next save will overwrite.`,
+                        type: 'info',
+                    });
+                    setLastWarnedTimestamp(note.updatedAt);
+                }
             } else {
                 // Editor is "clean", so it's safe to load the external changes.
                 resetEditorState({ title: note.title, content: note.content, tags: note.tags });
+                setLastWarnedTimestamp(null); // Reset warning state on successful sync
                 showToast({
                     message: `"${note.title}" was synced from an external change.`,
                     type: 'info',
@@ -208,7 +216,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
 
         // Update the ref for the next comparison.
         prevNoteRef.current = note;
-    }, [note, resetEditorState, showToast]);
+    }, [note, resetEditorState, showToast, lastWarnedTimestamp]);
 
 
     // Auto-save and status handling logic

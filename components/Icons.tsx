@@ -305,6 +305,12 @@ export const PlusIcon: React.FC<IconProps> = (props) => (
     </svg>
 )
 
+export const QuestionMarkCircleIcon: React.FC<IconProps> = (props) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5" {...props}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" />
+    </svg>
+)
+
 export const RocketLaunchIcon: React.FC<IconProps> = (props) => (
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6" {...props}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M15.59 14.37a6 6 0 01-5.84 7.38v-4.82m5.84-2.56a14.953 14.953 0 00-5.84-2.56m0 0a14.953 14.953 0 01-5.84 2.56m5.84-2.56v-4.82a6 6 0 015.84-7.38v4.82m-5.84 7.38h-4.82a6 6 0 01-7.38-5.84h4.82m12.38 0l-1.38-1.38m0 0l-1.38 1.38m1.38-1.38v3.47m-4.82-3.47v3.47m0 0l1.38 1.38m-1.38-1.38l1.38-1.38m2.07-5.13l-1.38-1.38m0 0l-1.38 1.38m1.38-1.38v3.47" />

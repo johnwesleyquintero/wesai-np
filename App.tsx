@@ -1,6 +1,3 @@
-
-
-
 import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Sidebar from './components/Sidebar';
 import { useStoreContext } from './context/AppContext';
@@ -31,6 +28,7 @@ const WelcomeModal = React.lazy(() => import('./components/WelcomeModal'));
 const AnalyticsDashboard = React.lazy(() => import('./components/AnalyticsDashboard'));
 const TrendAnalysisDashboard = React.lazy(() => import('./components/TrendAnalysisDashboard'));
 const GraphView = React.lazy(() => import('./components/GraphView'));
+const HelpModal = React.lazy(() => import('./components/HelpModal'));
 
 
 const WELCOME_SCREEN_SIDEBAR_WIDTH_KEY = 'wesai-sidebar-width';
@@ -48,6 +46,7 @@ function AppContent() {
         isSettingsOpen, setIsSettingsOpen, isCommandPaletteOpen, setIsCommandPaletteOpen,
         isSmartFolderModalOpen, setIsSmartFolderModalOpen, smartFolderToEdit,
         isWelcomeModalOpen, closeWelcomeModal,
+        isHelpModalOpen, setIsHelpModalOpen,
         contextMenu, setContextMenu,
         isApiKeyMissing,
         isSidebarCollapsed,
@@ -193,6 +192,8 @@ function AppContent() {
                 />
 
                 <WelcomeModal isOpen={isWelcomeModalOpen} onClose={closeWelcomeModal} />
+
+                <HelpModal isOpen={isHelpModalOpen} onClose={() => setIsHelpModalOpen(false)} />
             </Suspense>
 
             <ConfirmationModal

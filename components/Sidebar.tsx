@@ -9,7 +9,8 @@ import {
     ChartBarIcon,
     TrendingUpIcon,
     GraphIcon,
-    DocumentTextIcon
+    DocumentTextIcon,
+    QuestionMarkCircleIcon
 } from './Icons';
 import SidebarNode from './SidebarNode';
 import Highlight from './Highlight';
@@ -107,7 +108,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         theme, toggleTheme, isMobileView, isSidebarOpen, setIsSidebarOpen, view, setView,
         isAiRateLimited, openSmartFolderModal, onOpenContextMenu, openSettings, isApiKeyMissing,
         isSidebarCollapsed, toggleSidebarCollapsed: onToggleCollapsed, setIsCommandPaletteOpen,
-        showConfirmation,
+        showConfirmation, openHelpModal,
     } = useUIContext();
     
     const rootDropRef = useRef<HTMLDivElement>(null);
@@ -270,30 +271,36 @@ const Sidebar: React.FC<SidebarProps> = ({
                 </button>
             )}
         >
-            {smartCollections.map(sc => (
-                <div key={sc.id} 
-                    className={`group flex items-center justify-between w-full text-left rounded-md px-2 py-1.5 my-0.5 text-sm cursor-pointer hover:bg-light-background dark:hover:bg-dark-background`}
-                     onClick={() => onActivateSmartCollection(sc)}
-                     onContextMenu={(e) => onOpenContextMenu(e, [
-                         { label: 'Edit Smart Folder', action: () => openSmartFolderModal(sc), icon: <PencilSquareIcon /> },
-                         { 
-                             label: 'Delete Smart Folder', 
-                             action: () => showConfirmation({
-                                title: "Delete Smart Folder",
-                                message: `Are you sure you want to delete the smart folder "${sc.name}"? This will not delete any notes.`,
-                                onConfirm: () => handleDeleteSmartCollectionConfirm(sc),
-                             }), 
-                             isDestructive: true, 
-                             icon: <TrashIcon /> 
-                        },
-                     ])}
-                >
-                     <div className="flex items-center truncate">
-                        <LightBulbIcon className="w-4 h-4 mr-2 flex-shrink-0 text-light-primary dark:text-dark-primary" />
-                        <span className="truncate">{sc.name}</span>
+            {smartCollections.length > 0 ? (
+                smartCollections.map(sc => (
+                    <div key={sc.id} 
+                        className={`group flex items-center justify-between w-full text-left rounded-md px-2 py-1.5 my-0.5 text-sm cursor-pointer hover:bg-light-background dark:hover:bg-dark-background`}
+                         onClick={() => onActivateSmartCollection(sc)}
+                         onContextMenu={(e) => onOpenContextMenu(e, [
+                             { label: 'Edit Smart Folder', action: () => openSmartFolderModal(sc), icon: <PencilSquareIcon /> },
+                             { 
+                                 label: 'Delete Smart Folder', 
+                                 action: () => showConfirmation({
+                                    title: "Delete Smart Folder",
+                                    message: `Are you sure you want to delete the smart folder "${sc.name}"? This will not delete any notes.`,
+                                    onConfirm: () => handleDeleteSmartCollectionConfirm(sc),
+                                 }), 
+                                 isDestructive: true, 
+                                 icon: <TrashIcon /> 
+                            },
+                         ])}
+                    >
+                         <div className="flex items-center truncate">
+                            <LightBulbIcon className="w-4 h-4 mr-2 flex-shrink-0 text-light-primary dark:text-dark-primary" />
+                            <span className="truncate">{sc.name}</span>
+                        </div>
                     </div>
-                </div>
-            ))}
+                ))
+            ) : (
+                <p className="px-2 py-1 text-xs text-light-text/50 dark:text-dark-text/50">
+                    No smart folders. Click the '+' icon to create one.
+                </p>
+            )}
         </CollapsibleSection>
     );
     
@@ -387,10 +394,13 @@ const Sidebar: React.FC<SidebarProps> = ({
                         placeholder={activeSmartCollection ? activeSmartCollection.query : "Search notes..."}
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full pl-9 pr-4 py-2 text-sm bg-light-background dark:bg-dark-background rounded-md border border-light-border dark:border-dark-border focus:ring-1 focus:ring-light-primary focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full pl-9 pr-9 py-2 text-sm bg-light-background dark:bg-dark-background rounded-md border border-light-border dark:border-dark-border focus:ring-1 focus:ring-light-primary focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
                         disabled={!!activeSmartCollection}
                     />
                     <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-light-text/50 dark:text-dark-text/50" />
+                    {isAiSearching && (
+                        <SparklesIcon className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-light-primary dark:text-dark-primary animate-spin" />
+                    )}
                 </div>
                 <div className="flex items-center mt-2 text-xs">
                     <div className="flex w-full bg-light-background dark:bg-dark-background p-0.5 rounded-md border border-light-border dark:border-dark-border">
@@ -501,6 +511,13 @@ const Sidebar: React.FC<SidebarProps> = ({
                     >
                         <Cog6ToothIcon />
                     </FooterButton>
+                     <FooterButton
+                        onClick={openHelpModal}
+                        tooltip="Help & Changelog"
+                        tooltipPosition="top"
+                    >
+                        <QuestionMarkCircleIcon />
+                    </FooterButton>
                 </div>
             </div>
         </>
@@ -568,6 +585,12 @@ const Sidebar: React.FC<SidebarProps> = ({
             </FooterButton>
             <FooterButton onClick={openSettings} tooltip="Settings" hasIndicator={isApiKeyMissing}>
                 <Cog6ToothIcon />
+            </FooterButton>
+            <FooterButton
+                onClick={openHelpModal}
+                tooltip="Help & Changelog"
+            >
+                <QuestionMarkCircleIcon />
             </FooterButton>
         </div>
       </div>

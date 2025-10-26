@@ -32,6 +32,7 @@ export const useUIProviderLogic = () => {
     const [smartFolderToEdit, setSmartFolderToEdit] = useState<SmartCollection | null>(null);
     const [contextMenu, setContextMenu] = useState<{ x: number; y: number; items: ContextMenuItem[] } | null>(null);
     const [isWelcomeModalOpen, setIsWelcomeModalOpen] = useState(false);
+    const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
     const [confirmation, setConfirmation] = useState<ConfirmationState>(initialConfirmationState);
     const { apiKey } = useApiKey();
 
@@ -91,6 +92,7 @@ export const useUIProviderLogic = () => {
     const openSmartFolderModal = useCallback((folder: SmartCollection | null) => { setSmartFolderToEdit(folder); setIsSmartFolderModalOpen(true); }, []);
     const onOpenContextMenu = useCallback((e: React.MouseEvent, items: ContextMenuItem[]) => { e.preventDefault(); e.stopPropagation(); setContextMenu({ x: e.clientX, y: e.clientY, items }); }, []);
     const closeWelcomeModal = useCallback(() => { localStorage.setItem('wesai-seen-welcome', 'true'); setIsWelcomeModalOpen(false); }, []);
+    const openHelpModal = useCallback(() => setIsHelpModalOpen(true), []);
     
     const showConfirmation = useCallback((options: ConfirmationOptions) => {
         setConfirmation({ ...options, isOpen: true });
@@ -109,6 +111,7 @@ export const useUIProviderLogic = () => {
         setContextMenu, onOpenContextMenu, isWelcomeModalOpen, closeWelcomeModal, isApiKeyMissing: !apiKey,
         draggingItemId, setDraggingItemId,
         confirmation, showConfirmation, hideConfirmation,
+        isHelpModalOpen, setIsHelpModalOpen, openHelpModal,
     }), [
         theme, toggleTheme, view, setView, isMobileView, isSidebarOpen, setIsSidebarOpen,
         onToggleSidebar, isSidebarCollapsed, toggleSidebarCollapsed,
@@ -118,6 +121,7 @@ export const useUIProviderLogic = () => {
         setContextMenu, onOpenContextMenu, isWelcomeModalOpen, closeWelcomeModal, apiKey,
         draggingItemId, setDraggingItemId,
         confirmation, showConfirmation, hideConfirmation,
+        isHelpModalOpen, setIsHelpModalOpen, openHelpModal,
     ]);
     
     return uiValue;

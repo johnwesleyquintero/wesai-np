@@ -9,9 +9,10 @@ interface SmartFolderModalProps {
     onClose: () => void;
     folderToEdit: SmartCollection | null;
     onSave: (data: Omit<SmartCollection, 'id'>) => void;
+    initialQuery?: string;
 }
 
-const SmartFolderModal: React.FC<SmartFolderModalProps> = ({ isOpen, onClose, folderToEdit, onSave }) => {
+const SmartFolderModal: React.FC<SmartFolderModalProps> = ({ isOpen, onClose, folderToEdit, onSave, initialQuery }) => {
     const [name, setName] = useState('');
     const [query, setQuery] = useState('');
     const nameInputRef = useRef<HTMLInputElement>(null);
@@ -26,11 +27,11 @@ const SmartFolderModal: React.FC<SmartFolderModalProps> = ({ isOpen, onClose, fo
                 setQuery(folderToEdit.query);
             } else {
                 setName('');
-                setQuery('');
+                setQuery(initialQuery || '');
             }
             setTimeout(() => nameInputRef.current?.focus(), 100);
         }
-    }, [isOpen, folderToEdit]);
+    }, [isOpen, folderToEdit, initialQuery]);
 
     const handleSave = () => {
         if (name.trim() && query.trim()) {

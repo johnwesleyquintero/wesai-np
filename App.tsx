@@ -44,7 +44,7 @@ function AppContent() {
     const {
         isMobileView, setIsSidebarOpen, view, setView,
         isSettingsOpen, setIsSettingsOpen, isCommandPaletteOpen, setIsCommandPaletteOpen,
-        isSmartFolderModalOpen, setIsSmartFolderModalOpen, smartFolderToEdit,
+        isSmartFolderModalOpen, setIsSmartFolderModalOpen, smartFolderToEdit, initialSmartFolderQuery,
         isWelcomeModalOpen, closeWelcomeModal,
         isHelpModalOpen, setIsHelpModalOpen,
         contextMenu, setContextMenu,
@@ -188,6 +188,7 @@ function AppContent() {
                     isOpen={isSmartFolderModalOpen}
                     onClose={() => setIsSmartFolderModalOpen(false)}
                     folderToEdit={smartFolderToEdit}
+                    initialQuery={initialSmartFolderQuery}
                     onSave={handleSaveSmartFolder}
                 />
 

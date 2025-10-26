@@ -30,6 +30,7 @@ export const useUIProviderLogic = () => {
     const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
     const [isSmartFolderModalOpen, setIsSmartFolderModalOpen] = useState(false);
     const [smartFolderToEdit, setSmartFolderToEdit] = useState<SmartCollection | null>(null);
+    const [initialSmartFolderQuery, setInitialSmartFolderQuery] = useState<string | undefined>();
     const [contextMenu, setContextMenu] = useState<{ x: number; y: number; items: ContextMenuItem[] } | null>(null);
     const [isWelcomeModalOpen, setIsWelcomeModalOpen] = useState(false);
     const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
@@ -89,7 +90,11 @@ export const useUIProviderLogic = () => {
     const toggleSidebarCollapsed = useCallback(() => setIsSidebarCollapsed(prev => !prev), []);
     const onToggleSidebar = useCallback(() => setIsSidebarOpen(p => !p), []);
     const openSettings = useCallback(() => setIsSettingsOpen(true), []);
-    const openSmartFolderModal = useCallback((folder: SmartCollection | null) => { setSmartFolderToEdit(folder); setIsSmartFolderModalOpen(true); }, []);
+    const openSmartFolderModal = useCallback((folder: SmartCollection | null, query?: string) => {
+        setSmartFolderToEdit(folder);
+        setInitialSmartFolderQuery(query);
+        setIsSmartFolderModalOpen(true);
+    }, []);
     const onOpenContextMenu = useCallback((e: React.MouseEvent, items: ContextMenuItem[]) => { e.preventDefault(); e.stopPropagation(); setContextMenu({ x: e.clientX, y: e.clientY, items }); }, []);
     const closeWelcomeModal = useCallback(() => { localStorage.setItem('wesai-seen-welcome', 'true'); setIsWelcomeModalOpen(false); }, []);
     const openHelpModal = useCallback(() => setIsHelpModalOpen(true), []);
@@ -112,6 +117,7 @@ export const useUIProviderLogic = () => {
         draggingItemId, setDraggingItemId,
         confirmation, showConfirmation, hideConfirmation,
         isHelpModalOpen, setIsHelpModalOpen, openHelpModal,
+        initialSmartFolderQuery,
     }), [
         theme, toggleTheme, view, setView, isMobileView, isSidebarOpen, setIsSidebarOpen,
         onToggleSidebar, isSidebarCollapsed, toggleSidebarCollapsed,
@@ -122,6 +128,7 @@ export const useUIProviderLogic = () => {
         draggingItemId, setDraggingItemId,
         confirmation, showConfirmation, hideConfirmation,
         isHelpModalOpen, setIsHelpModalOpen, openHelpModal,
+        initialSmartFolderQuery,
     ]);
     
     return uiValue;

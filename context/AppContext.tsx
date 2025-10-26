@@ -241,8 +241,9 @@ const useStoreProviderLogic = () => {
         const noteMap = new Map(notes.map(note => [note.id, { ...note, children: [] as TreeNode[] }]));
         const collectionMap = new Map(collections.map(c => [c.id, { ...c, type: 'collection' as const, children: [] as TreeNode[] }]));
         const tree: TreeNode[] = [];
-        // FIX: Changed constructor to `new Map([...map1, ...map2])` to help TypeScript infer the correct union type for the map values.
-        const allItemsMap: Map<string, TreeNode> = new Map([...noteMap, ...collectionMap]);
+        // FIX: The original Map constructor had a type inference issue with the spread of two different map types.
+        // Casting the argument to `[string, TreeNode][]` explicitly tells TypeScript the correct type, resolving the overload error.
+        const allItemsMap: Map<string, TreeNode> = new Map([...noteMap, ...collectionMap] as [string, TreeNode][]);
         allItemsMap.forEach(item => {
             if (item.parentId === null) tree.push(item);
             else {

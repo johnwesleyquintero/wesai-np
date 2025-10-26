@@ -53,7 +53,7 @@ export const useStore = (user: User | undefined) => {
         setLoading(true);
         try {
             const [notesRes, collectionsRes, smartCollectionsRes, templatesRes] = await Promise.all([
-                supabase.rpc('get_notes_with_history', { p_user_id: user.id }),
+                supabase.from('notes').select('*').eq('user_id', user.id),
                 supabase.from('collections').select('*').eq('user_id', user.id),
                 supabase.from('smart_collections').select('*').eq('user_id', user.id),
                 supabase.from('templates').select('*').eq('user_id', user.id),

@@ -11,7 +11,7 @@ const ChatHeader: React.FC = () => {
     const modes: { id: ChatMode; name: string; description: string }[] = [
         { id: 'ASSISTANT', name: 'Assistant', description: 'Your knowledge co-pilot. Answers questions based on your notes.' },
         { id: 'RESPONDER', name: 'Responder', description: 'Drafts professional customer service responses using your notes as a knowledge base.' },
-        { id: 'GENERAL', name: 'General', description: 'A general-purpose AI that can help you create and manage your notes.' },
+        { id: 'WESCORE_COPILOT', name: 'WesCore Co-pilot', description: 'Your operational co-pilot. Creates, finds, and manages notes on your behalf.' },
         { id: 'AMAZON', name: 'Amazon Copywriter', description: 'Generates Amazon product listing copy based on product info and research notes.' },
     ];
 
@@ -223,7 +223,7 @@ const ChatInput: React.FC = () => {
             case 'RESPONDER':
                 onGenerateServiceResponse(input, image || undefined);
                 break;
-            case 'GENERAL':
+            case 'WESCORE_COPILOT':
                 onSendGeneralMessage(input, image || undefined);
                 break;
             case 'AMAZON':
@@ -266,7 +266,7 @@ const ChatInput: React.FC = () => {
     const placeholderText = {
         ASSISTANT: 'Ask a question about your notes...',
         RESPONDER: 'Paste customer query here...',
-        GENERAL: 'Ask me to create or manage notes...',
+        WESCORE_COPILOT: "Command your co-pilot... (e.g., 'create a note about Q4 planning')",
         AMAZON: 'Paste product info here...',
     }[chatMode];
 

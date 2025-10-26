@@ -2,42 +2,47 @@
 
 **One cockpit, endless AI-powered workflows.**
 
-WesCore is the evolution of WesAI NP — a centralized cockpit for operators to execute workflows, manage data, and automate tasks. Powered by **WesAI**, it preserves legacy workflows while scaling into a full platform ecosystem. It combines a fast, responsive interface with a multi-mode AI assistant powered by the Google Gemini API. All your data is securely stored in your own cloud backend, making it accessible across all your devices.
+WesCore is a centralized cockpit for operators to execute workflows, manage data, and automate tasks. It combines a fast, responsive interface with a multi-mode AI assistant powered by the Google Gemini API. All your data is securely stored in your own cloud backend, making it accessible across all your devices.
 
 ## Key Features
 
 ### Core System & Organization
-- **Secure & Private Cloud Sync:** All data is stored securely in your own cloud backend and protected by granular security policies, ensuring only you can access your notes. Real-time, authenticated subscriptions keep all your devices perfectly in sync without compromising privacy.
+- **Secure & Private Cloud Sync:** All data is stored securely in your own Supabase backend and protected by granular security policies. Real-time, authenticated subscriptions keep all your devices perfectly in sync.
 - **Flexible Authentication:** Sign up quickly with an email and password or use the convenient one-click Google Sign-In option.
-- **Drag & Drop Organization:** Intuitively organize your workspace by dragging notes and folders to reorder them or nest them within each other.
-- **Rich Markdown Editor:** A full-featured Markdown editor with syntax highlighting and a live preview mode that supports tables, images, embedded videos, and more.
+- **Drag & Drop Organization:** Intuitively organize your workspace by dragging notes and folders to reorder them or nest them within each other. Drop files directly onto folders to import them.
+- **Rich Markdown Editor:** A full-featured Markdown editor with syntax highlighting and a live preview mode that supports tables, images, embedded YouTube/Vimeo videos, and more.
 - **Cloud Image Storage:** Images are uploaded to secure cloud storage, keeping your note content clean and your database lean.
-- **Smart Folders:** Create dynamic, saved searches that automatically display notes matching a specific AI-powered query.
+- **Smart Folders:** Create dynamic, saved searches that automatically display notes matching a specific AI-powered query (e.g., "all notes about marketing from the last month").
 - **Bi-Directional Linking:** Connect ideas by linking notes using `[[note-id|display text]]` syntax. A "Linked Mentions" section automatically displays all backlinks to the current note.
 - **Tagging System:** Assign multiple tags to notes for flexible, cross-folder organization.
+- **PWA Ready:** Installable as a Progressive Web App with offline caching of core assets for faster load times and a native-like experience.
 
 ### AI-Powered by Google Gemini
-- **Multimodal Input:** Provide visual context to the AI by attaching images to your prompts in any assistant mode via drag-and-drop or a file picker. The AI analyzes the image alongside your text for more accurate and relevant responses.
-- **Multi-Mode AI Assistant:** A versatile AI assistant with three distinct modes for different tasks:
+- **Multi-Mode AI Assistant:** A versatile AI assistant with four distinct modes for different tasks:
     - **Knowledge Assistant:** Engage in a conversation with your notes. Ask complex questions and receive synthesized answers with direct links to the source notes.
     - **Service Responder:** Transform your notes into an operational playbook. Paste a customer inquiry, and the AI will use your knowledge base to draft a professional, compliant response.
-    - **General Assistant:** Your operational co-pilot. The General Assistant understands natural language commands to create, find, read, update, delete, and organize notes and folders using integrated tools.
-- **Proactive Related Notes (AI Co-Pilot):** As you write, the AI analyzes your content in real-time to proactively surface semantically related notes from your knowledge base, helping you discover hidden connections and build a richer web of ideas without breaking your flow.
-- **Self-Improving Intelligence:** A foundational feedback loop makes the AI smarter over time. The system logs every suggestion "impression" and user "click," creating an invaluable dataset to measure relevance and continuously refine the AI's performance.
-- **Trend Analysis Dashboard:** Visualize conceptual clusters, "hot topics," and the most frequent connections between your ideas, giving you a strategic overview of your knowledge base.
-- **AI-Powered Consolidation:** From the Trend Analysis dashboard, generate an AI-powered consolidated note from any frequently linked pair of notes, helping you synthesize ideas and reduce redundancy.
+    - **Amazon Copywriter:** Generates compelling, SEO-optimized Amazon product listing copy based on product info and research notes.
+    - **General Assistant (with Tools):** Your operational co-pilot. This assistant uses **Function Calling** to understand natural language commands and interact with your workspace. It can create, find, read, update, delete, and organize notes and folders on your behalf.
+- **Proactive Related Notes (AI Co-Pilot):** As you write, the AI analyzes your content in real-time to proactively surface semantically related notes from your knowledge base, helping you discover hidden connections without breaking your flow.
+- **Knowledge Graph Visualization:** A dynamic, interactive force-directed graph that visually represents the connections between your notes, allowing you to explore your web of ideas.
+- **Self-Improving Intelligence & Analytics:**
+    - **CTR Analytics:** A foundational feedback loop makes the AI smarter. The system logs every suggestion "impression" and user "click," providing a dashboard to measure relevance and continuously refine the AI's performance.
+    - **Trend Analysis Dashboard:** Visualize conceptual clusters, "hot topics," and the most frequent connections between your ideas, giving you a strategic overview of your knowledge base.
+    - **AI-Powered Consolidation:** From the Trend Analysis dashboard, generate an AI-powered consolidated note from any frequently linked pair of notes, helping you synthesize ideas and reduce redundancy.
 - **Semantic Search:** Go beyond keyword matching to find notes based on their conceptual meaning.
-- **Inline AI Assistant:** Select any text to fix spelling, adjust tone, expand or shorten, and simplify language.
-- **Real-time AI Spell Check:** Highlights potential spelling errors as you type and offers AI-powered suggestions for corrections.
-- **Content Generation:** Automatically suggest descriptive titles and relevant tags based on your note's content.
-- **Summarization & Action Items:** Generate a concise summary and extract a checklist of action items from your note with a single command.
+- **Inline AI Assistant:** Select any text to fix spelling, adjust tone (professional, casual), expand or shorten content, and simplify language.
+- **Real-time AI Spell Check:** Highlights potential spelling errors as you type and offers AI-powered suggestions for corrections, without interrupting your flow.
+- **Content Generation & Summarization:**
+    - Automatically suggest descriptive titles and relevant tags based on your note's content.
+    - Generate a concise summary and extract a checklist of action items from your note with a single command.
+- **Multimodal Input:** Provide visual context to the AI by attaching images to your prompts in any assistant mode via drag-and-drop or a file picker.
 
 ### Productivity and Workflow
-- **Optimized for Performance & Scale:** A highly-optimized Supabase backend with custom database indexing ensures data retrieval is instantaneous, providing a snappy experience even as your knowledge base grows to thousands of notes. The frontend is built with lazy-loading components for a fast initial load.
+- **Optimized for Performance & Scale:** A highly-optimized Supabase backend with custom database indexing ensures data retrieval is instantaneous. The frontend is built with lazy-loading components for a fast initial load.
 - **Full Keyboard Navigation:** Navigate the entire sidebar, select notes, and expand folders using only your keyboard for maximum efficiency.
 - **Robust Editing Experience:** A reliable undo/redo system that covers all note attributes (title, content, tags) ensures you never lose an idea.
 - **Command Palette:** Press `Ctrl/Cmd + K` to access nearly every application feature, from creating notes to executing AI actions.
-- **Slash Commands:** Type `/` in the editor to quickly insert headings, lists, to-do items, and more.
+- **Slash Commands:** Type `/` in the editor to quickly insert headings, lists, to-do items, dividers, and trigger AI actions.
 - **Collapsible Sidebar:** Maximize your writing space on desktop by collapsing the sidebar to a compact, icon-only view.
 - **Drag & Drop Import:** Drag text or markdown files directly into the editor or onto a folder in the sidebar to instantly create new notes.
 - **Full Data Portability:** Export your entire notepad—including all notes, folders, and templates—to a single JSON file for backup. Import a backup file to restore your data.
@@ -73,16 +78,16 @@ WesCore is the evolution of WesAI NP — a centralized cockpit for operators to 
     npm install
     npm run dev
     ```
-3.  Follow the "For Users" guide above to sign up and add your Gemini API key within the running application. The app is pre-configured to connect to a development Supabase instance.
+3.  Follow the "For Users" guide above to sign up and add your Gemini API key within the running application. The app is pre-configured to connect to the production Supabase instance.
 
 ## Technology Stack
-- **Frontend:** React, TypeScript, Tailwind CSS
+- **Frontend:** React, TypeScript, Vite, Tailwind CSS
 - **Backend & Database:** Supabase (Authentication, PostgreSQL, Realtime Subscriptions, Storage)
 - **AI Integration:** Google Gemini API (`@google/genai`)
 - **State Management:** React Hooks and Context API. The application features a clean, maintainable architecture built on custom hooks for logic encapsulation and reducers for predictable state management.
 
 ## Legacy & Philosophy
 
-The WesCore platform is built on the foundation of **WesAI NP**, an operator-first tool designed from a core philosophy of turning challenges into opportunities, prioritizing competence over conventional approaches, and building robust systems for long-term strategic independence.
+The WesCore platform is built on the foundation of an operator-first philosophy: turning challenges into opportunities, prioritizing competence over conventional approaches, and building robust systems for long-term strategic independence.
 
-This platform preserves the raw, powerful "cockpit" feel that values results and efficiency above all else. It is a sovereign, intelligent tool for turning your ideas into action.
+This platform preserves a raw, powerful "cockpit" feel that values results and efficiency above all else. It is a sovereign, intelligent tool for turning your ideas into action.

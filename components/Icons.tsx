@@ -178,6 +178,12 @@ export const GripVerticalIcon: React.FC<IconProps> = (props) => (
     </svg>
 )
 
+export const HashtagIcon: React.FC<IconProps> = (props) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5" {...props}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M5.25 8.25h13.5m-13.5 7.5h13.5m-1.5-15L5.25 19.5m9-15L9 19.5" />
+    </svg>
+)
+
 export const Heading1Icon: React.FC<IconProps> = (props) => (
   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5" {...props}>
     <path d="M4 12h8" />

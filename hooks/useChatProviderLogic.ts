@@ -17,19 +17,24 @@ export const useChatProviderLogic = () => {
     const [chatHistories, setChatHistories] = useState<Record<ChatMode, ChatMessage[]>>(() => {
         try {
             const saved = localStorage.getItem(CHAT_HISTORIES_STORAGE_KEY);
-            const initial = { ASSISTANT: [], RESPONDER: [], GENERAL: [], AMAZON: [] };
+            const initial = { ASSISTANT: [], RESPONDER: [], WESCORE_COPILOT: [], AMAZON: [] };
             if (saved) {
                 const parsed = JSON.parse(saved);
+                // Simple migration for existing users
+                if (parsed.GENERAL && !parsed.WESCORE_COPILOT) {
+                    parsed.WESCORE_COPILOT = parsed.GENERAL;
+                    delete parsed.GENERAL;
+                }
                 return {
                     ASSISTANT: Array.isArray(parsed.ASSISTANT) ? parsed.ASSISTANT : [],
                     RESPONDER: Array.isArray(parsed.RESPONDER) ? parsed.RESPONDER : [],
-                    GENERAL: Array.isArray(parsed.GENERAL) ? parsed.GENERAL : [],
+                    WESCORE_COPILOT: Array.isArray(parsed.WESCORE_COPILOT) ? parsed.WESCORE_COPILOT : [],
                     AMAZON: Array.isArray(parsed.AMAZON) ? parsed.AMAZON : [],
                 };
             }
             return initial;
         } catch {
-            return { ASSISTANT: [], RESPONDER: [], GENERAL: [], AMAZON: [] };
+            return { ASSISTANT: [], RESPONDER: [], WESCORE_COPILOT: [], AMAZON: [] };
         }
     });
 
@@ -46,7 +51,7 @@ export const useChatProviderLogic = () => {
     }, [chatHistories]);
 
     const setChatMode = useCallback((mode: ChatMode) => {
-        if (chatMode === 'GENERAL' && mode !== 'GENERAL') {
+        if (chatMode === 'WESCORE_COPILOT' && mode !== 'WESCORE_COPILOT') {
             generalChatRef.current = null;
         }
         setInternalChatMode(mode);
@@ -332,7 +337,7 @@ ${sourceNotes.length > 0 ? sourceNotes.map(n => `--- NOTE: ${n.title} ---\n${n.c
         setChatError(null);
         setChatStatus('idle');
         setActiveToolName(null);
-        if (chatMode === 'GENERAL') {
+        if (chatMode === 'WESCORE_COPILOT') {
             generalChatRef.current = null;
         }
     }, [chatMode]);

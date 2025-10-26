@@ -10,7 +10,7 @@ import json from 'react-syntax-highlighter/dist/esm/languages/prism/json';
 import bash from 'react-syntax-highlighter/dist/esm/languages/prism/bash';
 import markdown from 'react-syntax-highlighter/dist/esm/languages/prism/markdown';
 import { useStoreContext, useUIContext } from '../context/AppContext';
-import { InformationCircleIcon, LightBulbIcon, ExclamationTriangleIcon, ExclamationCircleIcon } from './Icons';
+import { InformationCircleIcon, LightBulbIcon, ExclamationTriangleIcon, ExclamationCircleIcon, ClipboardDocumentIcon, CheckIcon } from './Icons';
 
 SyntaxHighlighter.registerLanguage('jsx', jsx);
 SyntaxHighlighter.registerLanguage('tsx', typescript);
@@ -22,6 +22,38 @@ SyntaxHighlighter.registerLanguage('sh', bash);
 SyntaxHighlighter.registerLanguage('markdown', markdown);
 SyntaxHighlighter.registerLanguage('md', markdown);
 
+
+const CodeBlockWithCopy: React.FC<{ children: React.ReactNode, className?: string }> = ({ children, className }) => {
+    const [copied, setCopied] = useState(false);
+
+    const handleCopy = () => {
+        const codeString = String(children).replace(/\n$/, '');
+        navigator.clipboard.writeText(codeString).then(() => {
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        }, (err) => {
+            console.error('Failed to copy code to clipboard:', err);
+        });
+    };
+    
+    const match = /language-(\w+)/.exec(className || '');
+    if (!match) return null;
+
+    return (
+        <div className="code-block-wrapper markdown-preview">
+            <button onClick={handleCopy} className="copy-code-btn" aria-label="Copy code">
+                {copied ? (
+                    <span className="flex items-center gap-1 text-green-500 dark:text-green-400"><CheckIcon className="w-4 h-4" /> Copied</span>
+                ) : (
+                    <span className="flex items-center gap-1"><ClipboardDocumentIcon className="w-4 h-4" /> Copy</span>
+                )}
+            </button>
+            <SyntaxHighlighter style={okaidia} language={match[1]} PreTag="div">
+                {String(children).replace(/\n$/, '')}
+            </SyntaxHighlighter>
+        </div>
+    );
+};
 
 const getYoutubeVideoId = (url: string) => {
     const regex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
@@ -168,9 +200,7 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({ title, content, onTog
         code({ node, className, children, ...props }: any) {
             const match = /language-(\w+)/.exec(className || '');
             return match ? (
-                <SyntaxHighlighter style={okaidia} language={match[1]} PreTag="div" {...props}>
-                    {String(children).replace(/\n$/, '')}
-                </SyntaxHighlighter>
+                <CodeBlockWithCopy className={className}>{children}</CodeBlockWithCopy>
             ) : (
                 <code className="bg-light-ui dark:bg-dark-ui text-red-500 rounded px-1 py-0.5 font-mono text-sm" {...props}>
                     {children}

@@ -31,7 +31,7 @@ const CoachMark: React.FC<CoachMarkProps> = ({ targetSelector, title, content, o
                     top: { top: targetRect.top - popoverRect.height - margin, left: targetRect.left + (targetRect.width / 2) - (popoverRect.width / 2), pos: 'top' as const },
                     bottom: { top: targetRect.bottom + margin, left: targetRect.left + (targetRect.width / 2) - (popoverRect.width / 2), pos: 'bottom' as const },
                     right: { top: targetRect.top + (targetRect.height / 2) - (popoverRect.height / 2), left: targetRect.right + margin, pos: 'right' as const },
-                    left: { top: targetRect.top + (targetRect.height / 2) - (popoverRect.height / 2), left: targetRect.left - popoverRect.width - margin, pos: 'left' as const },
+                    left: { top: targetRect.top - popoverRect.width - margin, left: targetRect.left - popoverRect.width - margin, pos: 'left' as const },
                 };
 
                 const checkFit = (p: { top: number; left: number; }) => (

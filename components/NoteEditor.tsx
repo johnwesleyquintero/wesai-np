@@ -46,7 +46,7 @@ const StatusBar: React.FC<{ wordCount: number; charCount: number; readingTime: n
 );
 
 const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
-    const { updateNote, toggleFavorite, notes, restoreNoteVersion, allTags } = useStoreContext();
+    const { updateNote, toggleFavorite, notes, restoreNoteVersion } = useStoreContext();
     const { isMobileView, onToggleSidebar, isAiRateLimited, isSettingsOpen, isCommandPaletteOpen, isSmartFolderModalOpen, isWelcomeModalOpen } = useUIContext();
     const { session } = useAuthContext();
     const { showToast } = useToast();
@@ -157,20 +157,26 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
 
         // If updatedAt has changed, a modification occurred.
         if (note.updatedAt !== prevNoteRef.current.updatedAt) {
-            const isSelfUpdate =
-                latestEditorStateRef.current.title === note.title &&
-                latestEditorStateRef.current.content === note.content &&
-                JSON.stringify([...latestEditorStateRef.current.tags].sort()) === JSON.stringify([...(note.tags || [])].sort());
+            // Check if the incoming update matches the current editor state.
+            // If it does, it's just our own save reflecting back. Do nothing.
+            const isSelfUpdate = JSON.stringify(latestEditorStateRef.current) === JSON.stringify({
+                title: note.title,
+                content: note.content,
+                tags: note.tags,
+            });
 
             if (isSelfUpdate) {
                 prevNoteRef.current = note; // Update ref and continue
                 return;
             }
 
-            const hasLocalChanges =
-                latestEditorStateRef.current.title !== prevNoteRef.current.title ||
-                latestEditorStateRef.current.content !== prevNoteRef.current.content ||
-                JSON.stringify([...latestEditorStateRef.current.tags].sort()) !== JSON.stringify([...(prevNoteRef.current.tags || [])].sort());
+            // The update is external. Now check if the user has local, unsaved changes.
+            // "Dirty" is defined as the current editor state differing from the *previous* note prop state.
+            const hasLocalChanges = JSON.stringify(latestEditorStateRef.current) !== JSON.stringify({
+                title: prevNoteRef.current.title,
+                content: prevNoteRef.current.content,
+                tags: prevNoteRef.current.tags,
+            });
 
             if (hasLocalChanges) {
                 // User is actively editing. Warn them but preserve their work.
@@ -197,10 +203,11 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
     useEffect(() => {
         if (previewVersion) return; // Don't save while previewing history
 
-        const isLiveDirty =
-            editorState.title !== note.title ||
-            editorState.content !== note.content ||
-            JSON.stringify([...editorState.tags].sort()) !== JSON.stringify([...(note.tags || [])].sort());
+        const isLiveDirty = JSON.stringify(editorState) !== JSON.stringify({
+            title: note.title,
+            content: note.content,
+            tags: note.tags,
+        });
 
         if (!isLiveDirty) {
             if (saveStatus !== 'saved') {
@@ -237,10 +244,11 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
             // Use the state from the ref, which is always up-to-date
             const latestStateForNote = latestEditorStateRef.current;
             
-             const isDirty =
-                latestStateForNote.title !== noteAtMount.title ||
-                latestStateForNote.content !== noteAtMount.content ||
-                JSON.stringify([...latestStateForNote.tags].sort()) !== JSON.stringify([...(noteAtMount.tags || [])].sort());
+            const isDirty = JSON.stringify(latestStateForNote) !== JSON.stringify({
+                title: noteAtMount.title,
+                content: noteAtMount.content,
+                tags: noteAtMount.tags,
+            });
 
             if (isDirty) {
                 updateNote(noteAtMount.id, latestStateForNote).catch(error => {
@@ -561,12 +569,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
                         <BacklinksDisplay backlinks={backlinks} />
                         <RelatedNotes note={note} />
                          <div id="onboarding-tag-input" className={`pt-6 border-t border-light-border dark:border-dark-border ${isEffectivelyReadOnly ? 'opacity-60' : ''}`}>
-                            <TagInput 
-                                tags={displayedTags} 
-                                setTags={(tags) => setEditorState({ ...editorState, tags })} 
-                                readOnly={isEffectivelyReadOnly} 
-                                allTags={allTags}
-                            />
+                            <TagInput tags={displayedTags} setTags={(tags) => setEditorState({ ...editorState, tags })} readOnly={isEffectivelyReadOnly} />
                             {!isEffectivelyReadOnly && <TagSuggestions suggestions={suggestedTags} onAddTag={handleAddTag} isLoading={isSuggestingTags} error={tagSuggestionError} />}
                         </div>
                     </div>

@@ -144,27 +144,46 @@ export const useChatProviderLogic = () => {
     
     const onSendMessage = useCallback((q, i) => _handleStreamedChat(q, i, (s) => `You are a helpful AI assistant integrated into a note-taking app. Use the provided "Source Notes" to answer the user's query.\n- When you use information from a source, you MUST cite it by number, like this: [1].\n- Place citations at the end of the sentence or clause they support.\n- If the sources are not relevant, ignore them and answer from your general knowledge without citing any sources.\n- Be concise and helpful.\n\nSource Notes:\n${s.length > 0 ? s.map((n, i) => `--- SOURCE [${i + 1}]: ${n.title} ---\n${n.content}\n`).join('') : 'No source notes provided.'}`), [_handleStreamedChat]);
     const onGenerateServiceResponse = useCallback((q, i) => _handleStreamedChat(q, i, (s) => `You are a professional and empathetic customer service agent. Your goal is to resolve the customer's issue using the provided knowledge base.\n- When you use information from the knowledge base, you MUST cite it by number, like this: [1].\n- Place citations at the end of the sentence or clause they support.\n- If the knowledge base doesn't have the answer, apologize and explain that you will escalate the issue, without citing any sources.\nKnowledge Base:\n${s.length > 0 ? s.map((n, i) => `--- DOC [${i + 1}]: ${n.title} ---\n${n.content}\n`).join('') : 'No knowledge provided.'}`), [_handleStreamedChat]);
-    const onGenerateAmazonCopy = useCallback((q, i) => _handleStreamedChat(q, i, (s) => `You are an expert Amazon A+ Content Strategist and Copywriter, operating under Brand Story Intelligence v1.6. Your task is to transform raw product information into a compelling, modular A+ brand story that is both SEO-optimized and emotionally intelligent.
+    const onGenerateAmazonCopy = useCallback((q, i) => _handleStreamedChat(q, i, (s) => `You are an expert Amazon E-commerce Strategist and Copywriter, operating under Brand Story Intelligence v1.7. Your mission is to generate a complete, SEO-optimized, and brand-aligned product listing from the provided research notes.
 
-**FRAMEWORK DIRECTIVE:**
-You MUST structure your entire output as a sequence of distinct A+ modules, following this exact order:
-1.  **Hero:** A powerful, emotionally resonant headline and opening that captures the core benefit.
+**OVERALL DIRECTIVE:**
+You MUST generate the entire Amazon product listing, structured into the following sections using Markdown headings.
+
+**OUTPUT STRUCTURE:**
+
+## 1. Product Title
+A concise, keyword-rich title (max 200 characters).
+
+## 2. Bullet Points (5 Key Features)
+- Five distinct bullet points.
+- Each starts with a capitalized, benefit-oriented phrase.
+- Each explains a key feature and its direct benefit to the customer.
+
+## 3. Product Description
+A detailed, paragraph-based description of the product that expands on the bullet points and tells a cohesive story.
+
+## 4. Backend Keywords (Search Terms)
+A comma-separated list of 15-20 relevant, long-tail keywords. Do not repeat words from the title.
+
+## 5. Premium A+ Content
+This section MUST be a sequence of distinct A+ modules, following this exact order:
+1.  **Hero:** A powerful, emotionally resonant headline and opening.
 2.  **Compatibility:** Clear, direct information about device/service compatibility.
-3.  **Features:** Detail 3-4 key product features, translating technical specs into user benefits.
-4.  **Coverage:** Explain network coverage or service availability with confidence and reassurance.
-5.  **Brand Story:** A brief narrative about the brand's mission, values, or origin.
-6.  **CTA (Call to Action):** A final, compelling reason for the customer to choose this product.
+3.  **Features:** Detail 3-4 key product features, translating specs into benefits.
+4.  **Coverage:** Explain network coverage or service availability with confidence.
+5.  **Brand Story:** A brief narrative about the brand's mission or origin.
+6.  **CTA (Call to Action):** A final, compelling reason to choose this product.
 
-**NARRATIVE RHYTHM DIRECTIVE:**
-For each module (except Compatibility), you MUST follow this internal structure:
-1.  **Emotional Hook:** Start with a sentence that connects to the customer's feelings, needs, or aspirations.
-2.  **Rational Clarity:** Follow up with clear, factual information and benefits.
-3.  **Trust/Reassurance Cue:** End with a statement that builds confidence or alleviates a concern.
+**NARRATIVE RHYTHM DIRECTIVE (For A+ Content):**
+For each A+ module (except Compatibility), you MUST follow this internal structure:
+1.  **Emotional Hook:** Start with a sentence that connects to the customer's feelings or needs.
+2.  **Rational Clarity:** Follow with clear, factual information.
+3.  **Trust/Reassurance Cue:** End with a statement that builds confidence.
 
 **EXECUTION:**
-- Use the provided "Research Notes" for factual information. When you do, cite the source by number, like this: [1].
-- The final output must be well-structured Markdown.
-- Adhere strictly to Amazon's Terms of Service and style guidelines.
+- Base ALL content on the provided "Research Notes".
+- When using information from notes, cite the source by number, like this: [1].
+- Adhere strictly to Amazon's Terms of Service.
 
 Research Notes:
 ${s.length > 0 ? s.map((n, i) => `--- NOTE [${i + 1}]: ${n.title} ---\n${n.content}\n`).join('') : 'No research notes provided.'}`), [_handleStreamedChat]);

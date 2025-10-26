@@ -4,7 +4,7 @@ import { GoogleIcon } from './Icons';
 
 type AuthView = 'login' | 'signup' | 'resend_confirmation';
 
-const Auth: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
+const Auth: React.FC<{ onBack?: () => void; onEnterDemo: () => void; }> = ({ onBack, onEnterDemo }) => {
     const [view, setView] = useState<AuthView>('login');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -220,6 +220,12 @@ const Auth: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
                             </button>
                         </p>
                     )}
+                     <p className="mt-4 text-light-text/60 dark:text-dark-text/60">
+                        Or,{' '}
+                        <button onClick={onEnterDemo} className="font-medium text-light-primary dark:text-dark-primary hover:underline">
+                            explore a demo workspace
+                        </button>
+                    </p>
                 </div>
             </div>
         </div>

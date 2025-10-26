@@ -2,6 +2,8 @@
 
 
 
+
+
 import React from 'react';
 import { Bars3Icon, PlusIcon, SparklesIcon, ArrowDownTrayIcon, Cog6ToothIcon } from './Icons';
 import { useStoreContext } from '../context/AppContext';
@@ -14,8 +16,29 @@ const WelcomeScreen: React.FC<{
     isSidebarCollapsed?: boolean;
     onToggleSidebarCollapsed?: () => void;
 }> = ({ onToggleSidebar, isMobileView, onAddNote, isSidebarCollapsed, onToggleSidebarCollapsed }) => {
-    const { triggerNoteImport } = useStoreContext();
+    // FIX: 'triggerNoteImport' was removed from the context. This local function restores the "import from file" functionality.
+    const { onAddNoteFromFile } = useStoreContext();
     const { setView, openSettings } = useUIContext();
+
+    const triggerNoteImport = () => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.md,.txt,text/plain,text/markdown';
+        input.onchange = (e) => {
+            const file = (e.target as HTMLInputElement).files?.[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (loadEvent) => {
+                    const content = loadEvent.target?.result as string;
+                    if (content !== null) {
+                        onAddNoteFromFile(file.name, content, null);
+                    }
+                };
+                reader.readAsText(file);
+            }
+        };
+        input.click();
+    };
 
     const showHeader = isMobileView || isSidebarCollapsed;
     const handleHeaderButtonClick = isMobileView ? onToggleSidebar : onToggleSidebarCollapsed;

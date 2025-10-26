@@ -5,6 +5,7 @@ import { useDebounce } from './useDebounce';
 import { semanticSearchNotes } from '../services/geminiService';
 import { useAuthContext, useUIContext } from '../context/AppContext';
 import { useToast } from '../context/ToastContext';
+import { useLocalNotes } from './useLocalNotes';
 
 const buildTree = (notes: Note[], collections: Collection[]): TreeNode[] => {
     const noteMap = new Map(notes.map(note => [note.id, { ...note, children: [] as TreeNode[] }]));
@@ -55,11 +56,14 @@ const buildTree = (notes: Note[], collections: Collection[]): TreeNode[] => {
 
 export const useStoreProviderLogic = () => {
     const { session } = useAuthContext();
-    const store = useSupabaseStore(session?.user);
-    const { notes, collections, getNoteById, deleteCollection, deleteNote, deleteSmartCollection, addNote: createNote, addNoteFromFile } = store;
-    
+    const { isDemoMode, setView, isMobileView, setIsSidebarOpen, hideConfirmation } = useUIContext();
     const { showToast } = useToast();
-    const { setView, isMobileView, setIsSidebarOpen, hideConfirmation } = useUIContext();
+    
+    const supabaseStore = useSupabaseStore(session?.user);
+    const localStore = useLocalNotes();
+    const store = isDemoMode ? localStore : supabaseStore;
+
+    const { notes, collections, getNoteById, deleteCollection, deleteNote, deleteSmartCollection, addNote: createNote, addNoteFromFile } = store;
 
     const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
@@ -69,6 +73,12 @@ export const useStoreProviderLogic = () => {
     const [aiSearchResultIds, setAiSearchResultIds] = useState<string[] | null>(null);
     const [activeSmartCollectionId, setActiveSmartCollectionId] = useState<string | null>(null);
     const debouncedSearchTerm = useDebounce(searchTerm, 500);
+
+    useEffect(() => {
+        if (isDemoMode && notes.length > 0) {
+            setActiveNoteId(notes[0].id);
+        }
+    }, [isDemoMode]);
 
     useEffect(() => {
         if (searchMode === 'AI' && debouncedSearchTerm.trim()) {

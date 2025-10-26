@@ -85,7 +85,7 @@ const useCases = [
 ];
 
 
-const LandingPage: React.FC<{ onGetStarted: () => void }> = ({ onGetStarted }) => {
+const LandingPage: React.FC<{ onGetStarted: () => void; onEnterDemo: () => void; }> = ({ onGetStarted, onEnterDemo }) => {
     const { theme, toggleTheme } = useUIContext();
     const sectionsRef = useRef<Array<HTMLElement | null>>([]);
 
@@ -165,9 +165,12 @@ const LandingPage: React.FC<{ onGetStarted: () => void }> = ({ onGetStarted }) =
                         <p className="mt-6 max-w-2xl mx-auto text-lg text-light-text/70 dark:text-dark-text/70">
                             The operator-first platform for building, executing, and automating high-value work. Powered by a modular AI engine and your private cloud.
                         </p>
-                        <div className="mt-8 flex justify-center gap-4">
+                        <div className="mt-8 flex justify-center gap-4 flex-wrap">
                             <button onClick={onGetStarted} className="px-8 py-3 bg-light-primary text-white dark:bg-dark-primary dark:text-zinc-900 rounded-md text-lg font-semibold hover:bg-light-primary-hover dark:hover:bg-dark-primary-hover transition-transform hover:scale-105">
                                 Launch Your Workflow
+                            </button>
+                             <button onClick={onEnterDemo} className="px-8 py-3 bg-transparent text-light-text dark:text-dark-text rounded-md text-lg font-semibold border-2 border-light-border dark:border-dark-border hover:bg-light-ui dark:hover:bg-dark-ui transition-all hover:scale-105">
+                                Explore a Demo
                             </button>
                         </div>
                         <div className="mt-16 mx-auto max-w-4xl h-80 bg-slate-900 rounded-xl shadow-2xl p-4 border border-slate-700 flex flex-col font-mono text-sm text-slate-400 overflow-hidden relative">

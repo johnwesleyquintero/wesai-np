@@ -36,13 +36,14 @@ export const useUIProviderLogic = () => {
     const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
     const [confirmation, setConfirmation] = useState<ConfirmationState>(initialConfirmationState);
     const { apiKey } = useApiKey();
+    const [isDemoMode, setIsDemoMode] = useState(false);
 
     useEffect(() => {
         const hasSeenWelcome = localStorage.getItem('wesai-seen-welcome');
-        if (!hasSeenWelcome) {
+        if (!hasSeenWelcome && !isDemoMode) {
             setIsWelcomeModalOpen(true);
         }
-    }, []);
+    }, [isDemoMode]);
 
     useEffect(() => {
         if (theme === 'dark') document.documentElement.classList.add('dark');
@@ -113,11 +114,12 @@ export const useUIProviderLogic = () => {
         isAiRateLimited, renamingItemId, setRenamingItemId, isSettingsOpen, setIsSettingsOpen,
         openSettings, isCommandPaletteOpen, setIsCommandPaletteOpen, isSmartFolderModalOpen,
         setIsSmartFolderModalOpen, smartFolderToEdit, openSmartFolderModal, contextMenu,
-        setContextMenu, onOpenContextMenu, isWelcomeModalOpen, closeWelcomeModal, isApiKeyMissing: !apiKey,
+        setContextMenu, onOpenContextMenu, isWelcomeModalOpen, closeWelcomeModal, isApiKeyMissing: !apiKey && !isDemoMode,
         draggingItemId, setDraggingItemId,
         confirmation, showConfirmation, hideConfirmation,
         isHelpModalOpen, setIsHelpModalOpen, openHelpModal,
         initialSmartFolderQuery,
+        isDemoMode, setIsDemoMode,
     }), [
         theme, toggleTheme, view, setView, isMobileView, isSidebarOpen, setIsSidebarOpen,
         onToggleSidebar, isSidebarCollapsed, toggleSidebarCollapsed,
@@ -128,7 +130,7 @@ export const useUIProviderLogic = () => {
         draggingItemId, setDraggingItemId,
         confirmation, showConfirmation, hideConfirmation,
         isHelpModalOpen, setIsHelpModalOpen, openHelpModal,
-        initialSmartFolderQuery,
+        initialSmartFolderQuery, isDemoMode, setIsDemoMode
     ]);
     
     return uiValue;

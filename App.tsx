@@ -248,6 +248,7 @@ function AppContent() {
 
 function AppContainer() {
     const { session, isSessionLoading } = useAuthContext();
+    const { isDemoMode, setIsDemoMode } = useUIContext();
     const [showAuth, setShowAuth] = useState(false);
 
     useEffect(() => {
@@ -260,11 +261,11 @@ function AppContainer() {
         return <SuspenseLoader />;
     }
 
-    if (!session) {
+    if (!session && !isDemoMode) {
         if (showAuth) {
-            return <Auth onBack={() => setShowAuth(false)} />;
+            return <Auth onBack={() => setShowAuth(false)} onEnterDemo={() => setIsDemoMode(true)} />;
         }
-        return <LandingPage onGetStarted={() => setShowAuth(true)} />;
+        return <LandingPage onGetStarted={() => setShowAuth(true)} onEnterDemo={() => setIsDemoMode(true)} />;
     }
 
     return <AppContent />;

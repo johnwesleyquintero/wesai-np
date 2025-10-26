@@ -144,7 +144,30 @@ export const useChatProviderLogic = () => {
     
     const onSendMessage = useCallback((q, i) => _handleStreamedChat(q, i, (s) => `You are a helpful AI assistant integrated into a note-taking app. Use the provided "Source Notes" to answer the user's query.\n- When you use information from a source, you MUST cite it by number, like this: [1].\n- Place citations at the end of the sentence or clause they support.\n- If the sources are not relevant, ignore them and answer from your general knowledge without citing any sources.\n- Be concise and helpful.\n\nSource Notes:\n${s.length > 0 ? s.map((n, i) => `--- SOURCE [${i + 1}]: ${n.title} ---\n${n.content}\n`).join('') : 'No source notes provided.'}`), [_handleStreamedChat]);
     const onGenerateServiceResponse = useCallback((q, i) => _handleStreamedChat(q, i, (s) => `You are a professional and empathetic customer service agent. Your goal is to resolve the customer's issue using the provided knowledge base.\n- When you use information from the knowledge base, you MUST cite it by number, like this: [1].\n- Place citations at the end of the sentence or clause they support.\n- If the knowledge base doesn't have the answer, apologize and explain that you will escalate the issue, without citing any sources.\nKnowledge Base:\n${s.length > 0 ? s.map((n, i) => `--- DOC [${i + 1}]: ${n.title} ---\n${n.content}\n`).join('') : 'No knowledge provided.'}`), [_handleStreamedChat]);
-    const onGenerateAmazonCopy = useCallback((q, i) => _handleStreamedChat(q, i, (s) => `You are an expert Amazon copywriter. Create a compelling, SEO-optimized product listing based on the provided information.\n- Use information from the provided research notes if available. When you do, you MUST cite it by number, like this: [1].\n- Place citations where appropriate within the text.\n- Follow Amazon's style guidelines. The output should be well-structured Markdown, including a title, bullet points, and a product description.\nResearch Notes:\n${s.length > 0 ? s.map((n, i) => `--- NOTE [${i + 1}]: ${n.title} ---\n${n.content}\n`).join('') : 'No research notes provided.'}`), [_handleStreamedChat]);
+    const onGenerateAmazonCopy = useCallback((q, i) => _handleStreamedChat(q, i, (s) => `You are an expert Amazon A+ Content Strategist and Copywriter, operating under Brand Story Intelligence v1.6. Your task is to transform raw product information into a compelling, modular A+ brand story that is both SEO-optimized and emotionally intelligent.
+
+**FRAMEWORK DIRECTIVE:**
+You MUST structure your entire output as a sequence of distinct A+ modules, following this exact order:
+1.  **Hero:** A powerful, emotionally resonant headline and opening that captures the core benefit.
+2.  **Compatibility:** Clear, direct information about device/service compatibility.
+3.  **Features:** Detail 3-4 key product features, translating technical specs into user benefits.
+4.  **Coverage:** Explain network coverage or service availability with confidence and reassurance.
+5.  **Brand Story:** A brief narrative about the brand's mission, values, or origin.
+6.  **CTA (Call to Action):** A final, compelling reason for the customer to choose this product.
+
+**NARRATIVE RHYTHM DIRECTIVE:**
+For each module (except Compatibility), you MUST follow this internal structure:
+1.  **Emotional Hook:** Start with a sentence that connects to the customer's feelings, needs, or aspirations.
+2.  **Rational Clarity:** Follow up with clear, factual information and benefits.
+3.  **Trust/Reassurance Cue:** End with a statement that builds confidence or alleviates a concern.
+
+**EXECUTION:**
+- Use the provided "Research Notes" for factual information. When you do, cite the source by number, like this: [1].
+- The final output must be well-structured Markdown.
+- Adhere strictly to Amazon's Terms of Service and style guidelines.
+
+Research Notes:
+${s.length > 0 ? s.map((n, i) => `--- NOTE [${i + 1}]: ${n.title} ---\n${n.content}\n`).join('') : 'No research notes provided.'}`), [_handleStreamedChat]);
 
     const onSendGeneralMessage = useCallback(async (query: string, image?: string) => {
         const getChat = () => {

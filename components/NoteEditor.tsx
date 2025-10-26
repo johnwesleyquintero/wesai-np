@@ -47,7 +47,7 @@ const StatusBar: React.FC<{ wordCount: number; charCount: number; readingTime: n
 
 const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
     const { updateNote, toggleFavorite, notes, restoreNoteVersion } = useStoreContext();
-    const { isMobileView, onToggleSidebar, isAiRateLimited, isSettingsOpen, isCommandPaletteOpen, isSmartFolderModalOpen, isWelcomeModalOpen } = useUIContext();
+    const { isMobileView, onToggleSidebar, isAiRateLimited, isSettingsOpen, isCommandPaletteOpen, isSmartFolderModalOpen, isWelcomeModalOpen, isApiKeyMissing } = useUIContext();
     const { session } = useAuthContext();
     const { showToast } = useToast();
     const { registerEditorActions, unregisterEditorActions } = useEditorContext();
@@ -100,13 +100,24 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
     const { 
         spellingErrors, isCheckingSpelling, activeSpellingError, setActiveSpellingError,
         spellingSuggestions, isLoadingSuggestions, suggestionError 
-    } = useSpellcheck(editorState.content, isEffectivelyReadOnly || isAiRateLimited);
+    } = useSpellcheck(editorState.content, isEffectivelyReadOnly || isAiRateLimited || isApiKeyMissing);
 
     const backlinks = useBacklinks(note.id, notes);
+    
+    const allTags = useMemo(() => {
+        const tagSet = new Set<string>();
+        notes.forEach(note => {
+            if (note.tags) {
+                note.tags.forEach(tag => tagSet.add(tag));
+            }
+        });
+        return Array.from(tagSet).sort();
+    }, [notes]);
 
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const titleInputRef = useRef<HTMLInputElement>(null);
     const editorPaneRef = useRef<HTMLDivElement>(null);
+    const hasAutoTitledRef = useRef(false);
 
     const displayedTitle = previewVersion ? previewVersion.title : editorState.title;
     const displayedContent = previewVersion ? previewVersion.content : editorState.content;
@@ -140,6 +151,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         dispatch({ type: 'RESET_STATE_FOR_NEW_NOTE' });
         resetAiSuggestions();
         setActiveSpellingError(null);
+        hasAutoTitledRef.current = false;
         
         if (note.title === 'Untitled Note' && note.content === '') {
             setTimeout(() => titleInputRef.current?.focus(), 100);
@@ -432,6 +444,17 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
             }
         }
     };
+    
+    const handleContentBlur = () => {
+        if (!hasAutoTitledRef.current && editorState.title === 'Untitled Note' && editorState.content.trim()) {
+            const firstLine = editorState.content.split('\n')[0].trim().replace(/^#+\s*/, '');
+            if (firstLine) {
+                const newTitle = firstLine.length > 100 ? firstLine.substring(0, 100) + '...' : firstLine;
+                setEditorState({ ...editorState, title: newTitle });
+                hasAutoTitledRef.current = true;
+            }
+        }
+    };
 
     // --- Action Handlers ---
     const handleInsertLink = (noteId: string, noteTitle: string) => {
@@ -532,7 +555,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
 
     return (
         <div className="flex-1 flex flex-col h-full relative bg-light-background dark:bg-dark-background" onDragOver={(e) => { e.preventDefault(); if (!isEffectivelyReadOnly) dispatch({ type: 'SET_DRAG_OVER', payload: true }); }} onDragLeave={() => dispatch({ type: 'SET_DRAG_OVER', payload: false })} onDrop={handleDrop}>
-             <Toolbar note={note} onToggleFavorite={() => toggleFavorite(note.id)} saveStatus={saveStatus} editorTitle={editorState.title} onEnhance={handleEnhanceNote} onSummarize={summarizeAndFindActionForFullNote} onToggleHistory={() => dispatch({type: 'SET_HISTORY_OPEN', payload: !isHistoryOpen})} isHistoryOpen={isHistoryOpen} onApplyTemplate={handleApplyTemplate} isMobileView={isMobileView} onToggleSidebar={onToggleSidebar} onUndo={undo} onRedo={redo} canUndo={canUndo} canRedo={canRedo} viewMode={viewMode} onToggleViewMode={() => dispatch({type: 'SET_VIEW_MODE', payload: viewMode === 'edit' ? 'preview' : 'edit'})} wordCount={wordCount} charCount={charCount} aiActionError={aiActionError} setAiActionError={(err) => dispatch({ type: 'SET_AI_ACTION_ERROR', payload: err })} isFullAiActionLoading={isFullAiActionLoading} />
+             <Toolbar note={note} onToggleFavorite={() => toggleFavorite(note.id)} saveStatus={saveStatus} editorTitle={editorState.title} onEnhance={handleEnhanceNote} onSummarize={summarizeAndFindActionForFullNote} onToggleHistory={() => dispatch({type: 'SET_HISTORY_OPEN', payload: !isHistoryOpen})} isHistoryOpen={isHistoryOpen} onApplyTemplate={handleApplyTemplate} isMobileView={isMobileView} onToggleSidebar={onToggleSidebar} onUndo={undo} onRedo={redo} canUndo={canUndo} canRedo={canRedo} viewMode={viewMode} onToggleViewMode={() => dispatch({type: 'SET_VIEW_MODE', payload: viewMode === 'edit' ? 'preview' : 'edit'})} wordCount={wordCount} charCount={charCount} aiActionError={aiActionError} setAiActionError={(err) => dispatch({ type: 'SET_AI_ACTION_ERROR', payload: err })} isFullAiActionLoading={isFullAiActionLoading} isApiKeyMissing={isApiKeyMissing} />
              {isAiRateLimited && <div className="bg-yellow-100 dark:bg-yellow-900/30 border-b border-yellow-300 dark:border-yellow-700/50 py-2 px-4 text-center text-sm text-yellow-800 dark:text-yellow-200 flex-shrink-0">AI features are temporarily paused due to high usage. They will be available again shortly.</div>}
             
             <div ref={editorPaneRef} className="flex-1 overflow-y-auto relative">
@@ -548,10 +571,11 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
                                 className={`w-full bg-transparent text-3xl sm:text-4xl font-bold focus:outline-none rounded-md ${isEffectivelyReadOnly ? 'cursor-not-allowed opacity-70' : ''}`}
                                 readOnly={isEffectivelyReadOnly}
                             />
-                            {!isEffectivelyReadOnly && <TitleSuggestion suggestion={suggestedTitle} onApply={handleApplyTitleSuggestion} isLoading={isSuggestingTitle} error={titleSuggestionError} />}
+                            {!isApiKeyMissing && !isEffectivelyReadOnly && <TitleSuggestion suggestion={suggestedTitle} onApply={handleApplyTitleSuggestion} isLoading={isSuggestingTitle} error={titleSuggestionError} />}
                             <div className="relative mt-4">
                                 <textarea
                                     ref={textareaRef} onSelect={handleSelect} onScroll={handleScroll} onKeyDown={handleKeyDown}
+                                    onBlur={handleContentBlur}
                                     value={displayedContent} onChange={handleChange}
                                     placeholder="Start writing, drop a file, or type / for commands..."
                                     className={`${sharedEditorClasses} font-serif-editor relative z-10 caret-light-text dark:caret-dark-text bg-transparent block`}
@@ -567,10 +591,10 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
 
                     <div className="mt-12 space-y-8">
                         <BacklinksDisplay backlinks={backlinks} />
-                        <RelatedNotes note={note} />
+                        {!isApiKeyMissing && <RelatedNotes note={note} />}
                          <div id="onboarding-tag-input" className={`pt-6 border-t border-light-border dark:border-dark-border ${isEffectivelyReadOnly ? 'opacity-60' : ''}`}>
-                            <TagInput tags={displayedTags} setTags={(tags) => setEditorState({ ...editorState, tags })} readOnly={isEffectivelyReadOnly} />
-                            {!isEffectivelyReadOnly && <TagSuggestions suggestions={suggestedTags} onAddTag={handleAddTag} isLoading={isSuggestingTags} error={tagSuggestionError} />}
+                            <TagInput tags={displayedTags} setTags={(tags) => setEditorState({ ...editorState, tags })} readOnly={isEffectivelyReadOnly} allExistingTags={allTags} />
+                            {!isApiKeyMissing && !isEffectivelyReadOnly && <TagSuggestions suggestions={suggestedTags} onAddTag={handleAddTag} isLoading={isSuggestingTags} error={tagSuggestionError} />}
                         </div>
                     </div>
                 </div>
@@ -578,10 +602,10 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
             
             <StatusBar wordCount={wordCount} charCount={charCount} readingTime={readingTime} isCheckingSpelling={isCheckingSpelling} />
 
-            {(noteLinker || noteLinkerForSelection) && <NoteLinker query={noteLinker?.query || ''} onSelect={handleInsertLink} onClose={() => { dispatch({ type: 'SET_NOTE_LINKER', payload: null }); dispatch({ type: 'SET_NOTE_LINKER_FOR_SELECTION', payload: null }); }} position={noteLinker?.position || { top: noteLinkerForSelection!.rect.bottom, left: noteLinkerForSelection!.rect.left }} />}
+            {(noteLinker || noteLinkerForSelection) && <NoteLinker query={noteLinker?.query || ''} onSelect={handleInsertLink} onClose={() => { dispatch({ type: 'SET_NOTE_LINKer', payload: null }); dispatch({ type: 'SET_NOTE_LINKER_FOR_SELECTION', payload: null }); }} position={noteLinker?.position || { top: noteLinkerForSelection!.rect.bottom, left: noteLinkerForSelection!.rect.left }} />}
             {templateLinker && <TemplateLinker query={templateLinker.query} onSelect={handleInsertSyncedBlock} onClose={() => dispatch({ type: 'SET_TEMPLATE_LINKER', payload: null })} position={templateLinker.position} />}
             {slashCommand && <SlashCommandMenu query={slashCommand.query} position={slashCommand.position} onSelect={handleSelectCommand} onClose={() => dispatch({ type: 'SET_SLASH_COMMAND', payload: null })} textareaRef={textareaRef} />}
-            <InlineAiMenu selection={selection} onAction={async (action) => { if (selection) { const newPos = await handleInlineAiAction(action, selection); if (newPos !== null && textareaRef.current) { textareaRef.current.focus(); setTimeout(() => textareaRef.current?.setSelectionRange(newPos, newPos), 0); } } }} onFormat={handleFormatSelection} isLoading={isAiActionLoading} onClose={() => dispatch({ type: 'SET_SELECTION', payload: null })} />
+            <InlineAiMenu selection={selection} onAction={async (action) => { if (selection) { const newPos = await handleInlineAiAction(action, selection); if (newPos !== null && textareaRef.current) { textareaRef.current.focus(); setTimeout(() => textareaRef.current?.setSelectionRange(newPos, newPos), 0); } } }} onFormat={handleFormatSelection} isLoading={isAiActionLoading} onClose={() => dispatch({ type: 'SET_SELECTION', payload: null })} isApiKeyMissing={isApiKeyMissing} />
             <SpellcheckMenu activeError={activeSpellingError} suggestions={spellingSuggestions} onSelect={handleApplySuggestion} isLoading={isLoadingSuggestions} error={suggestionError} onClose={() => setActiveSpellingError(null)} />
             {isHistoryOpen && <VersionHistorySidebar history={note.history || []} onClose={handleCloseHistory} onPreview={(version) => dispatch({ type: 'SET_PREVIEW_VERSION', payload: version })} onRestore={handleRestore} activeVersionTimestamp={previewVersion?.savedAt} />}
             {isDragOver && <div className="absolute inset-0 bg-light-primary/10 dark:bg-dark-primary/10 border-4 border-dashed border-light-primary dark:border-dark-primary rounded-2xl m-4 pointer-events-none flex items-center justify-center"><p className="text-light-primary dark:text-dark-primary font-bold text-2xl">Drop file to import</p></div>}

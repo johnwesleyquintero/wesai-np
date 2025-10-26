@@ -465,7 +465,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                         </div>
                     </div>
                 </div>
-                <div className="flex items-center mt-2 text-xs">
+                {!isApiKeyMissing && <div className="flex items-center mt-2 text-xs">
                     <div className="flex w-full bg-light-background dark:bg-dark-background p-0.5 rounded-md border border-light-border dark:border-dark-border">
                          <button
                             onClick={() => setSearchMode('KEYWORD')}
@@ -483,7 +483,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                         </button>
                     </div>
                      {isAiRateLimited && <span className="text-red-500 ml-2 text-xs">Paused</span>}
-                </div>
+                </div>}
                  {aiSearchError && <p className="text-red-500 text-xs mt-1">{aiSearchError}</p>}
             </div>
 

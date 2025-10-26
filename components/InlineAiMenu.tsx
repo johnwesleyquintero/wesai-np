@@ -13,6 +13,7 @@ interface InlineAiMenuProps {
     onFormat: (format: 'bold' | 'italic' | 'code' | 'link') => void;
     isLoading: boolean;
     onClose: () => void;
+    isApiKeyMissing: boolean;
 }
 
 const actionMap: { action: InlineAction; label: string }[] = [
@@ -31,7 +32,7 @@ const FormatButton: React.FC<{ onClick: () => void, 'aria-label': string, childr
 );
 
 
-const InlineAiMenu: React.FC<InlineAiMenuProps> = ({ selection, onAction, onFormat, isLoading, onClose }) => {
+const InlineAiMenu: React.FC<InlineAiMenuProps> = ({ selection, onAction, onFormat, isLoading, onClose, isApiKeyMissing }) => {
     const [isAiMenuOpen, setIsAiMenuOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
 
@@ -68,36 +69,39 @@ const InlineAiMenu: React.FC<InlineAiMenuProps> = ({ selection, onAction, onForm
 
     return (
         <div ref={menuRef} style={style} onMouseDown={(e) => e.preventDefault()}>
-            <div className="bg-light-background dark:bg-dark-background rounded-lg shadow-xl border border-light-border dark:border-dark-border animate-fade-in-down w-[240px]">
-                <div className="flex justify-around items-center p-1 border-b border-light-border dark:border-dark-border">
+            <div className="bg-light-background dark:bg-dark-background rounded-lg shadow-xl border border-light-border dark:border-dark-border animate-fade-in-down w-auto">
+                <div className="flex justify-around items-center p-1">
                     <FormatButton onClick={() => handleFormatClick('bold')} aria-label="Bold"><BoldIcon /></FormatButton>
                     <FormatButton onClick={() => handleFormatClick('italic')} aria-label="Italic"><ItalicIcon /></FormatButton>
                     <FormatButton onClick={() => handleFormatClick('code')} aria-label="Code"><CodeBracketIcon /></FormatButton>
                     <FormatButton onClick={() => handleFormatClick('link')} aria-label="Link"><LinkIcon /></FormatButton>
-                </div>
-                <button 
-                    onClick={() => setIsAiMenuOpen(prev => !prev)}
-                    className="w-full flex justify-between items-center p-2 text-sm font-semibold hover:bg-light-ui dark:hover:bg-dark-ui"
-                >
-                    <span className="flex items-center gap-2">
-                        <SparklesIcon className="w-4 h-4 text-light-primary dark:text-dark-primary"/>
-                        AI Assistant
-                    </span>
-                    <ChevronDownIcon className={`w-4 h-4 transition-transform ${isAiMenuOpen ? 'rotate-180' : ''}`} />
-                </button>
-                {isAiMenuOpen && (
-                    <div className="py-1 border-t border-light-border dark:border-dark-border">
-                        {actionMap.map(({ action, label }) => (
-                            <button
-                                key={action}
-                                onClick={() => handleActionClick(action)}
-                                className="w-full text-left block px-3 py-2 text-sm hover:bg-light-ui dark:hover:bg-dark-ui transition-colors"
+                    {!isApiKeyMissing && <div className="w-px h-6 bg-light-border dark:border-dark-border mx-1" />}
+                    {!isApiKeyMissing && (
+                        <div className="relative">
+                            <button 
+                                onClick={() => setIsAiMenuOpen(prev => !prev)}
+                                className="flex items-center gap-2 p-2 text-sm font-semibold hover:bg-light-ui dark:hover:bg-dark-ui rounded-md"
                             >
-                                {label}
+                                <SparklesIcon className="w-4 h-4 text-light-primary dark:text-dark-primary"/>
+                                AI Assistant
+                                <ChevronDownIcon className={`w-4 h-4 transition-transform ${isAiMenuOpen ? 'rotate-180' : ''}`} />
                             </button>
-                        ))}
-                    </div>
-                )}
+                             {isAiMenuOpen && (
+                                <div className="absolute top-full right-0 mt-1 py-1 w-48 bg-light-background dark:bg-dark-background rounded-lg shadow-xl border border-light-border dark:border-dark-border">
+                                    {actionMap.map(({ action, label }) => (
+                                        <button
+                                            key={action}
+                                            onClick={() => handleActionClick(action)}
+                                            className="w-full text-left block px-3 py-2 text-sm hover:bg-light-ui dark:hover:bg-dark-ui transition-colors"
+                                        >
+                                            {label}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
     );

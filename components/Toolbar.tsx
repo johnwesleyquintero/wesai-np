@@ -28,6 +28,7 @@ interface ToolbarProps {
     aiActionError: string | null;
     setAiActionError: (error: string | null) => void;
     isFullAiActionLoading: string | null;
+    isApiKeyMissing: boolean;
 }
 
 interface StatusIndicatorProps {
@@ -223,7 +224,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
     note, onToggleFavorite, saveStatus, editorTitle, onEnhance, onSummarize, onToggleHistory, isHistoryOpen, 
     onApplyTemplate, isMobileView, onToggleSidebar, onUndo, onRedo, canUndo, canRedo,
     viewMode, onToggleViewMode, wordCount, charCount,
-    aiActionError, setAiActionError, isFullAiActionLoading
+    aiActionError, setAiActionError, isFullAiActionLoading, isApiKeyMissing
 }) => {
     const { addTemplate, handleDeleteNoteConfirm } = useStoreContext();
     const { showConfirmation } = useUIContext();
@@ -284,11 +285,11 @@ const Toolbar: React.FC<ToolbarProps> = ({
                     </button>
                      <div className="w-px h-6 bg-light-border dark:border-dark-border mx-1"></div>
                     
-                    <AiMenu 
+                    {!isApiKeyMissing && <AiMenu 
                         onEnhance={onEnhance}
                         onSummarize={onSummarize}
                         isDisabled={isDisabled}
-                    />
+                    />}
                     
                      <button onClick={onToggleHistory} disabled={isDisabled} className={`p-2 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${isHistoryOpen ? 'bg-light-ui dark:bg-dark-ui' : 'hover:bg-light-ui dark:hover:bg-dark-ui'}`} aria-label="Toggle Version History">
                         <HistoryIcon />

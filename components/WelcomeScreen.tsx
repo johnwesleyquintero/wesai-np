@@ -1,9 +1,3 @@
-
-
-
-
-
-
 import React from 'react';
 import { Bars3Icon, PlusIcon, SparklesIcon, ArrowDownTrayIcon, Cog6ToothIcon } from './Icons';
 import { useStoreContext } from '../context/AppContext';
@@ -16,7 +10,6 @@ const WelcomeScreen: React.FC<{
     isSidebarCollapsed?: boolean;
     onToggleSidebarCollapsed?: () => void;
 }> = ({ onToggleSidebar, isMobileView, onAddNote, isSidebarCollapsed, onToggleSidebarCollapsed }) => {
-    // FIX: 'triggerNoteImport' was removed from the context. This local function restores the "import from file" functionality.
     const { onAddNoteFromFile } = useStoreContext();
     const { setView, openSettings } = useUIContext();
 

@@ -7,6 +7,9 @@ interface OnboardingState {
     createdNote: boolean;
     addedTag: boolean;
     askedAI: boolean;
+    skippedNote: boolean;
+    skippedTag: boolean;
+    skippedAI: boolean;
 }
 
 const ONBOARDING_STORAGE_KEY = 'wesai-onboarding-state';
@@ -20,12 +23,15 @@ const getInitialState = (): OnboardingState => {
                 createdNote: !!parsed.createdNote,
                 addedTag: !!parsed.addedTag,
                 askedAI: !!parsed.askedAI,
+                skippedNote: !!parsed.skippedNote,
+                skippedTag: !!parsed.skippedTag,
+                skippedAI: !!parsed.skippedAI,
             };
         }
     } catch (error) {
         console.error("Failed to parse onboarding state from localStorage", error);
     }
-    return { createdNote: false, addedTag: false, askedAI: false };
+    return { createdNote: false, addedTag: false, askedAI: false, skippedNote: false, skippedTag: false, skippedAI: false };
 };
 
 export const useOnboarding = () => {
@@ -58,6 +64,19 @@ export const useOnboarding = () => {
 
     }, [notes, chatMessages, onboardingState]);
     
+    const dismissCoachMark = useCallback(() => {
+        if (activeCoachMark) {
+            const skipKeyMap: Record<OnboardingStep, keyof OnboardingState> = {
+                note: 'skippedNote',
+                tag: 'skippedTag',
+                ai: 'skippedAI',
+            };
+            const keyToSkip = skipKeyMap[activeCoachMark];
+            setOnboardingState(prev => ({ ...prev, [keyToSkip]: true }));
+        }
+        setActiveCoachMark(null);
+    }, [activeCoachMark]);
+    
      // Effect to manage which coach mark is active
     useEffect(() => {
         const isComplete = onboardingState.createdNote && onboardingState.addedTag && onboardingState.askedAI;
@@ -67,11 +86,11 @@ export const useOnboarding = () => {
         }
 
         let nextMark: OnboardingStep | null = null;
-        if (!onboardingState.createdNote) {
+        if (!onboardingState.createdNote && !onboardingState.skippedNote) {
             nextMark = 'note';
-        } else if (!onboardingState.addedTag && activeNote) {
+        } else if (onboardingState.createdNote && !onboardingState.addedTag && !onboardingState.skippedTag && activeNote) {
             nextMark = 'tag';
-        } else if (!onboardingState.askedAI && view !== 'CHAT') {
+        } else if (onboardingState.createdNote && onboardingState.addedTag && !onboardingState.askedAI && !onboardingState.skippedAI && view !== 'CHAT') {
             nextMark = 'ai';
         }
 
@@ -91,10 +110,6 @@ export const useOnboarding = () => {
             console.error("Failed to save onboarding state to localStorage", error);
         }
     }, [onboardingState]);
-    
-    const dismissCoachMark = useCallback(() => {
-        setActiveCoachMark(null);
-    }, []);
 
     const onboardingSteps = useMemo(() => [
         { id: 'createdNote', text: 'Create your first note', isComplete: onboardingState.createdNote },

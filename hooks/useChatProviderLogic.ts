@@ -269,6 +269,58 @@ ${sourceNotes.length > 0 ? sourceNotes.map(n => `--- NOTE: ${n.title} ---\n${n.c
                                     throw new Error("Note or destination folder not found.");
                                 }
                                 break;
+                            case 'findTemplates':
+                                const templateQuery = String(fc.args.query || '').toLowerCase();
+                                const foundTemplates = store.templates
+                                    .filter(t => t.title.toLowerCase().includes(templateQuery))
+                                    .map(t => ({ id: t.id, title: t.title }));
+                                result = { templates: foundTemplates };
+                                break;
+                            case 'createTemplateFromNote':
+                                const noteIdForTemplate = String(fc.args.noteId || '');
+                                const noteForTemplate = getNoteById(noteIdForTemplate);
+                                if (noteForTemplate) {
+                                    await store.addTemplate(noteForTemplate.title, noteForTemplate.content);
+                                    result = { success: true, templateTitle: noteForTemplate.title };
+                                } else {
+                                    throw new Error("Note not found.");
+                                }
+                                break;
+                            case 'applyTemplateToNote':
+                                const templateIdToApply = String(fc.args.templateId || '');
+                                const noteIdToApplyTo = String(fc.args.noteId || '');
+                                const templateToApply = store.templates.find(t => t.id === templateIdToApply);
+                                const noteToApplyToInstance = getNoteById(noteIdToApplyTo);
+
+                                if (templateToApply && noteToApplyToInstance) {
+                                    await updateNoteInStore(noteIdToApplyTo, {
+                                        title: templateToApply.title,
+                                        content: templateToApply.content,
+                                    });
+                                    result = { success: true, noteId: noteIdToApplyTo };
+                                    lastTouchedNoteId = noteIdToApplyTo;
+                                } else {
+                                    if (!templateToApply) throw new Error("Template not found.");
+                                    if (!noteToApplyToInstance) throw new Error("Note not found.");
+                                }
+                                break;
+                            case 'findAndReplaceInNotes':
+                                const { searchQuery, newText, caseSensitive = false } = fc.args;
+                                if (typeof searchQuery !== 'string' || typeof newText !== 'string') {
+                                    throw new Error("searchQuery and newText must be provided as strings.");
+                                }
+                                const regex = new RegExp(searchQuery, caseSensitive ? 'g' : 'gi');
+                                const notesToUpdate = notes.filter(note => regex.test(note.content));
+                                
+                                const updatePromises = notesToUpdate.map(note => {
+                                    const newContent = note.content.replace(regex, newText);
+                                    return updateNoteInStore(note.id, { content: newContent });
+                                });
+
+                                await Promise.all(updatePromises);
+
+                                result = { success: true, notesUpdated: notesToUpdate.length, updatedNoteIds: notesToUpdate.map(n => n.id) };
+                                break;
                             default:
                                 throw new Error(`Unknown function: ${fc.name}`);
                         }

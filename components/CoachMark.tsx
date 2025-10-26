@@ -32,37 +32,71 @@ const CoachMark: React.FC<CoachMarkProps> = ({ targetSelector, title, content, o
             const { innerWidth, innerHeight } = window;
             const margin = 12;
 
-            let top, left, pos: 'top' | 'bottom' | 'left' | 'right' = 'bottom';
+            let top: number, left: number, pos: 'top' | 'bottom' | 'left' | 'right';
 
-            // Default to bottom
-            top = targetRect.bottom + margin;
-            left = targetRect.left + (targetRect.width / 2) - (popoverRect.width / 2);
-            pos = 'bottom';
+            // Define all possible positions
+            const positions = {
+                top: {
+                    top: targetRect.top - popoverRect.height - margin,
+                    left: targetRect.left + (targetRect.width / 2) - (popoverRect.width / 2),
+                    pos: 'top' as const,
+                },
+                bottom: {
+                    top: targetRect.bottom + margin,
+                    left: targetRect.left + (targetRect.width / 2) - (popoverRect.width / 2),
+                    pos: 'bottom' as const,
+                },
+                right: {
+                    top: targetRect.top + (targetRect.height / 2) - (popoverRect.height / 2),
+                    left: targetRect.right + margin,
+                    pos: 'right' as const,
+                },
+                left: {
+                    top: targetRect.top + (targetRect.height / 2) - (popoverRect.height / 2),
+                    left: targetRect.left - popoverRect.width - margin,
+                    pos: 'left' as const,
+                }
+            };
+
+            // Check if a position fits within the viewport
+            const checkFit = (p: { top: number; left: number; }) => {
+                return (
+                    p.top >= margin &&
+                    p.left >= margin &&
+                    p.top + popoverRect.height <= innerHeight - margin &&
+                    p.left + popoverRect.width <= innerWidth - margin
+                );
+            };
+
+            // Try positions in order of preference
+            const order: ('top' | 'bottom' | 'right' | 'left')[] = ['top', 'bottom', 'right', 'left'];
+            let chosenPosition = null;
+
+            for (const p of order) {
+                if (checkFit(positions[p])) {
+                    chosenPosition = positions[p];
+                    break;
+                }
+            }
+
+            // If no position fits perfectly, fallback to the first option and clamp it
+            if (chosenPosition) {
+                top = chosenPosition.top;
+                left = chosenPosition.left;
+                pos = chosenPosition.pos;
+            } else {
+                // Fallback to top and let clamping handle it
+                const fallback = positions.top;
+                top = fallback.top;
+                left = fallback.left;
+                pos = fallback.pos;
+            }
             
-            // If it overflows bottom, try top
-            if (top + popoverRect.height > innerHeight) {
-                top = targetRect.top - popoverRect.height - margin;
-                pos = 'top';
-            }
-
-            // If it overflows top (e.g., small screen), try right
-            if (top < 0) {
-                 top = targetRect.top + targetRect.height / 2 - popoverRect.height / 2;
-                 left = targetRect.right + margin;
-                 pos = 'right';
-            }
-
-            // If it overflows right, try left
-            if (left + popoverRect.width > innerWidth) {
-                left = targetRect.left - popoverRect.width - margin;
-                pos = 'left';
-            }
-
-            // Clamp left/right to screen bounds
-            if (left < 10) left = 10;
-            if (left + popoverRect.width > innerWidth - 10) left = innerWidth - popoverRect.width - 10;
-            if (top < 10) top = 10;
-
+            // Final clamping to guarantee visibility
+            if (left < margin) left = margin;
+            if (left + popoverRect.width > innerWidth - margin) left = innerWidth - popoverRect.width - margin;
+            if (top < margin) top = margin;
+            if (top + popoverRect.height > innerHeight - margin) top = innerHeight - popoverRect.height - margin;
 
             setPosition({
                 top,
@@ -73,7 +107,6 @@ const CoachMark: React.FC<CoachMarkProps> = ({ targetSelector, title, content, o
             });
         };
         
-        // A small timeout allows the target element to render before we calculate position
         const timeoutId = setTimeout(updatePosition, 100);
         
         window.addEventListener('resize', updatePosition);

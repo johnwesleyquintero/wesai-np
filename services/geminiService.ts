@@ -1,7 +1,3 @@
-
-
-
-
 import { GoogleGenAI, HarmCategory, HarmBlockThreshold, Type, FunctionDeclaration, Content, GenerateContentResponse, Chat, Part } from "@google/genai";
 import { Note, ChatMessage, InlineAction, SpellingError } from '../types';
 import { MODEL_NAMES } from '../lib/config';
@@ -245,12 +241,55 @@ export const createGeneralChatSession = (): Chat => {
         { name: 'createCollection', parameters: { type: Type.OBJECT, properties: { name: { type: Type.STRING }, parentId: { type: Type.STRING } }, required: ['name'] } },
         { name: 'findCollections', parameters: { type: Type.OBJECT, properties: { query: { type: Type.STRING } }, required: ['query'] } },
         { name: 'moveNoteToCollection', parameters: { type: Type.OBJECT, properties: { noteId: { type: Type.STRING }, collectionId: { type: Type.STRING } }, required: ['noteId', 'collectionId'] } },
+        {
+            name: 'findTemplates',
+            description: "Finds templates by searching their titles.",
+            parameters: {
+                type: Type.OBJECT,
+                properties: { query: { type: Type.STRING, description: "The text to search for within template titles." } },
+                required: ['query']
+            }
+        },
+        {
+            name: 'createTemplateFromNote',
+            description: "Creates a new template from the content and title of an existing note.",
+            parameters: {
+                type: Type.OBJECT,
+                properties: { noteId: { type: Type.STRING, description: "The ID of the note to use for the template." } },
+                required: ['noteId']
+            }
+        },
+        {
+            name: 'applyTemplateToNote',
+            description: "Applies a template to an existing note, overwriting its title and content.",
+            parameters: {
+                type: Type.OBJECT,
+                properties: {
+                    templateId: { type: Type.STRING, description: "The ID of the template to apply." },
+                    noteId: { type: Type.STRING, description: "The ID of the note to apply the template to." }
+                },
+                required: ['templateId', 'noteId']
+            }
+        },
+        {
+            name: 'findAndReplaceInNotes',
+            description: "Finds and replaces text within the content of all notes. This is a bulk operation.",
+            parameters: {
+                type: Type.OBJECT,
+                properties: {
+                    searchQuery: { type: Type.STRING, description: "The text to search for." },
+                    newText: { type: Type.STRING, description: "The text to replace the found text with." },
+                    caseSensitive: { type: Type.BOOLEAN, description: "Optional. Whether the search should be case-sensitive. Defaults to false." }
+                },
+                required: ['searchQuery', 'newText']
+            }
+        },
     ];
 
     return ai.chats.create({
         model: MODEL_NAMES.PRO,
         config: {
-            systemInstruction: "You are a helpful assistant with access to a user's notes. You can create, find, read, update, and delete notes and folders. You MUST use the provided tools to interact with the notes.",
+            systemInstruction: "You are a helpful assistant with access to a user's notes. You can create, find, read, update, and delete notes and folders. You can also manage templates by creating them from existing notes, finding templates, or applying them to notes. Additionally, you can perform bulk operations like finding and replacing text across multiple notes. You MUST use the provided tools to interact with the user's workspace.",
             tools: [{ functionDeclarations }],
             safetySettings,
         },

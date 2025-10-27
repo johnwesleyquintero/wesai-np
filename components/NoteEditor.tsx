@@ -31,7 +31,7 @@ type NoteState = { title: string; content: string; tags: string[] };
 
 const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
     const { updateNote, toggleFavorite, notes, restoreNoteVersion } = useStoreContext();
-    const { isMobileView, onToggleSidebar, isAiRateLimited, isSettingsOpen, isCommandPaletteOpen, isSmartFolderModalOpen, isWelcomeModalOpen, isApiKeyMissing } = useUIContext();
+    const { isMobileView, onToggleSidebar, isAiRateLimited, isSettingsOpen, isCommandPaletteOpen, isSmartFolderModalOpen, isWelcomeModalOpen, isApiKeyMissing, isFocusMode, showConfirmation } = useUIContext();
     const { session } = useAuthContext();
     const { showToast } = useToast();
     const { registerEditorActions, unregisterEditorActions } = useEditorContext();
@@ -544,7 +544,23 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
 
     const handleRestore = (version: NoteVersion) => { restoreNoteVersion(note.id, version); dispatch({ type: 'SET_PREVIEW_VERSION', payload: null }); dispatch({ type: 'SET_HISTORY_OPEN', payload: false }); };
     const handleCloseHistory = () => { dispatch({ type: 'SET_PREVIEW_VERSION', payload: null }); dispatch({ type: 'SET_HISTORY_OPEN', payload: false }); };
-    const handleApplyTemplate = (template: Template) => { if (editorState.content.trim() !== '' && !window.confirm('Applying a template will replace the current note content. Are you sure?')) { return; } setEditorState({ title: template.title, content: template.content, tags: []}); dispatch({ type: 'SET_VIEW_MODE', payload: 'edit' }); };
+    const handleApplyTemplate = (template: Template) => {
+        const apply = () => {
+            setEditorState({ title: template.title, content: template.content, tags: []}); 
+            dispatch({ type: 'SET_VIEW_MODE', payload: 'edit' });
+        };
+
+        if (editorState.content.trim() !== '') {
+            showConfirmation({
+                title: 'Apply Template',
+                message: 'Applying a template will replace the current note content. Are you sure?',
+                confirmText: 'Apply',
+                onConfirm: apply,
+            });
+        } else {
+            apply();
+        }
+    };
     const handleToggleTask = (lineNumber: number) => { const lines = editorState.content.split('\n'); if (lineNumber >= lines.length) return; const line = lines[lineNumber]; const toggledLine = line.includes('[ ]') ? line.replace('[ ]', '[x]') : line.replace(/\[(x|X)\]/, '[ ]'); lines[lineNumber] = toggledLine; const newContent = lines.join('\n'); setEditorState({ ...editorState, content: newContent }); };
     const handleAddTag = (tagToAdd: string) => { if (!editorState.tags.includes(tagToAdd)) { setEditorState({ ...editorState, tags: [...editorState.tags, tagToAdd] }); } setSuggestedTags(prev => prev.filter(t => t !== tagToAdd)); };
     const handleApplyTitleSuggestion = (title: string) => { setEditorState({ ...editorState, title }); setSuggestedTitle(null); setTitleSuggestionError(null); };
@@ -560,7 +576,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
             <div ref={editorPaneRef} className="flex-1 overflow-y-auto relative">
                  {!!previewVersion && <div className={`bg-yellow-100 dark:bg-yellow-900/30 py-2 text-center text-sm text-yellow-800 dark:text-yellow-200 max-w-3xl mx-auto ${editorPaddingClass}`}>You are previewing a version from {new Date(previewVersion.savedAt).toLocaleString()}.</div>}
 
-                <div className={`max-w-3xl mx-auto py-12 ${editorPaddingClass} transition-opacity duration-300 ${isFullAiActionLoading ? 'opacity-50 pointer-events-none' : ''}`}>
+                <div className={`mx-auto py-12 ${editorPaddingClass} transition-all duration-300 ${isFullAiActionLoading ? 'opacity-50 pointer-events-none' : ''} ${isFocusMode ? 'max-w-4xl' : 'max-w-3xl'}`}>
                     <EditorTitle
                         titleInputRef={titleInputRef}
                         value={displayedTitle}

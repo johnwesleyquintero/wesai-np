@@ -58,6 +58,9 @@ const GraphView: React.FC = () => {
     const [linkSourceNode, setLinkSourceNode] = useState<GraphNode | null>(null);
     const [previewNode, setPreviewNode] = useState<{ note: Note; pos: { x: number; y: number } } | null>(null);
     const hoverTimeoutRef = useRef<number | null>(null);
+    // FIX: Add refs for manual double-click handling.
+    const clickTimeoutRef = useRef<number | null>(null);
+    const lastClickedNodeRef = useRef<GraphNode | null>(null);
 
     useEffect(() => {
         const handleResize = () => {
@@ -149,7 +152,15 @@ const GraphView: React.FC = () => {
         setPreviewNode(null);
     }, []);
     
-    const handleNodeClick = useCallback((node: GraphNode) => {
+    // FIX: This is the double-click action.
+    const handleNodeDoubleClick = useCallback((node: GraphNode) => {
+        clearPreview();
+        setActiveNoteId(node.id as string);
+        setView('NOTES');
+    }, [setActiveNoteId, setView, clearPreview]);
+    
+    // FIX: This is the single-click action, renamed from handleNodeClick.
+    const handleSingleClick = useCallback((node: GraphNode) => {
         clearPreview();
         if (selectedNodes.has(node.id as string) && selectedNodes.size === 1) {
             setSelectedNodes(new Set());
@@ -179,11 +190,27 @@ const GraphView: React.FC = () => {
         }
     }, [selectedNodes, neighborsMap, graphData.links, clearPreview]);
 
-    const handleNodeDoubleClick = useCallback((node: GraphNode) => {
-        clearPreview();
-        setActiveNoteId(node.id as string);
-        setView('NOTES');
-    }, [setActiveNoteId, setView, clearPreview]);
+    // FIX: New handler to orchestrate single vs. double clicks.
+    const handleNodeClick = useCallback((node: GraphNode) => {
+        if (clickTimeoutRef.current && lastClickedNodeRef.current?.id === node.id) {
+            // Double click
+            clearTimeout(clickTimeoutRef.current);
+            clickTimeoutRef.current = null;
+            lastClickedNodeRef.current = null;
+            handleNodeDoubleClick(node);
+        } else {
+            // Single click
+            if (clickTimeoutRef.current) {
+                clearTimeout(clickTimeoutRef.current);
+            }
+            lastClickedNodeRef.current = node;
+            clickTimeoutRef.current = window.setTimeout(() => {
+                handleSingleClick(node);
+                clickTimeoutRef.current = null;
+                lastClickedNodeRef.current = null;
+            }, 250);
+        }
+    }, [handleSingleClick, handleNodeDoubleClick]);
 
     const handleBackgroundClick = useCallback(() => {
         clearPreview();
@@ -356,7 +383,6 @@ const GraphView: React.FC = () => {
                     linkColor={linkColor}
                     linkWidth={link => highlightedLinks.has(link) ? 2 : 1}
                     onNodeClick={handleNodeClick}
-                    onNodeDblClick={handleNodeDoubleClick}
                     onBackgroundClick={handleBackgroundClick}
                     onNodeDragStart={handleNodeDragStart}
                     onNodeDragEnd={handleNodeDragEnd}

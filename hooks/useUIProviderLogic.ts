@@ -37,6 +37,7 @@ export const useUIProviderLogic = () => {
     const [confirmation, setConfirmation] = useState<ConfirmationState>(initialConfirmationState);
     const { apiKey } = useApiKey();
     const [isDemoMode, setIsDemoMode] = useState(false);
+    const [isFocusMode, setIsFocusMode] = useState(false);
 
     useEffect(() => {
         const hasSeenWelcome = localStorage.getItem('wesai-seen-welcome');
@@ -99,6 +100,7 @@ export const useUIProviderLogic = () => {
     const onOpenContextMenu = useCallback((e: React.MouseEvent, items: ContextMenuItem[]) => { e.preventDefault(); e.stopPropagation(); setContextMenu({ x: e.clientX, y: e.clientY, items }); }, []);
     const closeWelcomeModal = useCallback(() => { localStorage.setItem('wesai-seen-welcome', 'true'); setIsWelcomeModalOpen(false); }, []);
     const openHelpModal = useCallback(() => setIsHelpModalOpen(true), []);
+    const toggleFocusMode = useCallback(() => setIsFocusMode(prev => !prev), []);
     
     const showConfirmation = useCallback((options: ConfirmationOptions) => {
         setConfirmation({ ...options, isOpen: true });
@@ -120,6 +122,7 @@ export const useUIProviderLogic = () => {
         isHelpModalOpen, setIsHelpModalOpen, openHelpModal,
         initialSmartFolderQuery,
         isDemoMode, setIsDemoMode,
+        isFocusMode, toggleFocusMode,
     }), [
         theme, toggleTheme, view, isMobileView, isSidebarOpen,
         onToggleSidebar, isSidebarCollapsed, toggleSidebarCollapsed,
@@ -130,6 +133,6 @@ export const useUIProviderLogic = () => {
         draggingItemId,
         confirmation, showConfirmation, hideConfirmation,
         isHelpModalOpen, openHelpModal,
-        initialSmartFolderQuery, isDemoMode
+        initialSmartFolderQuery, isDemoMode, isFocusMode, toggleFocusMode
     ]);
 };

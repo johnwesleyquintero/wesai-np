@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Note, Template } from '../../types';
-import { StarIcon, TrashIcon, SparklesIcon, HistoryIcon, ArrowDownTrayIcon, DocumentDuplicateIcon, Bars3Icon, ArrowUturnLeftIcon, ArrowUturnRightIcon, EyeIcon, PencilSquareIcon, CheckBadgeIcon, ClipboardDocumentIcon, InformationCircleIcon, EllipsisVerticalIcon, DocumentPlusIcon } from '../Icons';
+import { StarIcon, TrashIcon, SparklesIcon, HistoryIcon, ArrowDownTrayIcon, DocumentDuplicateIcon, Bars3Icon, ArrowUturnLeftIcon, ArrowUturnRightIcon, EyeIcon, PencilSquareIcon, CheckBadgeIcon, ClipboardDocumentIcon, InformationCircleIcon, EllipsisVerticalIcon, DocumentPlusIcon, FocusIcon, UnfocusIcon } from '../Icons';
 import { useToast } from '../../context/ToastContext';
 import NoteInfoPopover from '../NoteInfoPopover';
 import { useStoreContext, useUIContext } from '../../context/AppContext';
@@ -227,7 +227,7 @@ const EditorHeader: React.FC<EditorHeaderProps> = ({
     aiActionError, setAiActionError, isFullAiActionLoading, isApiKeyMissing
 }) => {
     const { addTemplate, handleDeleteNoteConfirm } = useStoreContext();
-    const { showConfirmation } = useUIContext();
+    const { showConfirmation, isFocusMode, toggleFocusMode } = useUIContext();
     const [isInfoOpen, setIsInfoOpen] = useState(false);
     const { showToast } = useToast();
 
@@ -277,35 +277,43 @@ const EditorHeader: React.FC<EditorHeaderProps> = ({
                     />
                 </div>
                 <div className="flex items-center space-x-0.5 sm:space-x-2">
-                    <button onClick={onUndo} disabled={!canUndo || isDisabled} className="p-2 rounded-md hover:bg-light-ui dark:hover:bg-dark-ui transition-colors disabled:opacity-50 disabled:cursor-not-allowed" aria-label="Undo">
-                        <ArrowUturnLeftIcon />
-                    </button>
-                    <button onClick={onRedo} disabled={!canRedo || isDisabled} className="p-2 rounded-md hover:bg-light-ui dark:hover:bg-dark-ui transition-colors disabled:opacity-50 disabled:cursor-not-allowed" aria-label="Redo">
-                        <ArrowUturnRightIcon />
-                    </button>
-                     <div className="w-px h-6 bg-light-border dark:border-dark-border mx-1"></div>
-                    
-                    {!isApiKeyMissing && <AiMenu 
-                        onEnhance={onEnhance}
-                        onSummarize={onSummarize}
-                        isDisabled={isDisabled}
-                    />}
-                    
-                     <button onClick={onToggleHistory} disabled={isDisabled} className={`p-2 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${isHistoryOpen ? 'bg-light-ui dark:bg-dark-ui' : 'hover:bg-light-ui dark:hover:bg-dark-ui'}`} aria-label="Toggle Version History">
-                        <HistoryIcon />
-                    </button>
-                     <button onClick={onToggleViewMode} disabled={isDisabled} className={`p-2 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${viewMode === 'preview' ? 'bg-light-ui dark:bg-dark-ui' : 'hover:bg-light-ui dark:hover:bg-dark-ui'}`} aria-label={viewMode === 'preview' ? 'Switch to Edit Mode' : 'Switch to Preview Mode'}>
-                        {viewMode === 'preview' ? <PencilSquareIcon /> : <EyeIcon />}
-                    </button>
-                    
-                    <div className="relative">
-                        <button onClick={() => setIsInfoOpen(prev => !prev)} disabled={isDisabled} className={`p-2 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${isInfoOpen ? 'bg-light-ui dark:bg-dark-ui' : 'hover:bg-light-ui dark:hover:bg-dark-ui'}`} aria-label="Note Information">
-                            <InformationCircleIcon />
-                        </button>
-                        {isInfoOpen && <NoteInfoPopover note={note} wordCount={wordCount} charCount={charCount} />}
-                    </div>
+                    {!isFocusMode && (
+                        <>
+                            <button onClick={onUndo} disabled={!canUndo || isDisabled} className="p-2 rounded-md hover:bg-light-ui dark:hover:bg-dark-ui transition-colors disabled:opacity-50 disabled:cursor-not-allowed" aria-label="Undo">
+                                <ArrowUturnLeftIcon />
+                            </button>
+                            <button onClick={onRedo} disabled={!canRedo || isDisabled} className="p-2 rounded-md hover:bg-light-ui dark:hover:bg-dark-ui transition-colors disabled:opacity-50 disabled:cursor-not-allowed" aria-label="Redo">
+                                <ArrowUturnRightIcon />
+                            </button>
+                            <div className="w-px h-6 bg-light-border dark:border-dark-border mx-1"></div>
+                            
+                            {!isApiKeyMissing && <AiMenu 
+                                onEnhance={onEnhance}
+                                onSummarize={onSummarize}
+                                isDisabled={isDisabled}
+                            />}
+                            
+                            <button onClick={onToggleHistory} disabled={isDisabled} className={`p-2 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${isHistoryOpen ? 'bg-light-ui dark:bg-dark-ui' : 'hover:bg-light-ui dark:hover:bg-dark-ui'}`} aria-label="Toggle Version History">
+                                <HistoryIcon />
+                            </button>
+                            <button onClick={onToggleViewMode} disabled={isDisabled} className={`p-2 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${viewMode === 'preview' ? 'bg-light-ui dark:bg-dark-ui' : 'hover:bg-light-ui dark:hover:bg-dark-ui'}`} aria-label={viewMode === 'preview' ? 'Switch to Edit Mode' : 'Switch to Preview Mode'}>
+                                {viewMode === 'preview' ? <PencilSquareIcon /> : <EyeIcon />}
+                            </button>
+                            
+                            <div className="relative">
+                                <button onClick={() => setIsInfoOpen(prev => !prev)} disabled={isDisabled} className={`p-2 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${isInfoOpen ? 'bg-light-ui dark:bg-dark-ui' : 'hover:bg-light-ui dark:hover:bg-dark-ui'}`} aria-label="Note Information">
+                                    <InformationCircleIcon />
+                                </button>
+                                {isInfoOpen && <NoteInfoPopover note={note} wordCount={wordCount} charCount={charCount} />}
+                            </div>
 
-                    <div className="w-px h-6 bg-light-border dark:border-dark-border mx-1"></div>
+                            <div className="w-px h-6 bg-light-border dark:border-dark-border mx-1"></div>
+                        </>
+                    )}
+
+                    <button onClick={toggleFocusMode} disabled={isDisabled} className="p-2 rounded-md hover:bg-light-ui dark:hover:bg-dark-ui transition-colors disabled:opacity-50 disabled:cursor-not-allowed" aria-label={isFocusMode ? 'Exit Focus Mode' : 'Enter Focus Mode'}>
+                       {isFocusMode ? <UnfocusIcon /> : <FocusIcon />}
+                    </button>
 
                     <button onClick={() => onToggleFavorite(note.id)} disabled={isDisabled} className="p-2 rounded-md hover:bg-light-ui dark:hover:bg-dark-ui transition-colors disabled:opacity-50 disabled:cursor-not-allowed" aria-label={note.isFavorite ? 'Remove from favorites' : 'Add to favorites'}>
                         <StarIcon className={`w-5 h-5 ${note.isFavorite ? 'text-yellow-500' : ''}`} filled={note.isFavorite} />
@@ -324,12 +332,14 @@ const EditorHeader: React.FC<EditorHeaderProps> = ({
                         <TrashIcon />
                     </button>
 
-                    <MoreActionsMenu 
-                        note={note}
-                        onApplyTemplate={onApplyTemplate}
-                        onSaveAsTemplate={handleSaveAsTemplate}
-                        isDisabled={isDisabled}
-                    />
+                    {!isFocusMode && (
+                        <MoreActionsMenu 
+                            note={note}
+                            onApplyTemplate={onApplyTemplate}
+                            onSaveAsTemplate={handleSaveAsTemplate}
+                            isDisabled={isDisabled}
+                        />
+                    )}
                 </div>
             </div>
         </>

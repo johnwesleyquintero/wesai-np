@@ -72,6 +72,7 @@ function AppContent() {
         isSidebarCollapsed,
         toggleSidebarCollapsed,
         confirmation, hideConfirmation,
+        isFocusMode,
     } = useUIContext();
     
     const { onboardingSteps, isOnboardingComplete, activeCoachMark, dismissCoachMark } = useOnboarding();
@@ -90,6 +91,12 @@ function AppContent() {
     useEffect(() => {
         localStorage.setItem(WELCOME_SCREEN_SIDEBAR_WIDTH_KEY, String(sidebarWidth));
     }, [sidebarWidth]);
+    
+    useEffect(() => {
+        if (isFocusMode && !isSidebarCollapsed) {
+            toggleSidebarCollapsed();
+        }
+    }, [isFocusMode, isSidebarCollapsed, toggleSidebarCollapsed]);
     
     const activeNote = useMemo(() => {
         if (!activeNoteId) return null;

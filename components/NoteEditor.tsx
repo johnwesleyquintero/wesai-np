@@ -452,6 +452,40 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
             }
         }
     };
+
+    const handlePaste = useCallback((e: React.ClipboardEvent<HTMLDivElement>) => {
+        if (isEffectivelyReadOnly || !session?.user) return;
+        const items = e.clipboardData?.items;
+        if (!items) return;
+
+        // Fix: Explicitly type `item` as `DataTransferItem` to resolve `unknown` type errors.
+        const imageItem = Array.from(items).find((item: DataTransferItem) => item.type.startsWith('image/'));
+
+        if (imageItem) {
+            e.preventDefault();
+            const file = imageItem.getAsFile();
+            if (file) {
+                showToast({ message: 'Uploading image from clipboard...', type: 'info' });
+                uploadImage(session.user.id, note.id, file).then(path => {
+                    const publicUrl = getPublicUrl(path);
+                    const markdownImage = `\n![Pasted image](${publicUrl})\n`;
+                    const textarea = textareaRef.current;
+                    if (textarea) {
+                        const { selectionStart, selectionEnd } = textarea;
+                        const newContent = editorState.content.slice(0, selectionStart) + markdownImage + editorState.content.slice(selectionEnd);
+                        setEditorState({ ...editorState, content: newContent });
+                        
+                        setTimeout(() => {
+                           const newCursorPos = selectionStart + markdownImage.length;
+                           textarea.setSelectionRange(newCursorPos, newCursorPos);
+                        }, 0);
+
+                        showToast({ message: 'Image uploaded successfully!', type: 'success' });
+                    }
+                }).catch(err => showToast({ message: err.message || 'Failed to upload pasted image.', type: 'error' }));
+            }
+        }
+    }, [isEffectivelyReadOnly, session, note.id, showToast, editorState, setEditorState]);
     
     const handleContentBlur = () => {
         if (!hasAutoTitledRef.current && editorState.title === 'Untitled Note' && editorState.content.trim()) {
@@ -562,7 +596,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
     const sharedEditorClasses = 'w-full p-0 border-0 text-base sm:text-lg resize-none focus:outline-none leading-relaxed whitespace-pre-wrap break-words';
 
     return (
-        <div className="flex-1 flex flex-col h-full relative bg-light-background dark:bg-dark-background" onDragOver={(e) => { e.preventDefault(); if (!isEffectivelyReadOnly) dispatch({ type: 'SET_DRAG_OVER', payload: true }); }} onDragLeave={() => dispatch({ type: 'SET_DRAG_OVER', payload: false })} onDrop={handleDrop}>
+        <div className="flex-1 flex flex-col h-full relative bg-light-background dark:bg-dark-background" onDragOver={(e) => { e.preventDefault(); if (!isEffectivelyReadOnly) dispatch({ type: 'SET_DRAG_OVER', payload: true }); }} onDragLeave={() => dispatch({ type: 'SET_DRAG_OVER', payload: false })} onDrop={handleDrop} onPaste={handlePaste}>
              <Toolbar note={note} onToggleFavorite={() => toggleFavorite(note.id)} saveStatus={saveStatus} editorTitle={editorState.title} onEnhance={handleEnhanceNote} onSummarize={summarizeAndFindActionForFullNote} onToggleHistory={() => dispatch({type: 'SET_HISTORY_OPEN', payload: !isHistoryOpen})} isHistoryOpen={isHistoryOpen} onApplyTemplate={handleApplyTemplate} isMobileView={isMobileView} onToggleSidebar={onToggleSidebar} onUndo={undo} onRedo={redo} canUndo={canUndo} canRedo={canRedo} viewMode={viewMode} onToggleViewMode={() => dispatch({type: 'SET_VIEW_MODE', payload: viewMode === 'edit' ? 'preview' : 'edit'})} wordCount={wordCount} charCount={charCount} aiActionError={aiActionError} setAiActionError={(err) => dispatch({ type: 'SET_AI_ACTION_ERROR', payload: err })} isFullAiActionLoading={isFullAiActionLoading} isApiKeyMissing={isApiKeyMissing} />
              {isAiRateLimited && <div className="bg-yellow-100 dark:bg-yellow-900/30 border-b border-yellow-300 dark:border-yellow-700/50 py-2 px-4 text-center text-sm text-yellow-800 dark:text-yellow-200 flex-shrink-0">AI features are temporarily paused due to high usage. They will be available again shortly.</div>}
             
@@ -610,7 +644,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
             
             <StatusBar wordCount={wordCount} charCount={charCount} readingTime={readingTime} isCheckingSpelling={isCheckingSpelling} />
 
-            {(noteLinker || noteLinkerForSelection) && <NoteLinker query={noteLinker?.query || ''} onSelect={handleInsertLink} onClose={() => { dispatch({ type: 'SET_NOTE_LINKer', payload: null }); dispatch({ type: 'SET_NOTE_LINKER_FOR_SELECTION', payload: null }); }} position={noteLinker?.position || { top: noteLinkerForSelection!.rect.bottom, left: noteLinkerForSelection!.rect.left }} />}
+            {(noteLinker || noteLinkerForSelection) && <NoteLinker query={noteLinker?.query || ''} onSelect={handleInsertLink} onClose={() => { dispatch({ type: 'SET_NOTE_LINKER', payload: null }); dispatch({ type: 'SET_NOTE_LINKER_FOR_SELECTION', payload: null }); }} position={noteLinker?.position || { top: noteLinkerForSelection!.rect.bottom, left: noteLinkerForSelection!.rect.left }} />}
             {templateLinker && <TemplateLinker query={templateLinker.query} onSelect={handleInsertSyncedBlock} onClose={() => dispatch({ type: 'SET_TEMPLATE_LINKER', payload: null })} position={templateLinker.position} />}
             {slashCommand && <SlashCommandMenu query={slashCommand.query} position={slashCommand.position} onSelect={handleSelectCommand} onClose={() => dispatch({ type: 'SET_SLASH_COMMAND', payload: null })} textareaRef={textareaRef} />}
             <InlineAiMenu selection={selection} onAction={async (action) => { if (selection) { const newPos = await handleInlineAiAction(action, selection); if (newPos !== null && textareaRef.current) { textareaRef.current.focus(); setTimeout(() => textareaRef.current?.setSelectionRange(newPos, newPos), 0); } } }} onFormat={handleFormatSelection} isLoading={isAiActionLoading} onClose={() => dispatch({ type: 'SET_SELECTION', payload: null })} isApiKeyMissing={isApiKeyMissing} />

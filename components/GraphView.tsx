@@ -162,6 +162,8 @@ const GraphView: React.FC = () => {
     // FIX: This is the single-click action, renamed from handleNodeClick.
     const handleSingleClick = useCallback((node: GraphNode) => {
         clearPreview();
+        if (isLinkingMode) return;
+
         if (selectedNodes.has(node.id as string) && selectedNodes.size === 1) {
             setSelectedNodes(new Set());
             setNeighbors(new Set());
@@ -188,7 +190,7 @@ const GraphView: React.FC = () => {
             fgRef.current?.centerAt(node.x, node.y, 1000);
             fgRef.current?.zoom(4, 500);
         }
-    }, [selectedNodes, neighborsMap, graphData.links, clearPreview]);
+    }, [selectedNodes, neighborsMap, graphData.links, clearPreview, isLinkingMode]);
 
     // FIX: New handler to orchestrate single vs. double clicks.
     const handleNodeClick = useCallback((node: GraphNode) => {
@@ -335,7 +337,7 @@ const GraphView: React.FC = () => {
         return isDimmed ? 'rgba(128, 128, 128, 0.05)' : (theme === 'dark' ? 'rgba(51, 65, 85, 0.5)' : 'rgba(203, 213, 225, 0.7)');
     }, [highlightedLinks, selectedNodes, theme]);
     
-    const postRender = useCallback((ctx: CanvasRenderingContext2D, globalScale: number) => {
+    const onRenderFramePost = useCallback((ctx: CanvasRenderingContext2D, globalScale: number) => {
         if (!linkSourceNode || !fgRef.current) return;
         
         const { x, y } = (fgRef.current as any).graph2ScreenCoords(linkSourceNode.x || 0, linkSourceNode.y || 0);
@@ -391,7 +393,7 @@ const GraphView: React.FC = () => {
                     cooldownTicks={100}
                     onEngineStop={handleEngineStop}
                     // FIX: Changed 'postRender' to 'onRenderFramePost' to match react-force-graph-2d's API.
-                    onRenderFramePost={postRender}
+                    onRenderFramePost={onRenderFramePost}
                 />
             )}
         </div>

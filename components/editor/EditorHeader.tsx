@@ -50,7 +50,7 @@ const StatusIndicator: React.FC<StatusIndicatorProps> = ({
     }
 
     let colorClass = 'bg-yellow-500';
-    let text = 'Unsaved changes';
+    let text: string | null = 'Unsaved changes';
     let pulse = false;
 
     switch (saveStatus) {
@@ -60,9 +60,7 @@ const StatusIndicator: React.FC<StatusIndicatorProps> = ({
             pulse = true;
             break;
         case 'saved':
-            colorClass = 'bg-green-500';
-            text = 'Saved';
-            break;
+            return null; // Don't show anything when saved
         case 'error':
             colorClass = 'bg-red-500';
             text = 'Save Failed';

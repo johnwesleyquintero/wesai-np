@@ -1,25 +1,23 @@
 import React, { useEffect, useRef, useMemo, useCallback, useState } from 'react';
 import { Note, NoteVersion, Template } from '../types';
-import Toolbar from './Toolbar';
-import TagInput from './TagInput';
+import EditorHeader from './editor/EditorHeader';
+import EditorTitle from './editor/EditorTitle';
+import EditorContent from './editor/EditorContent';
+import EditorMeta from './editor/EditorMeta';
+import EditorStatusBar from './editor/EditorStatusBar';
 import VersionHistorySidebar from './VersionHistorySidebar';
 import { useUndoableState } from '../hooks/useUndoableState';
-import MarkdownPreview from './MarkdownPreview';
-import TagSuggestions from './TagSuggestions';
-import TitleSuggestion from './TitleSuggestion';
 import InlineAiMenu from './InlineAiMenu';
 import SpellcheckMenu from './SpellcheckMenu';
 import { useEditorContext, useStoreContext, useUIContext, useAuthContext } from '../context/AppContext';
 import NoteLinker from './NoteLinker';
 import TemplateLinker from './TemplateLinker';
-import BacklinksDisplay from './BacklinksDisplay';
 import { useBacklinks } from '../hooks/useBacklinks';
 import SlashCommandMenu from './SlashCommandMenu';
 import { uploadImage, getPublicUrl } from '../lib/supabaseClient';
 import { useToast } from '../context/ToastContext';
 import { useSpellcheck } from '../hooks/useSpellcheck';
-import RelatedNotes from './RelatedNotes';
-import { useNoteEditorReducer, initialNoteEditorUIState } from '../hooks/useNoteEditorReducer';
+import { useNoteEditorReducer } from '../hooks/useNoteEditorReducer';
 import { useAiSuggestions } from '../hooks/useAiSuggestions';
 import { useAiActions } from '../hooks/useAiActions';
 import { useDebounce } from '../hooks/useDebounce';
@@ -30,20 +28,6 @@ interface NoteEditorProps {
 }
 
 type NoteState = { title: string; content: string; tags: string[] };
-
-const StatusBar: React.FC<{ wordCount: number; charCount: number; readingTime: number; isCheckingSpelling: boolean }> = ({ wordCount, charCount, readingTime, isCheckingSpelling }) => (
-    <div className="flex-shrink-0 px-4 sm:px-8 py-1.5 border-t border-light-border dark:border-dark-border text-xs text-light-text/60 dark:text-dark-text/60 flex items-center justify-end space-x-4">
-        {isCheckingSpelling && (
-            <div className="flex items-center space-x-1.5 animate-pulse">
-                <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-                <span className="text-blue-500">Checking...</span>
-            </div>
-        )}
-        <span>~{readingTime} min read</span>
-        <span>Words: {wordCount}</span>
-        <span>Characters: {charCount}</span>
-    </div>
-);
 
 const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
     const { updateNote, toggleFavorite, notes, restoreNoteVersion } = useStoreContext();
@@ -132,7 +116,6 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         return { wordCount: finalWordCount, charCount: content.length, readingTime: finalReadingTime };
     }, [editorState.content]);
 
-    // Auto-resize textarea
     useEffect(() => {
         const textarea = textareaRef.current;
         if (textarea && viewMode === 'edit') {
@@ -146,7 +129,6 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         }
     }, [editorState.content, viewMode]);
 
-    // Reset all local state when switching to a new note
     useEffect(() => {
         resetEditorState({ title: note.title, content: note.content, tags: note.tags });
         dispatch({ type: 'RESET_STATE_FOR_NEW_NOTE' });
@@ -160,19 +142,13 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         }
     }, [note.id, resetEditorState, resetAiSuggestions, setActiveSpellingError]);
     
-    // Effect to handle external note updates (e.g., from another tab)
     useEffect(() => {
-        // If the note ID has changed, it's a new note loading.
-        // The main reset effect handles this, so we update our ref and exit.
         if (note.id !== prevNoteRef.current.id) {
             prevNoteRef.current = note;
             return;
         }
 
-        // If updatedAt has changed, a modification occurred.
         if (note.updatedAt !== prevNoteRef.current.updatedAt) {
-            // Check if the incoming update matches the current editor state.
-            // If it does, it's just our own save reflecting back. Do nothing.
             const isSelfUpdate = JSON.stringify(latestEditorStateRef.current) === JSON.stringify({
                 title: note.title,
                 content: note.content,
@@ -180,13 +156,11 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
             });
 
             if (isSelfUpdate) {
-                setLastWarnedTimestamp(null); // Reset warning on self-update
-                prevNoteRef.current = note; // Update ref and continue
+                setLastWarnedTimestamp(null);
+                prevNoteRef.current = note;
                 return;
             }
 
-            // The update is external. Now check if the user has local, unsaved changes.
-            // "Dirty" is defined as the current editor state differing from the *previous* note prop state.
             const hasLocalChanges = JSON.stringify(latestEditorStateRef.current) !== JSON.stringify({
                 title: prevNoteRef.current.title,
                 content: prevNoteRef.current.content,
@@ -194,8 +168,6 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
             });
 
             if (hasLocalChanges) {
-                // User is actively editing. Warn them but preserve their work.
-                // Only show toast if we haven't already warned for this specific update.
                 if (lastWarnedTimestamp !== note.updatedAt) {
                     showToast({
                         message: `"${note.title}" was updated in another tab. Your next save will overwrite.`,
@@ -204,24 +176,19 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
                     setLastWarnedTimestamp(note.updatedAt);
                 }
             } else {
-                // Editor is "clean", so it's safe to load the external changes.
                 resetEditorState({ title: note.title, content: note.content, tags: note.tags });
-                setLastWarnedTimestamp(null); // Reset warning state on successful sync
+                setLastWarnedTimestamp(null);
                 showToast({
                     message: `"${note.title}" was synced from an external change.`,
                     type: 'info',
                 });
             }
         }
-
-        // Update the ref for the next comparison.
         prevNoteRef.current = note;
     }, [note, resetEditorState, showToast, lastWarnedTimestamp]);
 
-
-    // Auto-save and status handling logic
     useEffect(() => {
-        if (previewVersion) return; // Don't save while previewing history
+        if (previewVersion) return;
 
         const isLiveDirty = JSON.stringify(editorState) !== JSON.stringify({
             title: note.title,
@@ -236,7 +203,6 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
             return;
         }
 
-        // If it's dirty, it's at least 'unsaved'
         if (saveStatus === 'saved') {
             dispatch({ type: 'SET_SAVE_STATUS', payload: 'unsaved' });
         }
@@ -256,14 +222,10 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         }
     }, [editorState, debouncedEditorState, note, updateNote, showToast, dispatch, previewVersion, saveStatus]);
 
-    // Robust saving on navigation/unmount
     useEffect(() => {
         const noteAtMount = note;
-
         return () => {
-            // Use the state from the ref, which is always up-to-date
             const latestStateForNote = latestEditorStateRef.current;
-            
             const isDirty = JSON.stringify(latestStateForNote) !== JSON.stringify({
                 title: noteAtMount.title,
                 content: noteAtMount.content,
@@ -279,8 +241,6 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         };
     }, [note.id, updateNote, showToast]);
 
-
-    // Register editor actions with the App context
     const editorActions = useMemo(() => ({ 
         undo, redo, canUndo, canRedo, 
         applyAiActionToFullNote,
@@ -306,7 +266,6 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         dispatch({ type: 'SET_SLASH_COMMAND', payload: null });
     }, [dispatch, setActiveSpellingError]);
     
-    // Effect for closing popups on scroll
     useEffect(() => {
         const pane = editorPaneRef.current;
         pane?.addEventListener('scroll', handleScroll);
@@ -458,7 +417,6 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         const items = e.clipboardData?.items;
         if (!items) return;
 
-        // FIX: Explicitly typed `item` as `DataTransferItem` to resolve `unknown` type errors.
         const imageItem = Array.from(items).find((item: DataTransferItem) => item.type.startsWith('image/'));
 
         if (imageItem) {
@@ -498,7 +456,6 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         }
     };
 
-    // --- Action Handlers ---
     const handleInsertLink = (noteId: string, noteTitle: string) => {
         const textarea = textareaRef.current;
         if (!textarea) return;
@@ -522,7 +479,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         const textarea = textareaRef.current;
         if (!textarea) return;
         const { selectionStart } = textarea;
-        const startIndex = selectionStart - templateLinker.query.length; // Assumes it was triggered from a slash command with no '/'
+        const startIndex = selectionStart - templateLinker.query.length;
         const newContent = `${editorState.content.substring(0, startIndex)}[[sync:${templateId}]]${editorState.content.substring(selectionStart)}`;
         setEditorState({ ...editorState, content: newContent });
         dispatch({ type: 'SET_TEMPLATE_LINKER', payload: null });
@@ -597,52 +554,55 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
 
     return (
         <div className="flex-1 flex flex-col h-full relative bg-light-background dark:bg-dark-background" onDragOver={(e) => { e.preventDefault(); if (!isEffectivelyReadOnly) dispatch({ type: 'SET_DRAG_OVER', payload: true }); }} onDragLeave={() => dispatch({ type: 'SET_DRAG_OVER', payload: false })} onDrop={handleDrop} onPaste={handlePaste}>
-             <Toolbar note={note} onToggleFavorite={() => toggleFavorite(note.id)} saveStatus={saveStatus} editorTitle={editorState.title} onEnhance={handleEnhanceNote} onSummarize={summarizeAndFindActionForFullNote} onToggleHistory={() => dispatch({type: 'SET_HISTORY_OPEN', payload: !isHistoryOpen})} isHistoryOpen={isHistoryOpen} onApplyTemplate={handleApplyTemplate} isMobileView={isMobileView} onToggleSidebar={onToggleSidebar} onUndo={undo} onRedo={redo} canUndo={canUndo} canRedo={canRedo} viewMode={viewMode} onToggleViewMode={() => dispatch({type: 'SET_VIEW_MODE', payload: viewMode === 'edit' ? 'preview' : 'edit'})} wordCount={wordCount} charCount={charCount} aiActionError={aiActionError} setAiActionError={(err) => dispatch({ type: 'SET_AI_ACTION_ERROR', payload: err })} isFullAiActionLoading={isFullAiActionLoading} isApiKeyMissing={isApiKeyMissing} />
-             {isAiRateLimited && <div className="bg-yellow-100 dark:bg-yellow-900/30 border-b border-yellow-300 dark:border-yellow-700/50 py-2 px-4 text-center text-sm text-yellow-800 dark:text-yellow-200 flex-shrink-0">AI features are temporarily paused due to high usage. They will be available again shortly.</div>}
+            <EditorHeader note={note} onToggleFavorite={() => toggleFavorite(note.id)} saveStatus={saveStatus} editorTitle={editorState.title} onEnhance={handleEnhanceNote} onSummarize={summarizeAndFindActionForFullNote} onToggleHistory={() => dispatch({type: 'SET_HISTORY_OPEN', payload: !isHistoryOpen})} isHistoryOpen={isHistoryOpen} onApplyTemplate={handleApplyTemplate} isMobileView={isMobileView} onToggleSidebar={onToggleSidebar} onUndo={undo} onRedo={redo} canUndo={canUndo} canRedo={canRedo} viewMode={viewMode} onToggleViewMode={() => dispatch({type: 'SET_VIEW_MODE', payload: viewMode === 'edit' ? 'preview' : 'edit'})} wordCount={wordCount} charCount={charCount} aiActionError={aiActionError} setAiActionError={(err) => dispatch({ type: 'SET_AI_ACTION_ERROR', payload: err })} isFullAiActionLoading={isFullAiActionLoading} isApiKeyMissing={isApiKeyMissing} />
+            {isAiRateLimited && <div className="bg-yellow-100 dark:bg-yellow-900/30 border-b border-yellow-300 dark:border-yellow-700/50 py-2 px-4 text-center text-sm text-yellow-800 dark:text-yellow-200 flex-shrink-0">AI features are temporarily paused due to high usage. They will be available again shortly.</div>}
             
             <div ref={editorPaneRef} className="flex-1 overflow-y-auto relative">
                  {!!previewVersion && <div className={`bg-yellow-100 dark:bg-yellow-900/30 py-2 text-center text-sm text-yellow-800 dark:text-yellow-200 max-w-3xl mx-auto ${editorPaddingClass}`}>You are previewing a version from {new Date(previewVersion.savedAt).toLocaleString()}.</div>}
 
                 <div className={`max-w-3xl mx-auto py-12 ${editorPaddingClass} transition-opacity duration-300 ${isFullAiActionLoading ? 'opacity-50 pointer-events-none' : ''}`}>
-                    {viewMode === 'edit' ? (
-                        <>
-                            <input
-                                ref={titleInputRef} type="text" value={displayedTitle}
-                                onChange={(e) => setEditorState({ ...editorState, title: e.target.value })}
-                                placeholder="Note Title"
-                                className={`w-full bg-transparent text-3xl sm:text-4xl font-bold focus:outline-none rounded-md ${isEffectivelyReadOnly ? 'cursor-not-allowed opacity-70' : ''}`}
-                                readOnly={isEffectivelyReadOnly}
-                            />
-                            {!isApiKeyMissing && !isEffectivelyReadOnly && <TitleSuggestion suggestion={suggestedTitle} onApply={handleApplyTitleSuggestion} isLoading={isSuggestingTitle} error={titleSuggestionError} />}
-                            <div className="relative mt-4">
-                                <textarea
-                                    ref={textareaRef} onSelect={handleSelect} onScroll={handleScroll} onKeyDown={handleKeyDown}
-                                    onBlur={handleContentBlur}
-                                    value={displayedContent} onChange={handleChange}
-                                    placeholder="Start writing, drop a file, or type / for commands..."
-                                    className={`${sharedEditorClasses} font-serif-editor relative z-10 caret-light-text dark:caret-dark-text bg-transparent block`}
-                                    readOnly={isEffectivelyReadOnly} spellCheck={false}
-                                />
-                            </div>
-                        </>
-                    ) : (
-                        <div className="font-serif-editor">
-                             <MarkdownPreview title={displayedTitle} content={displayedContent} onToggleTask={handleToggleTask} />
-                        </div>
-                    )}
-
-                    <div className="mt-12 space-y-8">
-                        <BacklinksDisplay backlinks={backlinks} />
-                        {!isApiKeyMissing && <RelatedNotes note={note} />}
-                         <div id="onboarding-tag-input" className={`pt-6 border-t border-light-border dark:border-dark-border ${isEffectivelyReadOnly ? 'opacity-60' : ''}`}>
-                            <TagInput tags={displayedTags} setTags={(tags) => setEditorState({ ...editorState, tags })} readOnly={isEffectivelyReadOnly} allExistingTags={allTags} />
-                            {!isApiKeyMissing && !isEffectivelyReadOnly && <TagSuggestions suggestions={suggestedTags} onAddTag={handleAddTag} isLoading={isSuggestingTags} error={tagSuggestionError} />}
-                        </div>
-                    </div>
+                    <EditorTitle
+                        titleInputRef={titleInputRef}
+                        value={displayedTitle}
+                        onChange={(e) => setEditorState({ ...editorState, title: e.target.value })}
+                        isReadOnly={isEffectivelyReadOnly}
+                        suggestion={suggestedTitle}
+                        onApplySuggestion={handleApplyTitleSuggestion}
+                        isSuggesting={isSuggestingTitle}
+                        error={titleSuggestionError}
+                        isApiKeyMissing={isApiKeyMissing}
+                    />
+                    <EditorContent
+                        textareaRef={textareaRef}
+                        viewMode={viewMode}
+                        displayedTitle={displayedTitle}
+                        displayedContent={displayedContent}
+                        isReadOnly={isEffectivelyReadOnly}
+                        onChange={handleChange}
+                        onSelect={handleSelect}
+                        onScroll={handleScroll}
+                        onKeyDown={handleKeyDown}
+                        onBlur={handleContentBlur}
+                        onToggleTask={handleToggleTask}
+                        sharedEditorClasses={sharedEditorClasses}
+                    />
+                    <EditorMeta
+                        note={note}
+                        backlinks={backlinks}
+                        tags={displayedTags}
+                        onTagsChange={(tags) => setEditorState({ ...editorState, tags })}
+                        isReadOnly={isEffectivelyReadOnly}
+                        allExistingTags={allTags}
+                        suggestedTags={suggestedTags}
+                        onAddTag={handleAddTag}
+                        isLoadingTags={isSuggestingTags}
+                        tagSuggestionError={tagSuggestionError}
+                        isApiKeyMissing={isApiKeyMissing}
+                    />
                 </div>
             </div>
             
-            <StatusBar wordCount={wordCount} charCount={charCount} readingTime={readingTime} isCheckingSpelling={isCheckingSpelling} />
+            <EditorStatusBar wordCount={wordCount} charCount={charCount} readingTime={readingTime} isCheckingSpelling={isCheckingSpelling} />
 
             {(noteLinker || noteLinkerForSelection) && <NoteLinker query={noteLinker?.query || ''} onSelect={handleInsertLink} onClose={() => { dispatch({ type: 'SET_NOTE_LINKER', payload: null }); dispatch({ type: 'SET_NOTE_LINKER_FOR_SELECTION', payload: null }); }} position={noteLinker?.position || { top: noteLinkerForSelection!.rect.bottom, left: noteLinkerForSelection!.rect.left }} />}
             {templateLinker && <TemplateLinker query={templateLinker.query} onSelect={handleInsertSyncedBlock} onClose={() => dispatch({ type: 'SET_TEMPLATE_LINKER', payload: null })} position={templateLinker.position} />}

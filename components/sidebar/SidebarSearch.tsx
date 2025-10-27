@@ -33,7 +33,7 @@ const SidebarSearch: React.FC<SidebarSearchProps> = ({ onboardingSteps, isOnboar
                     onChange={(e) => setSearchTerm(e.target.value)}
                     onFocus={() => setIsSearchFocused(true)}
                     onBlur={() => setTimeout(() => setIsSearchFocused(false), 200)}
-                    className="w-full pl-9 pr-16 py-2 text-sm bg-light-background dark:bg-dark-background rounded-md border border-light-border dark:border-dark-border focus:ring-1 focus:ring-light-primary focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full pl-9 pr-24 py-2 text-sm bg-light-background dark:bg-dark-background rounded-md border border-light-border dark:border-dark-border focus:ring-1 focus:ring-light-primary focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
                     disabled={!!activeSmartCollection}
                 />
                 <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-light-text/50 dark:text-dark-text/50" />

@@ -37,14 +37,17 @@ const Toast: React.FC<ToastProps> = ({ message, type, onDismiss }) => {
 
     useEffect(() => {
         setIsVisible(true);
-        timeoutRef.current = window.setTimeout(handleDismiss, 5000); // 5 second auto-dismiss
+        // Only auto-dismiss non-error toasts
+        if (type !== 'error') {
+            timeoutRef.current = window.setTimeout(handleDismiss, 5000);
+        }
 
         return () => {
             if (timeoutRef.current) {
                 clearTimeout(timeoutRef.current);
             }
         };
-    }, [handleDismiss]);
+    }, [type, handleDismiss]);
 
     const { icon, style } = toastConfig[type];
 

@@ -191,7 +191,9 @@ const Message: React.FC<MessageProps> = ({ message, onDelete, onToggleSources, i
 
             <div className={`p-3 rounded-lg max-w-full md:max-w-2xl w-fit ${isUser ? 'bg-light-ui dark:bg-dark-ui' : 'bg-light-background dark:bg-dark-background'}`}>
                 {message.image && <img src={`data:image/jpeg;base64,${message.image}`} alt="User upload" className="max-w-xs rounded-lg mb-2" />}
-                {renderContent()}
+                <div className="chat-markdown">
+                    {renderContent()}
+                </div>
                 {isAi && message.sources && message.sources.length > 0 && <SourceNotes sources={message.sources} />}
                 {isAi && message.noteId && (
                      <button onClick={() => handleNoteClick(message.noteId!)} className="text-xs font-semibold text-light-primary dark:text-dark-primary mt-2">
@@ -311,7 +313,6 @@ const ChatInput: React.FC = () => {
             if (lastUserMessage && typeof lastUserMessage.content === 'string') {
                 deleteMessage(lastUserMessage.id);
                 setInput(lastUserMessage.content);
-                // Note: Restoring image from last message is not implemented for simplicity.
             }
         }
     };
@@ -479,7 +480,7 @@ const ChatView: React.FC = () => {
                                         <span className="flex items-center justify-center w-5 h-5 text-xs font-bold rounded-full bg-light-ui dark:bg-dark-ui">{index + 1}</span>
                                         {source.title}
                                     </h3>
-                                    <div className="text-sm max-h-64 overflow-y-auto">
+                                    <div className="text-sm max-h-64 overflow-y-auto chat-markdown">
                                         <MarkdownPreview title="" content={source.content} onToggleTask={() => {}} />
                                     </div>
                                 </div>

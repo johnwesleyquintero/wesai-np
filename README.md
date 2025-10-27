@@ -1,6 +1,6 @@
 # WesCore
 
-**One cockpit, endless AI-powered workflows.**
+**The operator-first platform for building, executing, and automating high-value workflows. Powered by a modular AI engine and real-time cloud sync.**
 
 WesCore is a centralized cockpit for operators to execute workflows, manage data, and automate tasks. It combines a fast, responsive interface with a multi-mode AI assistant powered by the Google Gemini API. All your data is securely stored in your own cloud backend, making it accessible across all your devices.
 
@@ -9,9 +9,9 @@ WesCore is a centralized cockpit for operators to execute workflows, manage data
 ### Core System & Organization
 - **Secure & Private Cloud Sync:** All data is stored securely in your own Supabase backend and protected by granular security policies. Real-time, authenticated subscriptions keep all your devices perfectly in sync.
 - **Flexible Authentication:** Sign up quickly with an email and password or use the convenient one-click Google Sign-In option.
-- **Comprehensive Onboarding:** A first-session checklist and contextual coach marks guide new users through core features, ensuring a smooth start.
+- **Generative Onboarding Experience:** Instead of a static checklist, new users are greeted with a set of AI-generated notes that immersively guide them through core features, teaching the app with its own functionality from the first second.
 - **Drag & Drop Organization:** Intuitively organize your workspace by dragging notes and folders to reorder them or nest them within each other. Drop files directly onto folders to import them.
-- **Rich Markdown Editor:** A full-featured Markdown editor with syntax highlighting and a live preview mode that supports tables, images, embedded YouTube/Vimeo videos, and more.
+- **Rich Markdown Editor:** A full-featured Markdown editor with syntax highlighting and a live preview mode that supports tables, images, embedded YouTube/Vimeo videos, callout blocks, and more.
 - **Cloud Image Storage:** Images are uploaded to secure cloud storage, keeping your note content clean and your database lean.
 - **Smart Folders:** Create dynamic, saved searches that automatically display notes matching a specific AI-powered query (e.g., "all notes about marketing from the last month").
 - **Bi-Directional Linking:** Connect ideas by linking notes using `[[note-id|display text]]` syntax. A "Linked Mentions" section automatically displays all backlinks to the current note.
@@ -45,10 +45,11 @@ WesCore is a centralized cockpit for operators to execute workflows, manage data
 - **Robust Editing Experience:** A reliable undo/redo system that covers all note attributes (title, content, tags) ensures you never lose an idea.
 - **Command Palette:** Press `Ctrl/Cmd + K` to access nearly every application feature, from creating notes to executing AI actions.
 - **Slash Commands:** Type `/` in the editor to quickly insert headings, lists, to-do items, dividers, and trigger AI actions.
+- **Saved Chat Responders:** Save and reuse common prompts in the "Responder" chat mode, turning complex customer service tasks into one-click actions.
 - **Collapsible Sidebar:** Maximize your writing space on desktop by collapsing the sidebar to a compact, icon-only view.
 - **Drag & Drop Import:** Drag text or markdown files directly into the editor or onto a folder in the sidebar to instantly create new notes.
 - **Full Data Portability:** Export your entire notepad—including all notes, folders, and templates—to a single JSON file for backup. Import a backup file to restore your data.
-- **Note Templates:** Create and save reusable templates for frequently created documents.
+- **Note Templates & Synced Blocks:** Create and save reusable templates. Embed template content directly into notes as "synced blocks" that update automatically when the source template is changed.
 - **Version History:** Automatically saves previous versions of your notes, allowing you to preview or restore them at any time.
 - **In-App Help Center:** A dedicated modal for FAQs and a running changelog to keep users informed.
 - **Light and Dark Themes:** Choose between a light or dark interface for optimal viewing comfort.

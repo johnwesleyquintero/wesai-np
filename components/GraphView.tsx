@@ -390,7 +390,8 @@ const GraphView: React.FC = () => {
                     onNodeHover={handleNodeHover}
                     cooldownTicks={100}
                     onEngineStop={handleEngineStop}
-                    postRender={postRender}
+                    // FIX: Changed 'postRender' to 'onRenderFramePost' to match react-force-graph-2d's API.
+                    onRenderFramePost={postRender}
                 />
             )}
         </div>

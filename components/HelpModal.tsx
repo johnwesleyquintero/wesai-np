@@ -26,6 +26,13 @@ const AccordionItem: React.FC<{ title: string; children: ReactNode }> = ({ title
 const ChangelogContent = () => (
     <div className="space-y-6 text-sm">
         <div>
+            <h3 className="font-bold text-base mb-2">July 28, 2024</h3>
+            <ul className="list-disc pl-5 space-y-1">
+                <li><strong className="font-semibold">AI-Driven Onboarding:</strong> Replaced the static checklist with a generative onboarding experience. New users are now greeted with AI-crafted notes that guide them through the app's core features.</li>
+                <li><strong className="font-semibold">Saved Chat Responders:</strong> Added the ability to save and quickly reuse common prompts in the "Responder" chat mode, accelerating customer service workflows.</li>
+            </ul>
+        </div>
+        <div>
             <h3 className="font-bold text-base mb-2">July 27, 2024</h3>
             <ul className="list-disc pl-5 space-y-1">
                 <li><strong className="font-semibold">Enhanced AI Feedback:</strong> Added one-click reason tags (e.g., "Incorrect") when downvoting an AI chat response to provide more detailed feedback for model improvement.</li>

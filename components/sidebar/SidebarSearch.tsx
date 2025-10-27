@@ -1,10 +1,20 @@
 import React, { useState } from 'react';
 import { MagnifyingGlassIcon, SparklesIcon, FolderPlusIcon } from '../Icons';
 import { useStoreContext, useUIContext } from '../../context/AppContext';
+import OnboardingChecklist from '../OnboardingChecklist';
 
-interface SidebarSearchProps {}
+interface OnboardingStep {
+    id: string;
+    text: string;
+    isComplete: boolean;
+}
 
-const SidebarSearch: React.FC<SidebarSearchProps> = () => {
+interface SidebarSearchProps {
+    onboardingSteps: OnboardingStep[];
+    isOnboardingComplete: boolean;
+}
+
+const SidebarSearch: React.FC<SidebarSearchProps> = ({ onboardingSteps, isOnboardingComplete }) => {
     const { 
         searchTerm, handleSearchTermChange: setSearchTerm, searchMode, setSearchMode,
         isAiSearching, aiSearchError, activeSmartCollection, recentQueries,
@@ -14,6 +24,7 @@ const SidebarSearch: React.FC<SidebarSearchProps> = () => {
 
     return (
         <div className="px-4 py-3 border-b border-light-border dark:border-dark-border flex-shrink-0">
+            {!isOnboardingComplete && <OnboardingChecklist steps={onboardingSteps} />}
             <div className="relative">
                 <input
                     type="text"

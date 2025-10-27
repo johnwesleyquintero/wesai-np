@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Note, Collection, SmartCollection, SearchMode, TreeNode } from '../types';
 import { useStore as useSupabaseStore } from './useStore';
 import { useDebounce } from './useDebounce';
-import { semanticSearchNotes, generateOnboardingNotes } from '../services/geminiService';
+import { semanticSearchNotes } from '../services/geminiService';
 import { useAuthContext, useUIContext } from '../context/AppContext';
 import { useToast } from '../context/ToastContext';
 import { useLocalNotes } from './useLocalNotes';
@@ -60,7 +60,6 @@ export const useStoreProviderLogic = () => {
     const [activeSmartCollectionId, setActiveSmartCollectionId] = useState<string | null>(null);
     const debouncedSearchTerm = useDebounce(searchTerm, 1000);
     const { queries: recentQueries, addQuery: addRecentQuery } = useRecentQueries();
-    const [hasRunOnboardingCheck, setHasRunOnboardingCheck] = useState(false);
 
 
     useEffect(() => {
@@ -98,38 +97,6 @@ export const useStoreProviderLogic = () => {
         }
     }, [debouncedSearchTerm, searchMode, notes]);
     
-    useEffect(() => {
-        const generateAndSetupOnboardingNotes = async () => {
-            try {
-                const generatedNotes = await generateOnboardingNotes();
-                
-                const noteIds = await Promise.all(
-                    generatedNotes.map(note => createNote(null, note.title, ''))
-                );
-    
-                const updatePromises = generatedNotes.map((note, index) => {
-                    const finalContent = note.content
-                        .replace('[[NOTE_ID_2', `[[${noteIds[1]}`)
-                        .replace('[[NOTE_ID_3', `[[${noteIds[2]}`);
-                    return store.updateNote(noteIds[index], { content: finalContent });
-                });
-    
-                await Promise.all(updatePromises);
-                
-                setActiveNoteId(noteIds[0]);
-                
-            } catch (error) {
-                console.error("Failed to create onboarding notes:", error);
-                showToast({ message: "Could not create welcome notes. You can start by creating a new note manually.", type: 'error' });
-            }
-        };
-    
-        if (!store.loading && !isDemoMode && notes.length === 0 && !hasRunOnboardingCheck && session?.user) {
-            setHasRunOnboardingCheck(true);
-            generateAndSetupOnboardingNotes();
-        }
-    }, [store.loading, isDemoMode, notes.length, hasRunOnboardingCheck, session, createNote, store.updateNote, showToast, setActiveNoteId]);
-
     const favoriteNotes = useMemo(() => notes.filter(n => n.isFavorite).sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()), [notes]);
 
     const fileTree = useMemo(() => buildTree(notes, collections), [notes, collections]);

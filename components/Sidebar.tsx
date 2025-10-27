@@ -6,16 +6,24 @@ import SidebarContent from './sidebar/SidebarContent';
 import SidebarFooter from './sidebar/SidebarFooter';
 import CollapsedSidebar from './sidebar/CollapsedSidebar';
 
+interface OnboardingStep {
+    id: string;
+    text: string;
+    isComplete: boolean;
+}
+
 interface SidebarProps {
     width: number;
+    onboardingSteps: OnboardingStep[];
+    isOnboardingComplete: boolean;
 }
 
 const COLLAPSED_WIDTH = 56;
 
-const ExpandedView: React.FC = () => (
+const ExpandedView: React.FC<{onboardingSteps: OnboardingStep[], isOnboardingComplete: boolean}> = ({ onboardingSteps, isOnboardingComplete }) => (
     <>
         <SidebarHeader />
-        <SidebarSearch />
+        <SidebarSearch onboardingSteps={onboardingSteps} isOnboardingComplete={isOnboardingComplete} />
         <SidebarContent />
         <SidebarFooter />
     </>
@@ -23,6 +31,8 @@ const ExpandedView: React.FC = () => (
 
 const Sidebar: React.FC<SidebarProps> = ({
     width,
+    onboardingSteps,
+    isOnboardingComplete,
 }) => {
     const { isSidebarOpen, isMobileView, isSidebarCollapsed } = useUIContext();
 
@@ -34,7 +44,7 @@ const Sidebar: React.FC<SidebarProps> = ({
            {isSidebarCollapsed && !isMobileView ? (
                <CollapsedSidebar />
            ) : (
-               <ExpandedView />
+               <ExpandedView onboardingSteps={onboardingSteps} isOnboardingComplete={isOnboardingComplete} />
             )}
         </aside>
     );

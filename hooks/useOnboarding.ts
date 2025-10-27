@@ -1,7 +1,36 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useStoreContext, useChatContext, useUIContext } from '../context/AppContext';
 
-type OnboardingStep = 'note' | 'tag' | 'ai';
+type OnboardingStepId = 'note' | 'tag' | 'ai';
+
+interface CoachMarkData {
+    id: OnboardingStepId;
+    targetSelector: string;
+    title: string;
+    content: string;
+}
+
+const coachMarkMap: Record<OnboardingStepId, CoachMarkData> = {
+    note: {
+        id: 'note',
+        targetSelector: '#onboarding-new-note-btn',
+        title: "Create Your First Note",
+        content: "Click 'New Note' to get started. All your thoughts will be saved securely.",
+    },
+    tag: {
+        id: 'tag',
+        targetSelector: '#onboarding-tag-input',
+        title: "Organize with Tags",
+        content: "Add tags to your note to categorize it. You'll even get AI-powered suggestions!",
+    },
+    ai: {
+        id: 'ai',
+        targetSelector: '#onboarding-ask-ai-btn',
+        title: "Ask the AI",
+        content: "Switch to the chat view to ask questions about your notes or generate new ideas.",
+    }
+};
+
 
 interface OnboardingState {
     createdNote: boolean;
@@ -40,7 +69,7 @@ export const useOnboarding = () => {
     const { view, isWelcomeModalOpen } = useUIContext();
     
     const [onboardingState, setOnboardingState] = useState<OnboardingState>(getInitialState);
-    const [activeCoachMark, setActiveCoachMark] = useState<OnboardingStep | null>(null);
+    const [activeCoachMarkId, setActiveCoachMarkId] = useState<OnboardingStepId | null>(null);
 
     // Effect to check conditions and update step completion state
     useEffect(() => {
@@ -65,27 +94,27 @@ export const useOnboarding = () => {
     }, [notes, chatMessages, onboardingState]);
     
     const dismissCoachMark = useCallback(() => {
-        if (activeCoachMark) {
-            const skipKeyMap: Record<OnboardingStep, keyof OnboardingState> = {
+        if (activeCoachMarkId) {
+            const skipKeyMap: Record<OnboardingStepId, keyof OnboardingState> = {
                 note: 'skippedNote',
                 tag: 'skippedTag',
                 ai: 'skippedAI',
             };
-            const keyToSkip = skipKeyMap[activeCoachMark];
+            const keyToSkip = skipKeyMap[activeCoachMarkId];
             setOnboardingState(prev => ({ ...prev, [keyToSkip]: true }));
         }
-        setActiveCoachMark(null);
-    }, [activeCoachMark]);
+        setActiveCoachMarkId(null);
+    }, [activeCoachMarkId]);
     
      // Effect to manage which coach mark is active
     useEffect(() => {
         const isComplete = onboardingState.createdNote && onboardingState.addedTag && onboardingState.askedAI;
         if (isComplete || isWelcomeModalOpen) {
-            setActiveCoachMark(null);
+            setActiveCoachMarkId(null);
             return;
         }
 
-        let nextMark: OnboardingStep | null = null;
+        let nextMark: OnboardingStepId | null = null;
         if (!onboardingState.createdNote && !onboardingState.skippedNote) {
             nextMark = 'note';
         } else if (onboardingState.createdNote && !onboardingState.addedTag && !onboardingState.skippedTag && activeNote) {
@@ -95,11 +124,11 @@ export const useOnboarding = () => {
         }
 
         // Prevent flicker by only setting if it's different
-        if (activeCoachMark !== nextMark) {
-            setActiveCoachMark(nextMark);
+        if (activeCoachMarkId !== nextMark) {
+            setActiveCoachMarkId(nextMark);
         }
 
-    }, [onboardingState, activeNote, view, isWelcomeModalOpen, activeCoachMark]);
+    }, [onboardingState, activeNote, view, isWelcomeModalOpen, activeCoachMarkId]);
 
 
     // Effect to persist completion state to localStorage
@@ -120,6 +149,8 @@ export const useOnboarding = () => {
     const isOnboardingComplete = useMemo(() => 
         onboardingState.createdNote && onboardingState.addedTag && onboardingState.askedAI
     , [onboardingState]);
+
+    const activeCoachMark = activeCoachMarkId ? coachMarkMap[activeCoachMarkId] : null;
 
     return { onboardingSteps, isOnboardingComplete, activeCoachMark, dismissCoachMark };
 };

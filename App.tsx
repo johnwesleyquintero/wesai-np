@@ -18,6 +18,7 @@ import TrendAnalysisDashboardSkeleton from './components/TrendAnalysisDashboardS
 import GraphViewSkeleton from './components/GraphViewSkeleton';
 import LandingPage from './components/LandingPage';
 import WelcomeScreen from './components/WelcomeScreen';
+import { useOnboarding } from './hooks/useOnboarding';
 
 const NoteEditor = React.lazy(() => import('./components/NoteEditor'));
 const ChatView = React.lazy(() => import('./components/ChatView'));
@@ -29,6 +30,7 @@ const AnalyticsDashboard = React.lazy(() => import('./components/AnalyticsDashbo
 const TrendAnalysisDashboard = React.lazy(() => import('./components/TrendAnalysisDashboard'));
 const GraphView = React.lazy(() => import('./components/GraphView'));
 const HelpModal = React.lazy(() => import('./components/HelpModal'));
+const CoachMark = React.lazy(() => import('./components/CoachMark'));
 
 
 const WELCOME_SCREEN_SIDEBAR_WIDTH_KEY = 'wesai-sidebar-width';
@@ -55,6 +57,7 @@ function AppContent() {
         isFocusMode,
     } = useUIContext();
     
+    const { onboardingSteps, isOnboardingComplete, activeCoachMark, dismissCoachMark } = useOnboarding();
     const isResizing = useRef(false);
 
     const [sidebarWidth, setSidebarWidth] = useState<number>(() => {
@@ -171,6 +174,8 @@ function AppContent() {
         <div className="flex h-screen w-screen font-sans text-light-text dark:text-dark-text bg-light-background dark:bg-dark-background overflow-hidden">
             <Sidebar
                 width={sidebarWidth}
+                onboardingSteps={onboardingSteps}
+                isOnboardingComplete={isOnboardingComplete}
             />
             {!isMobileView && <SidebarResizer onResizeStart={handleResizeStart} />}
             <main className="flex-1 flex flex-col h-full min-w-0">
@@ -204,6 +209,16 @@ function AppContent() {
                 <WelcomeModal isOpen={isWelcomeModalOpen} onClose={closeWelcomeModal} />
 
                 <HelpModal isOpen={isHelpModalOpen} onClose={() => setIsHelpModalOpen(false)} />
+                
+                {activeCoachMark && (
+                    <CoachMark
+                        key={activeCoachMark.id}
+                        targetSelector={activeCoachMark.targetSelector}
+                        title={activeCoachMark.title}
+                        content={activeCoachMark.content}
+                        onDismiss={dismissCoachMark}
+                    />
+                )}
             </Suspense>
 
             <ConfirmationModal

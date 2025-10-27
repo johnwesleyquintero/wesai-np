@@ -458,7 +458,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         const items = e.clipboardData?.items;
         if (!items) return;
 
-        // Fix: Explicitly type `item` as `DataTransferItem` to resolve `unknown` type errors.
+        // FIX: Explicitly typed `item` as `DataTransferItem` to resolve `unknown` type errors.
         const imageItem = Array.from(items).find((item: DataTransferItem) => item.type.startsWith('image/'));
 
         if (imageItem) {

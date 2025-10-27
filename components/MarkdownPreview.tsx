@@ -10,7 +10,7 @@ import json from 'react-syntax-highlighter/dist/esm/languages/prism/json';
 import bash from 'react-syntax-highlighter/dist/esm/languages/prism/bash';
 import markdown from 'react-syntax-highlighter/dist/esm/languages/prism/markdown';
 import { useStoreContext, useUIContext } from '../context/AppContext';
-import { InformationCircleIcon, LightBulbIcon, ExclamationTriangleIcon, ExclamationCircleIcon, ClipboardDocumentIcon, CheckIcon } from './Icons';
+import { InformationCircleIcon, LightBulbIcon, ExclamationTriangleIcon, ExclamationCircleIcon, ClipboardDocumentIcon, CheckIcon, PhotoIcon } from './Icons';
 
 SyntaxHighlighter.registerLanguage('jsx', jsx);
 SyntaxHighlighter.registerLanguage('tsx', typescript);
@@ -88,10 +88,8 @@ const ImageRenderer = ({ src, alt, ...props }: { src?: string, alt?: string, [ke
 
     if (hasError || !src) {
         return (
-            <div className="my-4 p-4 bg-light-ui dark:bg-dark-ui rounded-lg flex flex-col items-center justify-center text-center text-sm text-light-text/60 dark:text-dark-text/60">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
+            <div className="my-4 p-4 bg-light-ui dark:bg-dark-ui rounded-lg flex flex-col items-center justify-center text-center text-sm text-light-text/60 dark:text-dark-text/60 border border-light-border dark:border-dark-border">
+                <PhotoIcon className="h-8 w-8 mb-2" />
                 <span>{!src ? "Image source missing." : "Could not load image."}</span>
                 <span className="text-xs truncate max-w-full">{alt || src}</span>
             </div>
@@ -99,16 +97,19 @@ const ImageRenderer = ({ src, alt, ...props }: { src?: string, alt?: string, [ke
     }
     
     return (
-        <div className="relative my-4">
+        <div className="relative my-4 min-h-[5rem] flex items-center justify-center bg-light-ui/50 dark:bg-dark-ui/50 rounded-lg border border-dashed border-light-border dark:border-dark-border overflow-hidden">
             {isLoading && (
-                <div className="absolute inset-0 bg-light-ui dark:bg-dark-ui rounded-lg animate-pulse"></div>
+                <div className="absolute inset-0 flex flex-col items-center justify-center p-4 text-center text-light-text/60 dark:text-dark-text/60 animate-pulse">
+                    <PhotoIcon className="h-8 w-8 mb-2" />
+                    {alt && <span className="text-xs truncate max-w-full">{alt}</span>}
+                </div>
             )}
             <img 
                 src={src} 
                 alt={alt || ''}
                 onLoad={handleLoad}
                 onError={handleError}
-                className={`rounded-lg transition-opacity duration-300 ${isLoading ? 'opacity-0' : 'opacity-100'}`}
+                className={`rounded-lg transition-opacity duration-500 w-full relative z-10 ${isLoading ? 'opacity-0' : 'opacity-100'}`}
                 {...props} 
             />
         </div>

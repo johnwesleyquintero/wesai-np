@@ -75,6 +75,59 @@ async function _callGemini<T>(
 }
 
 
+// --- Onboarding ---
+export const generateOnboardingNotes = async (): Promise<{ title: string; content: string }[]> => {
+    const prompt = `You are a UX writer for an AI-powered note-taking app called "WesCore". Your task is to generate a series of 3 short, engaging onboarding notes for a new user. The user is an "operator" - someone who is results-driven and values efficiency. The tone should be inspiring, clear, and action-oriented.
+
+The notes should guide the user through the app's core features. Use Markdown for formatting.
+
+The notes must be in this order and include the following elements:
+1.  **First Note (Welcome):**
+    - Title: "Welcome to Your WesCore Cockpit"
+    - Content: Welcome the user, explain the "cockpit" philosophy, and include a link to the second note using the placeholder \`[[NOTE_ID_2|Next: Power Up with AI]]\`.
+2.  **Second Note (AI Features):**
+    - Title: "Powering Up with AI"
+    - Content: Explain the inline AI assistant. Include a sample sentence with a typo for the user to practice on (e.g., "This is a sample sentance to fix."). Include a link to the third note using the placeholder \`[[NOTE_ID_3|Next: Organize Your Workspace]]\`.
+3.  **Third Note (Organization):**
+    - Title: "Organize Your Workspace"
+    - Content: Explain tags and bi-directional linking. Instruct the user to add an 'onboarding' tag to this note.
+
+Return the notes as a JSON array of objects, where each object has a "title" and "content" string property.`;
+
+    return _callGemini(
+        (ai) => ai.models.generateContent({
+            model: MODEL_NAMES.FLASH,
+            contents: prompt,
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: {
+                    type: Type.ARRAY,
+                    items: {
+                        type: Type.OBJECT,
+                        properties: {
+                            title: { type: Type.STRING },
+                            content: { type: Type.STRING },
+                        },
+                        required: ["title", "content"],
+                    },
+                },
+            },
+        }),
+        {
+            errorMessage: 'Error generating onboarding notes:',
+            processResponse: (res) => {
+                const result = JSON.parse(res.text.trim());
+                if (Array.isArray(result) && result.length === 3) {
+                    return result;
+                }
+                throw new Error("Invalid response format from AI for onboarding notes.");
+            },
+            onError: () => { throw new Error("Failed to generate onboarding notes."); }
+        }
+    );
+};
+
+
 // --- Spellcheck ---
 export const findMisspelledWords = async (text: string): Promise<SpellingError[]> => {
     if (!text.trim()) return [];

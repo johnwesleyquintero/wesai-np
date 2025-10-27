@@ -384,7 +384,8 @@ const GraphView: React.FC = () => {
                     linkWidth={link => highlightedLinks.has(link) ? 2 : 1}
                     onNodeClick={handleNodeClick}
                     onBackgroundClick={handleBackgroundClick}
-                    onNodeDragStart={handleNodeDragStart}
+                    // FIX: The `onNodeDragStart` prop does not exist on this component. The correct prop is `onNodeDrag`, which can be used to handle drag start logic.
+                    onNodeDrag={handleNodeDragStart}
                     onNodeDragEnd={handleNodeDragEnd}
                     onNodeHover={handleNodeHover}
                     cooldownTicks={100}

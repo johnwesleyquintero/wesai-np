@@ -1,20 +1,10 @@
 import React, { useState } from 'react';
 import { MagnifyingGlassIcon, SparklesIcon, FolderPlusIcon } from '../Icons';
 import { useStoreContext, useUIContext } from '../../context/AppContext';
-import OnboardingChecklist from '../OnboardingChecklist';
 
-interface OnboardingStep {
-    id: string;
-    text: string;
-    isComplete: boolean;
-}
+interface SidebarSearchProps {}
 
-interface SidebarSearchProps {
-    onboardingSteps: OnboardingStep[];
-    isOnboardingComplete: boolean;
-}
-
-const SidebarSearch: React.FC<SidebarSearchProps> = ({ onboardingSteps, isOnboardingComplete }) => {
+const SidebarSearch: React.FC<SidebarSearchProps> = () => {
     const { 
         searchTerm, handleSearchTermChange: setSearchTerm, searchMode, setSearchMode,
         isAiSearching, aiSearchError, activeSmartCollection, recentQueries,
@@ -24,8 +14,7 @@ const SidebarSearch: React.FC<SidebarSearchProps> = ({ onboardingSteps, isOnboar
 
     return (
         <div className="px-4 py-3 border-b border-light-border dark:border-dark-border flex-shrink-0">
-            {!isOnboardingComplete && <OnboardingChecklist steps={onboardingSteps} />}
-            <div className={`relative ${!isOnboardingComplete ? 'mt-3' : ''}`}>
+            <div className="relative">
                 <input
                     type="text"
                     placeholder={activeSmartCollection ? activeSmartCollection.query : "Search notes..."}

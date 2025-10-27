@@ -1,26 +1,32 @@
 import React, { useMemo, useCallback, useRef, useEffect, useState } from 'react';
-import ForceGraph2D, { ForceGraphMethods } from 'react-force-graph-2d';
+// FIX: Import `LinkObject` as `Link` as `Link` is not an exported member.
+import ForceGraph2D, { ForceGraphMethods, LinkObject as Link, NodeObject } from 'react-force-graph-2d';
 import { useStoreContext, useUIContext } from '../context/AppContext';
 import { GraphIcon } from './Icons';
+import { useToast } from '../context/ToastContext';
 
 const noteLinkRegex = /\[\[([a-zA-Z0-9-]+)(?:\|.*?)?\]\]/g;
 
-// FIX: Define a type for graph nodes to include coordinates added by the physics engine.
-type GraphNode = {
+type GraphNode = NodeObject & {
     id: string;
     name: string;
     val: number;
-    x?: number;
-    y?: number;
 };
 
 const GraphView: React.FC = () => {
-    const { notes, setActiveNoteId } = useStoreContext();
+    const { notes, setActiveNoteId, updateNote } = useStoreContext();
     const { setView, theme } = useUIContext();
+    const { showToast } = useToast();
     const containerRef = useRef<HTMLDivElement>(null);
-    // FIX: Initialize useRef with null for component refs.
     const fgRef = useRef<ForceGraphMethods | null>(null);
     const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+
+    const [hoveredNode, setHoveredNode] = useState<GraphNode | null>(null);
+    const [selectedNodes, setSelectedNodes] = useState(new Set<string>());
+    const [neighbors, setNeighbors] = useState(new Set<string>());
+    const [highlightedLinks, setHighlightedLinks] = useState(new Set<Link>());
+    const [isLinkingMode, setIsLinkingMode] = useState(false);
+    const [linkSourceNode, setLinkSourceNode] = useState<GraphNode | null>(null);
 
     useEffect(() => {
         const handleResize = () => {
@@ -37,13 +43,39 @@ const GraphView: React.FC = () => {
         return () => window.removeEventListener('resize', handleResize);
     }, []);
 
-    const { graphData, hotNodeId } = useMemo(() => {
-        const links: { source: string, target: string }[] = [];
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Alt') setIsLinkingMode(true);
+        };
+        const handleKeyUp = (e: KeyboardEvent) => {
+            if (e.key === 'Alt') {
+                setIsLinkingMode(false);
+                setLinkSourceNode(null);
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        window.addEventListener('keyup', handleKeyUp);
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+            window.removeEventListener('keyup', handleKeyUp);
+        };
+    }, []);
+    
+    useEffect(() => {
+        if (containerRef.current) {
+            containerRef.current.style.cursor = isLinkingMode ? 'crosshair' : 'grab';
+        }
+    }, [isLinkingMode]);
+
+    const { graphData, neighborsMap, hotNodeId } = useMemo(() => {
+        const links: Link[] = [];
         const noteIds = new Set(notes.map(n => n.id));
         const degrees = new Map<string, number>();
+        const neighborsMap = new Map<string, Set<string>>();
 
         notes.forEach(note => {
-            degrees.set(note.id, 0); // Initialize all nodes with degree 0
+            degrees.set(note.id, 0);
+            neighborsMap.set(note.id, new Set());
             const matches = [...note.content.matchAll(noteLinkRegex)];
             matches.forEach(match => {
                 const targetId = match[1];
@@ -54,15 +86,22 @@ const GraphView: React.FC = () => {
                 }
             });
         });
+
+        links.forEach(({ source, target }) => {
+            const sourceId = typeof source === 'object' ? source.id as string : source as string;
+            const targetId = typeof target === 'object' ? target.id as string : target as string;
+            neighborsMap.get(sourceId)?.add(targetId);
+            neighborsMap.get(targetId)?.add(sourceId);
+        });
         
         const nodes: GraphNode[] = notes.map(note => ({
             id: note.id,
             name: note.title || 'Untitled Note',
-            val: (degrees.get(note.id) || 0) + 1, // Node size based on connections
+            val: (degrees.get(note.id) || 0) + 1,
         }));
         
         let hotNodeId: string | null = null;
-        let maxDegree = 0; // Start at 0 to only select nodes with at least one connection
+        let maxDegree = 0;
         degrees.forEach((degree, nodeId) => {
             if (degree > maxDegree) {
                 maxDegree = degree;
@@ -70,65 +109,151 @@ const GraphView: React.FC = () => {
             }
         });
 
-        return { graphData: { nodes, links }, hotNodeId };
+        return { graphData: { nodes, links }, neighborsMap, hotNodeId };
     }, [notes]);
 
     const handleNodeClick = useCallback((node: GraphNode) => {
-        setActiveNoteId(node.id);
+        if (selectedNodes.has(node.id as string) && selectedNodes.size === 1) {
+            setSelectedNodes(new Set());
+            setNeighbors(new Set());
+            setHighlightedLinks(new Set());
+            return;
+        }
+
+        const newSelected = new Set([node.id as string]);
+        setSelectedNodes(newSelected);
+        setNeighbors(neighborsMap.get(node.id as string) || new Set());
+
+        const newHighlightedLinks = new Set<Link>();
+        graphData.links.forEach(link => {
+            const sourceId = typeof link.source === 'object' ? link.source.id : link.source;
+            const targetId = typeof link.target === 'object' ? link.target.id : link.target;
+            if (sourceId === node.id || targetId === node.id) {
+                newHighlightedLinks.add(link);
+            }
+        });
+        setHighlightedLinks(newHighlightedLinks);
+
+        if (node.x !== undefined && node.y !== undefined) {
+            fgRef.current?.centerAt(node.x, node.y, 1000);
+            fgRef.current?.zoom(4, 500);
+        }
+    }, [selectedNodes, neighborsMap, graphData.links]);
+
+    const handleNodeDoubleClick = useCallback((node: GraphNode) => {
+        setActiveNoteId(node.id as string);
         setView('NOTES');
     }, [setActiveNoteId, setView]);
+
+    const handleBackgroundClick = useCallback(() => {
+        setSelectedNodes(new Set());
+        setNeighbors(new Set());
+        setHighlightedLinks(new Set());
+        fgRef.current?.zoomToFit(400, 100);
+    }, []);
     
+    const handleNodeDragStart = useCallback((node: GraphNode) => {
+        if (isLinkingMode) {
+            setLinkSourceNode(node);
+        }
+    }, [isLinkingMode]);
+
+    const handleNodeDragEnd = useCallback(async (node: GraphNode) => {
+        if (isLinkingMode && linkSourceNode && hoveredNode && linkSourceNode.id !== hoveredNode.id) {
+            const sourceNote = notes.find(n => n.id === linkSourceNode.id);
+            if (sourceNote) {
+                const linkText = `\n[[${hoveredNode.id}]]`;
+                if (!sourceNote.content.includes(linkText.trim())) {
+                    const newContent = `${sourceNote.content}${linkText}`;
+                    try {
+                        await updateNote(sourceNote.id, { content: newContent });
+                        showToast({ message: `Linked to "${hoveredNode.name}"!`, type: 'success' });
+                    } catch (err) {
+                        showToast({ message: 'Failed to create link.', type: 'error' });
+                    }
+                }
+            }
+        }
+        setLinkSourceNode(null);
+    }, [isLinkingMode, linkSourceNode, hoveredNode, notes, updateNote, showToast]);
+
+    const handleNodeHover = useCallback((node: GraphNode | null) => {
+        setHoveredNode(node);
+        if (containerRef.current) {
+            containerRef.current.style.cursor = node ? (isLinkingMode ? 'crosshair' : 'pointer') : (isLinkingMode ? 'crosshair' : 'grab');
+        }
+    }, [isLinkingMode]);
+
     const handleEngineStop = useCallback(() => {
         const fg = fgRef.current;
-        if (!fg) return;
+        if (!fg || selectedNodes.size > 0) return;
 
         if (hotNodeId) {
             const hotNode = graphData.nodes.find(n => n.id === hotNodeId);
-            // After engine stop, node positions are fixed
             if (hotNode && typeof hotNode.x === 'number' && typeof hotNode.y === 'number') {
-                fg.centerAt(hotNode.x, hotNode.y, 1000); // 1-second transition
-                fg.zoom(4, 500); // Zoom in
+                fg.centerAt(hotNode.x, hotNode.y, 1000);
+                fg.zoom(4, 500);
                 return;
             }
         }
         
-        // Fallback for no hot node or if something goes wrong
         fg.zoomToFit(400, 100);
 
-    }, [graphData, hotNodeId]);
-
+    }, [graphData, hotNodeId, selectedNodes]);
+    
     const nodeCanvasObject = useCallback((node: GraphNode, ctx: CanvasRenderingContext2D, globalScale: number) => {
-        // FIX: Guard against undefined coordinates before drawing.
         if (node.x === undefined || node.y === undefined) return;
-
+        const isSelected = selectedNodes.has(node.id as string);
+        const isNeighbor = neighbors.has(node.id as string);
+        const isDimmed = selectedNodes.size > 0 && !isSelected && !isNeighbor;
+        
         const label = node.name;
         const fontSize = 12 / globalScale;
-        const isHotNode = node.id === hotNodeId;
+        const nodeRadius = 3 + Math.log2(node.val || 1) * (isSelected ? 1.5 : 1);
+        
+        const nodeColor = theme === 'dark' ? '#22d3ee' : '#06b6d4';
+        const selectedColor = '#facc15'; // yellow-400
+        const labelColor = theme === 'dark' ? 'rgba(248, 250, 252, 0.8)' : 'rgba(2, 6, 23, 0.8)';
+        
+        ctx.globalAlpha = isDimmed ? 0.1 : 1;
 
-        const baseRadius = 3 + Math.log2(node.val || 1);
-        const nodeRadius = isHotNode ? baseRadius * 1.5 : baseRadius;
-
-        // Halo for hot node
-        if (isHotNode) {
-            ctx.beginPath();
-            ctx.arc(node.x, node.y, nodeRadius + 5, 0, 2 * Math.PI, false);
-            ctx.fillStyle = theme === 'dark' ? 'rgba(34, 211, 238, 0.25)' : 'rgba(6, 182, 212, 0.25)'; // cyan-400 or cyan-500
-            ctx.fill();
-        }
-
-        // Node circle
         ctx.beginPath();
         ctx.arc(node.x, node.y, nodeRadius, 0, 2 * Math.PI, false);
-        ctx.fillStyle = theme === 'dark' ? '#22d3ee' : '#06b6d4'; // cyan-400 or cyan-500
+        ctx.fillStyle = isSelected ? selectedColor : nodeColor;
         ctx.fill();
 
-        // Node label
-        ctx.font = `${fontSize}px Sans-Serif`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillStyle = theme === 'dark' ? 'rgba(248, 250, 252, 0.8)' : 'rgba(2, 6, 23, 0.8)';
-        ctx.fillText(label, node.x, node.y + nodeRadius + 8);
-    }, [theme, hotNodeId]);
+        if (!isDimmed) {
+            ctx.font = `${fontSize}px Sans-Serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = labelColor;
+            ctx.fillText(label, node.x, node.y + nodeRadius + 8);
+        }
+
+        ctx.globalAlpha = 1;
+    }, [theme, selectedNodes, neighbors]);
+    
+    const linkColor = useCallback((link: Link) => {
+        const isDimmed = selectedNodes.size > 0 && !highlightedLinks.has(link);
+        return isDimmed ? 'rgba(128, 128, 128, 0.05)' : (theme === 'dark' ? 'rgba(51, 65, 85, 0.5)' : 'rgba(203, 213, 225, 0.7)');
+    }, [highlightedLinks, selectedNodes, theme]);
+    
+    const postRender = useCallback((ctx: CanvasRenderingContext2D, globalScale: number) => {
+        if (!linkSourceNode || !fgRef.current) return;
+        
+        // FIX: Use correct methods (`graph2ScreenCoords`, `getPointerPosition`) and cast to 'any' to bypass incomplete type definitions.
+        const { x, y } = (fgRef.current as any).graph2ScreenCoords(linkSourceNode.x || 0, linkSourceNode.y || 0);
+        const mousePos = (fgRef.current as any).getPointerPosition();
+        if (!mousePos || mousePos.x === undefined || mousePos.y === undefined) return;
+        const { x: mouseX, y: mouseY } = mousePos;
+
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(mouseX, mouseY);
+        ctx.strokeStyle = theme === 'dark' ? 'rgba(34, 211, 238, 0.5)' : 'rgba(6, 182, 212, 0.5)';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+    }, [linkSourceNode, theme]);
 
     if (notes.length === 0) {
         return (
@@ -150,11 +275,18 @@ const GraphView: React.FC = () => {
                     graphData={graphData}
                     nodeLabel="name"
                     nodeCanvasObject={nodeCanvasObject}
-                    linkColor={() => theme === 'dark' ? 'rgba(51, 65, 85, 0.5)' : 'rgba(203, 213, 225, 0.7)'}
-                    linkWidth={1}
+                    linkColor={linkColor}
+                    linkWidth={link => highlightedLinks.has(link) ? 2 : 1}
                     onNodeClick={handleNodeClick}
+                    // FIX: The correct prop name is `onNodeDblClick`.
+                    onNodeDblClick={handleNodeDoubleClick}
+                    onBackgroundClick={handleBackgroundClick}
+                    onNodeDragStart={handleNodeDragStart}
+                    onNodeDragEnd={handleNodeDragEnd}
+                    onNodeHover={handleNodeHover}
                     cooldownTicks={100}
                     onEngineStop={handleEngineStop}
+                    postRender={postRender}
                 />
             )}
         </div>

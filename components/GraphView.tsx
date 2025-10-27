@@ -1,16 +1,44 @@
 import React, { useMemo, useCallback, useRef, useEffect, useState } from 'react';
-// FIX: Import `LinkObject` as `Link` as `Link` is not an exported member.
 import ForceGraph2D, { ForceGraphMethods, LinkObject as Link, NodeObject } from 'react-force-graph-2d';
 import { useStoreContext, useUIContext } from '../context/AppContext';
 import { GraphIcon } from './Icons';
 import { useToast } from '../context/ToastContext';
+import { Note } from '../types';
+import MarkdownPreview from './MarkdownPreview';
+import { generatePreviewFromMarkdown } from '../lib/markdownUtils';
 
 const noteLinkRegex = /\[\[([a-zA-Z0-9-]+)(?:\|.*?)?\]\]/g;
 
+// FIX: Define GraphNode with required properties, extending NodeObject for graph-related properties.
 type GraphNode = NodeObject & {
     id: string;
     name: string;
     val: number;
+};
+
+const NotePreviewPopover: React.FC<{ note: Note; position: { x: number; y: number } }> = ({ note, position }) => {
+    const previewContent = generatePreviewFromMarkdown(note.content, 250);
+
+    const style: React.CSSProperties = {
+        position: 'fixed',
+        top: position.y,
+        left: position.x,
+        transform: 'translate(15px, 15px)', // Offset from cursor/node
+        zIndex: 100,
+        pointerEvents: 'none',
+    };
+
+    return (
+        <div
+            style={style}
+            className="w-80 max-h-60 overflow-hidden p-4 bg-light-background dark:bg-dark-background rounded-lg shadow-2xl border border-light-border dark:border-dark-border text-sm text-light-text dark:text-dark-text animate-fade-in"
+        >
+            <h3 className="font-bold mb-2 truncate">{note.title}</h3>
+            <div className="text-light-text/80 dark:text-dark-text/80 chat-markdown">
+                 <MarkdownPreview title="" content={previewContent} onToggleTask={() => {}} />
+            </div>
+        </div>
+    );
 };
 
 const GraphView: React.FC = () => {
@@ -24,9 +52,12 @@ const GraphView: React.FC = () => {
     const [hoveredNode, setHoveredNode] = useState<GraphNode | null>(null);
     const [selectedNodes, setSelectedNodes] = useState(new Set<string>());
     const [neighbors, setNeighbors] = useState(new Set<string>());
-    const [highlightedLinks, setHighlightedLinks] = useState(new Set<Link>());
+    // FIX: Use specific Link type for GraphNode
+    const [highlightedLinks, setHighlightedLinks] = useState(new Set<Link<GraphNode>>());
     const [isLinkingMode, setIsLinkingMode] = useState(false);
     const [linkSourceNode, setLinkSourceNode] = useState<GraphNode | null>(null);
+    const [previewNode, setPreviewNode] = useState<{ note: Note; pos: { x: number; y: number } } | null>(null);
+    const hoverTimeoutRef = useRef<number | null>(null);
 
     useEffect(() => {
         const handleResize = () => {
@@ -68,7 +99,8 @@ const GraphView: React.FC = () => {
     }, [isLinkingMode]);
 
     const { graphData, neighborsMap, hotNodeId } = useMemo(() => {
-        const links: Link[] = [];
+        // FIX: Use specific Link type for GraphNode
+        const links: Link<GraphNode>[] = [];
         const noteIds = new Set(notes.map(n => n.id));
         const degrees = new Map<string, number>();
         const neighborsMap = new Map<string, Set<string>>();
@@ -88,8 +120,8 @@ const GraphView: React.FC = () => {
         });
 
         links.forEach(({ source, target }) => {
-            const sourceId = typeof source === 'object' ? source.id as string : source as string;
-            const targetId = typeof target === 'object' ? target.id as string : target as string;
+            const sourceId = typeof source === 'object' ? (source as GraphNode).id as string : source as string;
+            const targetId = typeof target === 'object' ? (target as GraphNode).id as string : target as string;
             neighborsMap.get(sourceId)?.add(targetId);
             neighborsMap.get(targetId)?.add(sourceId);
         });
@@ -112,7 +144,13 @@ const GraphView: React.FC = () => {
         return { graphData: { nodes, links }, neighborsMap, hotNodeId };
     }, [notes]);
 
+    const clearPreview = useCallback(() => {
+        if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+        setPreviewNode(null);
+    }, []);
+    
     const handleNodeClick = useCallback((node: GraphNode) => {
+        clearPreview();
         if (selectedNodes.has(node.id as string) && selectedNodes.size === 1) {
             setSelectedNodes(new Set());
             setNeighbors(new Set());
@@ -124,10 +162,11 @@ const GraphView: React.FC = () => {
         setSelectedNodes(newSelected);
         setNeighbors(neighborsMap.get(node.id as string) || new Set());
 
-        const newHighlightedLinks = new Set<Link>();
+        // FIX: Use specific Link type for GraphNode
+        const newHighlightedLinks = new Set<Link<GraphNode>>();
         graphData.links.forEach(link => {
-            const sourceId = typeof link.source === 'object' ? link.source.id : link.source;
-            const targetId = typeof link.target === 'object' ? link.target.id : link.target;
+            const sourceId = typeof link.source === 'object' ? (link.source as GraphNode).id : link.source;
+            const targetId = typeof link.target === 'object' ? (link.target as GraphNode).id : link.target;
             if (sourceId === node.id || targetId === node.id) {
                 newHighlightedLinks.add(link);
             }
@@ -138,25 +177,28 @@ const GraphView: React.FC = () => {
             fgRef.current?.centerAt(node.x, node.y, 1000);
             fgRef.current?.zoom(4, 500);
         }
-    }, [selectedNodes, neighborsMap, graphData.links]);
+    }, [selectedNodes, neighborsMap, graphData.links, clearPreview]);
 
     const handleNodeDoubleClick = useCallback((node: GraphNode) => {
+        clearPreview();
         setActiveNoteId(node.id as string);
         setView('NOTES');
-    }, [setActiveNoteId, setView]);
+    }, [setActiveNoteId, setView, clearPreview]);
 
     const handleBackgroundClick = useCallback(() => {
+        clearPreview();
         setSelectedNodes(new Set());
         setNeighbors(new Set());
         setHighlightedLinks(new Set());
         fgRef.current?.zoomToFit(400, 100);
-    }, []);
+    }, [clearPreview]);
     
     const handleNodeDragStart = useCallback((node: GraphNode) => {
+        clearPreview();
         if (isLinkingMode) {
             setLinkSourceNode(node);
         }
-    }, [isLinkingMode]);
+    }, [isLinkingMode, clearPreview]);
 
     const handleNodeDragEnd = useCallback(async (node: GraphNode) => {
         if (isLinkingMode && linkSourceNode && hoveredNode && linkSourceNode.id !== hoveredNode.id) {
@@ -178,11 +220,25 @@ const GraphView: React.FC = () => {
     }, [isLinkingMode, linkSourceNode, hoveredNode, notes, updateNote, showToast]);
 
     const handleNodeHover = useCallback((node: GraphNode | null) => {
+        clearPreview();
         setHoveredNode(node);
+
+        if (node && fgRef.current) {
+            hoverTimeoutRef.current = window.setTimeout(() => {
+                const fullNote = notes.find(n => n.id === node.id);
+                const nodeWithCoords = node as any; 
+                if (fullNote && typeof nodeWithCoords.x === 'number' && typeof nodeWithCoords.y === 'number') {
+                    const { x, y } = fgRef.current!.graph2ScreenCoords(nodeWithCoords.x, nodeWithCoords.y);
+                    setPreviewNode({ note: fullNote, pos: { x, y } });
+                }
+            }, 300);
+        }
+
         if (containerRef.current) {
             containerRef.current.style.cursor = node ? (isLinkingMode ? 'crosshair' : 'pointer') : (isLinkingMode ? 'crosshair' : 'grab');
         }
-    }, [isLinkingMode]);
+    }, [isLinkingMode, notes, clearPreview]);
+
 
     const handleEngineStop = useCallback(() => {
         const fg = fgRef.current;
@@ -203,9 +259,12 @@ const GraphView: React.FC = () => {
     
     const nodeCanvasObject = useCallback((node: GraphNode, ctx: CanvasRenderingContext2D, globalScale: number) => {
         if (node.x === undefined || node.y === undefined) return;
+        
         const isSelected = selectedNodes.has(node.id as string);
         const isNeighbor = neighbors.has(node.id as string);
         const isDimmed = selectedNodes.size > 0 && !isSelected && !isNeighbor;
+        const isHovered = hoveredNode?.id === node.id;
+        const isInitialHot = !selectedNodes.size && hotNodeId === node.id;
         
         const label = node.name;
         const fontSize = 12 / globalScale;
@@ -216,7 +275,17 @@ const GraphView: React.FC = () => {
         const labelColor = theme === 'dark' ? 'rgba(248, 250, 252, 0.8)' : 'rgba(2, 6, 23, 0.8)';
         
         ctx.globalAlpha = isDimmed ? 0.1 : 1;
+        
+        // Halo for hovered or initial hot node
+        if (!isDimmed && (isHovered || isInitialHot)) {
+            const haloRadius = nodeRadius + 4 / globalScale;
+            ctx.beginPath();
+            ctx.arc(node.x, node.y, haloRadius, 0, 2 * Math.PI, false);
+            ctx.fillStyle = isSelected ? 'rgba(250, 204, 21, 0.2)' : (theme === 'dark' ? 'rgba(34, 211, 238, 0.2)' : 'rgba(6, 182, 212, 0.2)');
+            ctx.fill();
+        }
 
+        // Main node circle
         ctx.beginPath();
         ctx.arc(node.x, node.y, nodeRadius, 0, 2 * Math.PI, false);
         ctx.fillStyle = isSelected ? selectedColor : nodeColor;
@@ -231,9 +300,10 @@ const GraphView: React.FC = () => {
         }
 
         ctx.globalAlpha = 1;
-    }, [theme, selectedNodes, neighbors]);
+    }, [theme, selectedNodes, neighbors, hoveredNode, hotNodeId]);
     
-    const linkColor = useCallback((link: Link) => {
+    // FIX: Use specific Link type for GraphNode
+    const linkColor = useCallback((link: Link<GraphNode>) => {
         const isDimmed = selectedNodes.size > 0 && !highlightedLinks.has(link);
         return isDimmed ? 'rgba(128, 128, 128, 0.05)' : (theme === 'dark' ? 'rgba(51, 65, 85, 0.5)' : 'rgba(203, 213, 225, 0.7)');
     }, [highlightedLinks, selectedNodes, theme]);
@@ -241,18 +311,20 @@ const GraphView: React.FC = () => {
     const postRender = useCallback((ctx: CanvasRenderingContext2D, globalScale: number) => {
         if (!linkSourceNode || !fgRef.current) return;
         
-        // FIX: Use correct methods (`graph2ScreenCoords`, `getPointerPosition`) and cast to 'any' to bypass incomplete type definitions.
         const { x, y } = (fgRef.current as any).graph2ScreenCoords(linkSourceNode.x || 0, linkSourceNode.y || 0);
         const mousePos = (fgRef.current as any).getPointerPosition();
         if (!mousePos || mousePos.x === undefined || mousePos.y === undefined) return;
         const { x: mouseX, y: mouseY } = mousePos;
 
+        ctx.save();
         ctx.beginPath();
         ctx.moveTo(x, y);
         ctx.lineTo(mouseX, mouseY);
+        ctx.setLineDash([8, 4]);
         ctx.strokeStyle = theme === 'dark' ? 'rgba(34, 211, 238, 0.5)' : 'rgba(6, 182, 212, 0.5)';
         ctx.lineWidth = 2;
         ctx.stroke();
+        ctx.restore();
     }, [linkSourceNode, theme]);
 
     if (notes.length === 0) {
@@ -267,6 +339,12 @@ const GraphView: React.FC = () => {
 
     return (
         <div ref={containerRef} className="flex-1 w-full h-full relative bg-light-background dark:bg-dark-background">
+            {previewNode && (
+                <NotePreviewPopover 
+                    note={previewNode.note} 
+                    position={previewNode.pos}
+                />
+            )}
             {dimensions.width > 0 && (
                 <ForceGraph2D
                     ref={fgRef as any}
@@ -278,7 +356,6 @@ const GraphView: React.FC = () => {
                     linkColor={linkColor}
                     linkWidth={link => highlightedLinks.has(link) ? 2 : 1}
                     onNodeClick={handleNodeClick}
-                    // FIX: The correct prop name is `onNodeDblClick`.
                     onNodeDblClick={handleNodeDoubleClick}
                     onBackgroundClick={handleBackgroundClick}
                     onNodeDragStart={handleNodeDragStart}

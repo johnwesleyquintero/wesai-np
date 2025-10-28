@@ -9,7 +9,6 @@ import { generatePreviewFromMarkdown } from '../lib/markdownUtils';
 
 const noteLinkRegex = /\[\[([a-zA-Z0-9-]+)(?:\|.*?)?\]\]/g;
 
-// FIX: Define GraphNode with required properties, extending NodeObject for graph-related properties.
 type GraphNode = NodeObject & {
     id: string;
     name: string;
@@ -52,13 +51,11 @@ const GraphView: React.FC = () => {
     const [hoveredNode, setHoveredNode] = useState<GraphNode | null>(null);
     const [selectedNodes, setSelectedNodes] = useState(new Set<string>());
     const [neighbors, setNeighbors] = useState(new Set<string>());
-    // FIX: Use specific Link type for GraphNode
     const [highlightedLinks, setHighlightedLinks] = useState(new Set<Link<GraphNode>>());
     const [isLinkingMode, setIsLinkingMode] = useState(false);
     const [linkSourceNode, setLinkSourceNode] = useState<GraphNode | null>(null);
     const [previewNode, setPreviewNode] = useState<{ note: Note; pos: { x: number; y: number } } | null>(null);
     const hoverTimeoutRef = useRef<number | null>(null);
-    // FIX: Add refs for manual double-click handling.
     const clickTimeoutRef = useRef<number | null>(null);
     const lastClickedNodeRef = useRef<GraphNode | null>(null);
 
@@ -102,7 +99,6 @@ const GraphView: React.FC = () => {
     }, [isLinkingMode]);
 
     const { graphData, neighborsMap, hotNodeId } = useMemo(() => {
-        // FIX: Use specific Link type for GraphNode
         const links: Link<GraphNode>[] = [];
         const noteIds = new Set(notes.map(n => n.id));
         const degrees = new Map<string, number>();
@@ -152,14 +148,12 @@ const GraphView: React.FC = () => {
         setPreviewNode(null);
     }, []);
     
-    // FIX: This is the double-click action.
     const handleNodeDoubleClick = useCallback((node: GraphNode) => {
         clearPreview();
         setActiveNoteId(node.id as string);
         setView('NOTES');
     }, [setActiveNoteId, setView, clearPreview]);
     
-    // FIX: This is the single-click action, renamed from handleNodeClick.
     const handleSingleClick = useCallback((node: GraphNode) => {
         clearPreview();
         if (isLinkingMode) return;
@@ -175,7 +169,6 @@ const GraphView: React.FC = () => {
         setSelectedNodes(newSelected);
         setNeighbors(neighborsMap.get(node.id as string) || new Set());
 
-        // FIX: Use specific Link type for GraphNode
         const newHighlightedLinks = new Set<Link<GraphNode>>();
         graphData.links.forEach(link => {
             const sourceId = typeof link.source === 'object' ? (link.source as GraphNode).id : link.source;
@@ -192,7 +185,6 @@ const GraphView: React.FC = () => {
         }
     }, [selectedNodes, neighborsMap, graphData.links, clearPreview, isLinkingMode]);
 
-    // FIX: New handler to orchestrate single vs. double clicks.
     const handleNodeClick = useCallback((node: GraphNode) => {
         if (clickTimeoutRef.current && lastClickedNodeRef.current?.id === node.id) {
             // Double click
@@ -331,7 +323,6 @@ const GraphView: React.FC = () => {
         ctx.globalAlpha = 1;
     }, [theme, selectedNodes, neighbors, hoveredNode, hotNodeId]);
     
-    // FIX: Use specific Link type for GraphNode
     const linkColor = useCallback((link: Link<GraphNode>) => {
         const isDimmed = selectedNodes.size > 0 && !highlightedLinks.has(link);
         return isDimmed ? 'rgba(128, 128, 128, 0.05)' : (theme === 'dark' ? 'rgba(51, 65, 85, 0.5)' : 'rgba(203, 213, 225, 0.7)');
@@ -386,13 +377,11 @@ const GraphView: React.FC = () => {
                     linkWidth={link => highlightedLinks.has(link) ? 2 : 1}
                     onNodeClick={handleNodeClick}
                     onBackgroundClick={handleBackgroundClick}
-                    // FIX: The `onNodeDragStart` prop does not exist on this component. The correct prop is `onNodeDrag`, which can be used to handle drag start logic.
                     onNodeDrag={handleNodeDragStart}
                     onNodeDragEnd={handleNodeDragEnd}
                     onNodeHover={handleNodeHover}
                     cooldownTicks={100}
                     onEngineStop={handleEngineStop}
-                    // FIX: Changed 'postRender' to 'onRenderFramePost' to match react-force-graph-2d's API.
                     onRenderFramePost={onRenderFramePost}
                 />
             )}

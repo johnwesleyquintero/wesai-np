@@ -1,6 +1,9 @@
-import { GoogleGenAI, HarmCategory, HarmBlockThreshold, Type, FunctionDeclaration, Content, GenerateContentResponse, Chat, Part } from "@google/genai";
+
+import { GoogleGenAI, HarmCategory, HarmBlockThreshold, Type, FunctionDeclaration, Content, GenerateContentResponse, Chat, Part, GenerationConfig } from "@google/genai";
 import { Note, ChatMessage, InlineAction, SpellingError } from '../types';
 import { MODEL_NAMES } from '../lib/config';
+import { sha256, getLocalCache, setLocalCache } from '../lib/cache';
+import { supabase } from '../lib/supabaseClient';
 
 const API_KEY_STORAGE_KEY = 'wesai-api-key';
 
@@ -49,28 +52,77 @@ const fireRateLimitEvent = (error: any) => {
 };
 
 /**
- * A centralized wrapper for making Gemini API calls to reduce boilerplate.
- * It handles getting the genAI instance, try/catch, error logging, and rate limit event firing.
- * @param apiCall The async function that makes the actual API call.
- * @param options Configuration for processing the response and handling errors.
- * @returns The processed response or the result of the error handler.
+ * A centralized wrapper for making Gemini API calls, now with a two-tiered caching system.
+ * It handles caching, getting the genAI instance, try/catch, error logging, and rate limit events.
  */
 async function _callGemini<T>(
-    apiCall: (ai: GoogleGenAI) => Promise<any>,
-    options: {
+    payload: {
+        model: string;
+        contents: string | Part | (string | Part)[];
+        config?: GenerationConfig;
+    },
+    processingOptions: {
         errorMessage: string;
-        processResponse: (response: any) => T;
-        onError: () => T | never; // Can return a default value OR throw
+        processResponse: (response: GenerateContentResponse) => T;
+        onError: () => T | never;
+        bypassCache?: boolean;
     }
 ): Promise<T> {
+    const { model, contents, config } = payload;
+    const { bypassCache = false } = processingOptions;
+
+    // 1. Create a stable hash for the request.
+    const promptString = JSON.stringify({ model, contents, config });
+    const hash = await sha256(promptString);
+
+    // 2. Check Level 1: Local Cache (fastest)
+    if (!bypassCache) {
+        const localData = getLocalCache(hash);
+        if (localData !== null) {
+            return localData as T;
+        }
+    }
+
+    // 3. Check Level 2: Supabase Persistent Cache
+    if (!bypassCache) {
+        const { data: dbCache, error: dbError } = await supabase
+            .from('ai_cache')
+            .select('response')
+            .eq('prompt_hash', hash)
+            .single();
+        
+        if (dbCache && !dbError) {
+            const dbData = dbCache.response as T;
+            setLocalCache(hash, dbData); // Populate L1 cache
+            return dbData;
+        }
+    }
+
+    // 4. Cache Miss: Call the Gemini API
     try {
         const ai = getGenAI();
-        const response = await apiCall(ai);
-        return options.processResponse(response);
+        const response = await ai.models.generateContent({ model, contents, config });
+        const processedData = processingOptions.processResponse(response);
+
+        // 5. Save to both caches for future requests
+        setLocalCache(hash, processedData);
+        // Fire-and-forget insertion to Supabase. Don't block the UI.
+        supabase.from('ai_cache').insert({
+            prompt_hash: hash,
+            prompt: promptString, // Store full context for analytics/debugging
+            response: processedData as any, // Cast to any for JSONB compatibility
+            model,
+        }).then(({ error }) => {
+            if (error && error.code !== '23505') { // Ignore unique constraint violations
+                console.warn("Supabase cache insertion failed:", error);
+            }
+        });
+
+        return processedData;
     } catch (e) {
-        console.error(options.errorMessage, e);
+        console.error(processingOptions.errorMessage, e);
         fireRateLimitEvent(e);
-        return options.onError();
+        return processingOptions.onError();
     }
 }
 
@@ -78,27 +130,30 @@ async function _callGemini<T>(
 // --- Spellcheck ---
 export const findMisspelledWords = async (text: string): Promise<SpellingError[]> => {
     if (!text.trim()) return [];
-    return _callGemini(
-        (ai) => ai.models.generateContent({
-            model: MODEL_NAMES.FLASH,
-            contents: `Analyze the following text and identify all misspelled words. For each misspelled word, provide its exact text, its starting index in the original text, and its length.
+    
+    const payload = {
+        model: MODEL_NAMES.FLASH,
+        contents: `Analyze the following text and identify all misspelled words. For each misspelled word, provide its exact text, its starting index in the original text, and its length.
 Text: "${text}"`,
-            config: {
-                responseMimeType: "application/json",
-                responseSchema: {
-                    type: Type.ARRAY,
-                    items: {
-                        type: Type.OBJECT,
-                        properties: {
-                            word: { type: Type.STRING },
-                            index: { type: Type.INTEGER },
-                            length: { type: Type.INTEGER },
-                        },
-                        required: ["word", "index", "length"],
+        config: {
+            responseMimeType: "application/json",
+            responseSchema: {
+                type: Type.ARRAY,
+                items: {
+                    type: Type.OBJECT,
+                    properties: {
+                        word: { type: Type.STRING },
+                        index: { type: Type.INTEGER },
+                        length: { type: Type.INTEGER },
                     },
+                    required: ["word", "index", "length"],
                 },
             },
-        }),
+        },
+    };
+    
+    return _callGemini(
+        payload,
         {
             errorMessage: 'Error in findMisspelledWords:',
             processResponse: (res) => JSON.parse(res.text.trim()),
@@ -108,18 +163,20 @@ Text: "${text}"`,
 };
 
 export const getSpellingSuggestions = async (word: string): Promise<string[]> => {
-    return _callGemini(
-        (ai) => ai.models.generateContent({
-            model: MODEL_NAMES.FLASH,
-            contents: `Provide up to 5 spelling suggestions for the word "${word}".`,
-            config: {
-                responseMimeType: "application/json",
-                responseSchema: {
-                    type: Type.ARRAY,
-                    items: { type: Type.STRING },
-                },
+    const payload = {
+        model: MODEL_NAMES.FLASH,
+        contents: `Provide up to 5 spelling suggestions for the word "${word}".`,
+        config: {
+            responseMimeType: "application/json",
+            responseSchema: {
+                type: Type.ARRAY,
+                items: { type: Type.STRING },
             },
-        }),
+        },
+    };
+    
+    return _callGemini(
+        payload,
         {
             errorMessage: 'Error in getSpellingSuggestions:',
             processResponse: (res) => JSON.parse(res.text.trim()),
@@ -130,6 +187,7 @@ export const getSpellingSuggestions = async (word: string): Promise<string[]> =>
 
 
 // --- Semantic Search ---
+// Semantic search should not be cached as it depends on the entire (and changing) notes corpus.
 export const semanticSearchNotes = async (query: string, notes: Note[], limit: number = 5): Promise<string[]> => {
     if (notes.length === 0) return [];
 
@@ -138,8 +196,9 @@ export const semanticSearchNotes = async (query: string, notes: Note[], limit: n
         .map(note => `ID: ${note.id}\nTITLE: ${note.title}\nCONTENT: ${note.content.substring(0, 200)}...`)
         .join('\n---\n');
 
-    return _callGemini(
-        (ai) => ai.models.generateContent({
+    try {
+        const ai = getGenAI();
+        const response = await ai.models.generateContent({
             model: MODEL_NAMES.FLASH,
             contents: `Based on the user's query, which of the following notes are the most relevant? List the top ${limit} most relevant note IDs.
 QUERY: "${query}"
@@ -154,21 +213,20 @@ ${notesContext}`,
                     items: { type: Type.STRING },
                 },
             },
-        }),
-        {
-            errorMessage: 'Error in semanticSearchNotes:',
-            processResponse: (res) => JSON.parse(res.text.trim()),
-            onError: () => { throw new Error("AI search failed. Please check your API key and try again."); }
-        }
-    );
+        });
+        return JSON.parse(response.text.trim());
+    } catch (e) {
+        console.error('Error in semanticSearchNotes:', e);
+        fireRateLimitEvent(e);
+        throw new Error("AI search failed. Please check your API key and try again.");
+    }
 };
 
 // --- Note Actions ---
 export const suggestNoteConsolidation = async (note1: Note, note2: Note): Promise<{ title: string, content: string }> => {
-    return _callGemini(
-        (ai) => ai.models.generateContent({
-            model: MODEL_NAMES.FLASH,
-            contents: `Consolidate the following two notes into a single, coherent note. Create a new title that synthesizes the topics, and merge the content, removing redundancy and improving flow.
+    const payload = {
+        model: MODEL_NAMES.FLASH,
+        contents: `Consolidate the following two notes into a single, coherent note. Create a new title that synthesizes the topics, and merge the content, removing redundancy and improving flow.
 
 Note 1 Title: "${note1.title}"
 Note 1 Content:
@@ -177,18 +235,21 @@ ${note1.content}
 Note 2 Title: "${note2.title}"
 Note 2 Content:
 ${note2.content}`,
-            config: {
-                responseMimeType: "application/json",
-                responseSchema: {
-                    type: Type.OBJECT,
-                    properties: {
-                        title: { type: Type.STRING },
-                        content: { type: Type.STRING },
-                    },
-                    required: ["title", "content"]
+        config: {
+            responseMimeType: "application/json",
+            responseSchema: {
+                type: Type.OBJECT,
+                properties: {
+                    title: { type: Type.STRING },
+                    content: { type: Type.STRING },
                 },
+                required: ["title", "content"]
             },
-        }),
+        },
+    };
+
+    return _callGemini(
+        payload,
         {
             errorMessage: 'Error in suggestNoteConsolidation:',
             processResponse: (res) => JSON.parse(res.text.trim()),
@@ -198,30 +259,32 @@ ${note2.content}`,
 };
 
 export const suggestTitleAndTags = async (content: string): Promise<{ title: string, tags: string[] }> => {
-    return _callGemini(
-        (ai) => ai.models.generateContent({
-            model: MODEL_NAMES.FLASH,
-            contents: `Analyze the following note content. Suggest a concise, descriptive title (no more than 10 words) and up to 5 relevant, single-word or two-word tags.
+    const payload = {
+        model: MODEL_NAMES.FLASH,
+        contents: `Analyze the following note content. Suggest a concise, descriptive title (no more than 10 words) and up to 5 relevant, single-word or two-word tags.
 Content: ${content.substring(0, 1000)}`,
-            config: {
-                responseMimeType: "application/json",
-                responseSchema: {
-                    type: Type.OBJECT,
-                    properties: {
-                        title: { 
-                            type: Type.STRING,
-                            description: "A concise, descriptive title, no more than 10 words."
-                        },
-                        tags: {
-                            type: Type.ARRAY,
-                            items: { type: Type.STRING },
-                            description: "Up to 5 relevant, single-word or two-word tags."
-                        }
+        config: {
+            responseMimeType: "application/json",
+            responseSchema: {
+                type: Type.OBJECT,
+                properties: {
+                    title: { 
+                        type: Type.STRING,
+                        description: "A concise, descriptive title, no more than 10 words."
                     },
-                    required: ["title", "tags"]
-                }
-            },
-        }),
+                    tags: {
+                        type: Type.ARRAY,
+                        items: { type: Type.STRING },
+                        description: "Up to 5 relevant, single-word or two-word tags."
+                    }
+                },
+                required: ["title", "tags"]
+            }
+        },
+    };
+    
+    return _callGemini(
+        payload,
         {
             errorMessage: 'Error suggesting title and tags:',
             processResponse: (res) => {
@@ -237,7 +300,7 @@ Content: ${content.substring(0, 1000)}`,
 };
 
 
-// --- Chat ---
+// --- Chat (Streaming - Bypasses Caching) ---
 export const generateChatStream = async (
     query: string,
     systemInstruction: string,
@@ -253,21 +316,21 @@ export const generateChatStream = async (
         });
     }
 
-    return _callGemini(
-        (ai) => ai.models.generateContentStream({
+    try {
+        const ai = getGenAI();
+        return await ai.models.generateContentStream({
             model: MODEL_NAMES.FLASH,
             contents: { role: 'user', parts: userParts },
             config: { systemInstruction, safetySettings },
-        }),
-        {
-            errorMessage: 'Error getting streaming chat response:',
-            processResponse: (stream) => stream, // Pass the stream through directly
-            onError: () => { throw new Error("Failed to get streaming response. Please check your API key."); }
-        }
-    );
+        });
+    } catch (e) {
+        console.error('Error getting streaming chat response:', e);
+        fireRateLimitEvent(e);
+        throw new Error("Failed to get streaming response. Please check your API key.");
+    }
 };
 
-// --- General Chat with Tools ---
+// --- General Chat with Tools (Bypasses Caching) ---
 export const createGeneralChatSession = (): Chat => {
     const ai = getGenAI();
 
@@ -338,20 +401,22 @@ export const createGeneralChatSession = (): Chat => {
 
 // --- Editor AI Actions ---
 export const suggestTags = async (title: string, content: string): Promise<string[]> => {
-    return _callGemini(
-        (ai) => ai.models.generateContent({
-            model: MODEL_NAMES.FLASH,
-            contents: `Suggest up to 5 relevant, single-word or two-word tags for the following note.
+    const payload = {
+        model: MODEL_NAMES.FLASH,
+        contents: `Suggest up to 5 relevant, single-word or two-word tags for the following note.
 Title: ${title}
 Content: ${content.substring(0, 500)}`,
-            config: {
-                responseMimeType: "application/json",
-                responseSchema: {
-                    type: Type.ARRAY,
-                    items: { type: Type.STRING }
-                }
-            },
-        }),
+        config: {
+            responseMimeType: "application/json",
+            responseSchema: {
+                type: Type.ARRAY,
+                items: { type: Type.STRING }
+            }
+        },
+    };
+    
+    return _callGemini(
+        payload,
         {
             errorMessage: 'Error suggesting tags:',
             processResponse: (res) => JSON.parse(res.text.trim()),
@@ -361,12 +426,14 @@ Content: ${content.substring(0, 500)}`,
 };
 
 export const suggestTitle = async (content: string): Promise<string> => {
-    return _callGemini(
-        (ai) => ai.models.generateContent({
-            model: MODEL_NAMES.FLASH,
-            contents: `Suggest a concise, descriptive title for the following note content. The title should be no more than 10 words.
+    const payload = {
+        model: MODEL_NAMES.FLASH,
+        contents: `Suggest a concise, descriptive title for the following note content. The title should be no more than 10 words.
 Content: ${content.substring(0, 1000)}`,
-        }),
+    };
+
+    return _callGemini(
+        payload,
         {
             errorMessage: 'Error suggesting title:',
             processResponse: (res) => res.text.trim().replace(/["\.]/g, ''),
@@ -385,15 +452,17 @@ export const performInlineEdit = async (text: string, action: InlineAction): Pro
         case 'makeProfessional': instruction = 'Rewrite the following text in a professional tone:'; break;
         case 'makeCasual': instruction = 'Rewrite the following text in a casual tone:'; break;
     }
+    
+    const payload = {
+        model: MODEL_NAMES.FLASH,
+        contents: `${instruction}\n\n"${text}"`,
+        config: {
+            safetySettings,
+        },
+    };
 
     return _callGemini(
-        (ai) => ai.models.generateContent({
-            model: MODEL_NAMES.FLASH,
-            contents: `${instruction}\n\n"${text}"`,
-            config: {
-                safetySettings,
-            },
-        }),
+        payload,
         {
             errorMessage: `Error performing inline edit action "${action}":`,
             processResponse: (res) => res.text.trim(),
@@ -403,24 +472,26 @@ export const performInlineEdit = async (text: string, action: InlineAction): Pro
 };
 
 export const summarizeAndExtractActions = async (content: string): Promise<{ summary: string; actionItems: string[] }> => {
-    return _callGemini(
-        (ai) => ai.models.generateContent({
-            model: MODEL_NAMES.FLASH,
-            contents: `Summarize the following note and extract a list of action items.
+    const payload = {
+        model: MODEL_NAMES.FLASH,
+        contents: `Summarize the following note and extract a list of action items.
 Note:
 ${content}`,
-            config: {
-                responseMimeType: 'application/json',
-                responseSchema: {
-                    type: Type.OBJECT,
-                    properties: {
-                        summary: { type: Type.STRING },
-                        actionItems: { type: Type.ARRAY, items: { type: Type.STRING } },
-                    },
-                    required: ["summary", "actionItems"]
+        config: {
+            responseMimeType: 'application/json',
+            responseSchema: {
+                type: Type.OBJECT,
+                properties: {
+                    summary: { type: Type.STRING },
+                    actionItems: { type: Type.ARRAY, items: { type: Type.STRING } },
                 },
+                required: ["summary", "actionItems"]
             },
-        }),
+        },
+    };
+    
+    return _callGemini(
+        payload,
         {
             errorMessage: 'Error in summarizeAndExtractActions:',
             processResponse: (res) => JSON.parse(res.text.trim()),
@@ -431,14 +502,16 @@ ${content}`,
 
 
 export const enhanceText = async (text: string, tone: string): Promise<string> => {
+    const payload = {
+        model: MODEL_NAMES.FLASH,
+        contents: `Rewrite the following text to have a ${tone} tone:\n\n"${text}"`,
+        config: {
+            safetySettings,
+        },
+    };
+    
     return _callGemini(
-        (ai) => ai.models.generateContent({
-            model: MODEL_NAMES.FLASH,
-            contents: `Rewrite the following text to have a ${tone} tone:\n\n"${text}"`,
-            config: {
-                safetySettings,
-            },
-        }),
+        payload,
         {
             errorMessage: 'Error enhancing text:',
             processResponse: (res) => res.text.trim(),

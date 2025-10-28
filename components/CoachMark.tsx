@@ -42,8 +42,6 @@ const CoachMark: React.FC<CoachMarkProps> = ({ targetSelector, title, content, o
                 );
                 
                 const order: ('top' | 'bottom' | 'right' | 'left')[] = ['top', 'bottom', 'right', 'left'];
-                // FIX: Explicitly type `chosenPosition` to be a union of all possible position objects.
-                // This prevents TypeScript from inferring a narrow type from the initial assignment.
                 let chosenPosition: (typeof positions)[keyof typeof positions] = positions.top;
 
                 for (const posKey of order) {

@@ -9,6 +9,7 @@ interface EditorHeaderProps {
     note: Note;
     onToggleFavorite: (id: string) => void;
     saveStatus: 'saved' | 'saving' | 'unsaved' | 'error';
+    handleSave: () => void;
     editorTitle: string;
     onEnhance: (tone: string) => Promise<void>;
     onSummarize: () => Promise<void>;
@@ -63,6 +64,9 @@ const StatusIndicator: React.FC<StatusIndicatorProps> = ({
             colorClass = 'bg-red-500';
             text = 'Save Failed';
             break;
+        case 'unsaved':
+            // No need to render anything here, the Save button will appear
+            return null;
     }
 
 
@@ -211,7 +215,7 @@ const MoreActionsMenu: React.FC<{
 };
 
 const EditorHeader: React.FC<EditorHeaderProps> = ({ 
-    note, onToggleFavorite, saveStatus, editorTitle, onEnhance, onSummarize, onToggleHistory, isHistoryOpen, 
+    note, onToggleFavorite, saveStatus, handleSave, editorTitle, onEnhance, onSummarize, onToggleHistory, isHistoryOpen, 
     onApplyTemplate, isMobileView, onToggleSidebar, onUndo, onRedo, canUndo, canRedo,
     viewMode, onToggleViewMode, wordCount, charCount,
     isFullAiActionLoading, isApiKeyMissing
@@ -221,7 +225,7 @@ const EditorHeader: React.FC<EditorHeaderProps> = ({
     const [isInfoOpen, setIsInfoOpen] = useState(false);
     const { showToast } = useToast();
 
-    const isDisabled = !!isFullAiActionLoading;
+    const isDisabled = !!isFullAiActionLoading || saveStatus === 'saving';
 
     const handleSaveAsTemplate = () => {
         addTemplate(editorTitle, note.content)
@@ -246,6 +250,15 @@ const EditorHeader: React.FC<EditorHeaderProps> = ({
                         saveStatus={saveStatus} 
                         isFullAiActionLoading={isFullAiActionLoading}
                     />
+                    {(saveStatus === 'unsaved' || saveStatus === 'error') && (
+                        <button 
+                            onClick={handleSave} 
+                            className="px-3 py-1 text-sm font-semibold rounded-md bg-light-primary text-white dark:bg-dark-primary dark:text-zinc-900 hover:bg-light-primary-hover dark:hover:bg-dark-primary-hover disabled:opacity-50"
+                            disabled={isDisabled}
+                        >
+                            {saveStatus === 'error' ? 'Retry Save' : 'Save'}
+                        </button>
+                    )}
                 </div>
                 <div className="flex items-center space-x-0.5 sm:space-x-2">
                     {!isFocusMode && (

@@ -20,7 +20,6 @@ import { useSpellcheck } from '../hooks/useSpellcheck';
 import { useNoteEditorReducer } from '../hooks/useNoteEditorReducer';
 import { useAiSuggestions } from '../hooks/useAiSuggestions';
 import { useAiActions } from '../hooks/useAiActions';
-import { useDebounce } from '../hooks/useDebounce';
 import { useEditorHotkeys } from '../hooks/useEditorHotkeys';
 
 interface NoteEditorProps {
@@ -50,8 +49,6 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         tags: note.tags,
     });
     
-    const debouncedEditorState = useDebounce(editorState, 1500);
-
     const latestEditorStateRef = useRef(editorState);
     useEffect(() => {
         latestEditorStateRef.current = editorState;
@@ -63,7 +60,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
     const [uiState, dispatch] = useNoteEditorReducer();
     const {
         saveStatus, isHistoryOpen, previewVersion, viewMode, selection, noteLinker, templateLinker, noteLinkerForSelection,
-        slashCommand, isDragOver, isAiActionLoading, isFullAiActionLoading, aiActionError
+        slashCommand, isDragOver, isAiActionLoading, isFullAiActionLoading
     } = uiState;
 
     const { 
@@ -183,6 +180,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         prevNoteRef.current = note;
     }, [note, resetEditorState, showToast, lastWarnedTimestamp]);
 
+    // Effect to manage save status (unsaved/saved) based on changes
     useEffect(() => {
         if (previewVersion) return;
 
@@ -192,31 +190,32 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
             tags: note.tags,
         });
 
-        if (!isLiveDirty) {
+        if (isLiveDirty) {
+            if (saveStatus === 'saved') {
+                dispatch({ type: 'SET_SAVE_STATUS', payload: 'unsaved' });
+            }
+        } else {
+            // This handles the case where user undoes changes to the saved state
             if (saveStatus !== 'saved') {
                 dispatch({ type: 'SET_SAVE_STATUS', payload: 'saved' });
             }
-            return;
         }
-
-        if (saveStatus === 'saved') {
-            dispatch({ type: 'SET_SAVE_STATUS', payload: 'unsaved' });
+    }, [editorState, note.title, note.content, note.tags, previewVersion, saveStatus, dispatch]);
+    
+    const handleSave = useCallback(async () => {
+        if (saveStatus === 'saving') return;
+        dispatch({ type: 'SET_SAVE_STATUS', payload: 'saving' });
+        try {
+            await updateNote(note.id, editorState);
+            dispatch({ type: 'SET_SAVE_STATUS', payload: 'saved' });
+            showToast({ message: 'Note saved!', type: 'success' });
+        } catch (error) {
+            console.error("Manual save failed:", error);
+            showToast({ message: `Save failed. Your changes are safe here.`, type: 'error' });
+            dispatch({ type: 'SET_SAVE_STATUS', payload: 'error' });
         }
+    }, [note.id, editorState, updateNote, showToast, dispatch, saveStatus]);
 
-        const userHasStoppedTyping = JSON.stringify(editorState) === JSON.stringify(debouncedEditorState);
-
-        if (userHasStoppedTyping && saveStatus !== 'saving') {
-            dispatch({ type: 'SET_SAVE_STATUS', payload: 'saving' });
-            
-            updateNote(note.id, editorState).then(() => {
-                dispatch({ type: 'SET_SAVE_STATUS', payload: 'saved' });
-            }).catch(error => {
-                console.error("Auto-save failed:", error);
-                showToast({ message: `Auto-save failed. Your changes are safe here.`, type: 'error' });
-                dispatch({ type: 'SET_SAVE_STATUS', payload: 'error' });
-            });
-        }
-    }, [editorState, debouncedEditorState, note, updateNote, showToast, dispatch, previewVersion, saveStatus]);
 
     useEffect(() => {
         const noteAtMount = note;
@@ -567,7 +566,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
 
     return (
         <div className="flex-1 flex flex-col h-full relative bg-light-background dark:bg-dark-background" onDragOver={(e) => { e.preventDefault(); if (!isEffectivelyReadOnly) dispatch({ type: 'SET_DRAG_OVER', payload: true }); }} onDragLeave={() => dispatch({ type: 'SET_DRAG_OVER', payload: false })} onDrop={handleDrop} onPaste={handlePaste}>
-            <EditorHeader note={note} onToggleFavorite={() => toggleFavorite(note.id)} saveStatus={saveStatus} editorTitle={editorState.title} onEnhance={handleEnhanceNote} onSummarize={summarizeAndFindActionForFullNote} onToggleHistory={() => dispatch({type: 'SET_HISTORY_OPEN', payload: !isHistoryOpen})} isHistoryOpen={isHistoryOpen} onApplyTemplate={handleApplyTemplate} isMobileView={isMobileView} onToggleSidebar={onToggleSidebar} onUndo={undo} onRedo={redo} canUndo={canUndo} canRedo={canRedo} viewMode={viewMode} onToggleViewMode={() => dispatch({type: 'SET_VIEW_MODE', payload: viewMode === 'edit' ? 'preview' : 'edit'})} wordCount={wordCount} charCount={charCount} aiActionError={aiActionError} setAiActionError={(err) => dispatch({ type: 'SET_AI_ACTION_ERROR', payload: err })} isFullAiActionLoading={isFullAiActionLoading} isApiKeyMissing={isApiKeyMissing} />
+            <EditorHeader note={note} onToggleFavorite={() => toggleFavorite(note.id)} saveStatus={saveStatus} handleSave={handleSave} editorTitle={editorState.title} onEnhance={handleEnhanceNote} onSummarize={summarizeAndFindActionForFullNote} onToggleHistory={() => dispatch({type: 'SET_HISTORY_OPEN', payload: !isHistoryOpen})} isHistoryOpen={isHistoryOpen} onApplyTemplate={handleApplyTemplate} isMobileView={isMobileView} onToggleSidebar={onToggleSidebar} onUndo={undo} onRedo={redo} canUndo={canUndo} canRedo={canRedo} viewMode={viewMode} onToggleViewMode={() => dispatch({type: 'SET_VIEW_MODE', payload: viewMode === 'edit' ? 'preview' : 'edit'})} wordCount={wordCount} charCount={charCount} isFullAiActionLoading={isFullAiActionLoading} isApiKeyMissing={isApiKeyMissing} />
             {isAiRateLimited && <div className="bg-yellow-100 dark:bg-yellow-900/30 border-b border-yellow-300 dark:border-yellow-700/50 py-2 px-4 text-center text-sm text-yellow-800 dark:text-yellow-200 flex-shrink-0">AI features are temporarily paused due to high usage. They will be available again shortly.</div>}
             
             <div ref={editorPaneRef} className={`flex-1 overflow-y-auto relative transition-opacity ${isReadOnlyForVisuals ? 'opacity-70' : ''}`}>

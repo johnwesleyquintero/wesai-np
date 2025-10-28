@@ -1,4 +1,5 @@
 
+
 import { GoogleGenAI, HarmCategory, HarmBlockThreshold, Type, FunctionDeclaration, Content, GenerateContentResponse, Chat, Part, GenerationConfig } from "@google/genai";
 import { Note, ChatMessage, InlineAction, SpellingError } from '../types';
 import { MODEL_NAMES } from '../lib/config';
@@ -10,6 +11,35 @@ const API_KEY_STORAGE_KEY = 'wesai-api-key';
 // Cache for the GenAI instance to avoid re-creating it on every call.
 let genAI: GoogleGenAI | null = null;
 let cachedApiKey: string | null = null;
+
+/**
+ * Normalizes the 'contents' part of a Gemini request by trimming whitespace 
+ * from any text parts. This increases cache hits for semantically identical prompts.
+ */
+function normalizeContents(contents: string | Part | (string | Part)[]): string | Part | (string | Part)[] {
+    if (typeof contents === 'string') {
+        return contents.trim();
+    }
+
+    if (Array.isArray(contents)) {
+        return contents.map(part => {
+            if (typeof part === 'string') {
+                return part.trim();
+            }
+            if (part.text) {
+                return { ...part, text: part.text.trim() };
+            }
+            return part;
+        });
+    }
+
+    if (typeof contents === 'object' && 'text' in contents && typeof contents.text === 'string') {
+         return { ...contents, text: contents.text.trim() };
+    }
+
+    return contents;
+}
+
 
 const getGenAI = (): GoogleGenAI => {
     let apiKey: string | null = null;
@@ -71,8 +101,10 @@ async function _callGemini<T>(
     const { model, contents, config } = payload;
     const { bypassCache = false } = processingOptions;
 
+    const normalizedContents = normalizeContents(contents);
+
     // 1. Create a stable hash for the request.
-    const promptString = JSON.stringify({ model, contents, config });
+    const promptString = JSON.stringify({ model, contents: normalizedContents, config });
     const hash = await sha256(promptString);
 
     // 2. Check Level 1: Local Cache (fastest)
@@ -101,7 +133,7 @@ async function _callGemini<T>(
     // 4. Cache Miss: Call the Gemini API
     try {
         const ai = getGenAI();
-        const response = await ai.models.generateContent({ model, contents, config });
+        const response = await ai.models.generateContent({ model, contents: normalizedContents, config });
         const processedData = processingOptions.processResponse(response);
 
         // 5. Save to both caches for future requests

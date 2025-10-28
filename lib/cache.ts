@@ -1,5 +1,5 @@
 
-const CACHE_STALE_MS = 24 * 60 * 60 * 1000; // 24 hours
+const CACHE_STALE_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
 /**
  * Generates a SHA-256 hash from a string.

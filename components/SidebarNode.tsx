@@ -246,7 +246,7 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
 
     return (
         <div className="relative">
-            {dropPosition === 'top' && <div className="absolute -top-0.5 left-2 right-2 h-0.5 bg-light-primary dark:bg-dark-primary rounded-full z-10" style={{ marginLeft: `${level * 16}px` }} />}
+            {dropPosition && <div className={`drop-indicator-pill ${dropPosition === 'top' ? '-top-1' : '-bottom-1'}`} style={{ marginLeft: `${level * 16}px` }} />}
             <div
                 ref={nodeRef}
                 {...dragAndDropProps}
@@ -303,7 +303,6 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
                     )}
                 </div>
             </div>
-            {dropPosition === 'bottom' && <div className="absolute -bottom-0.5 left-2 right-2 h-0.5 bg-light-primary dark:bg-dark-primary rounded-full z-10" style={{ marginLeft: `${level * 16}px` }} />}
             {isCollection && isExpanded && (
                 <div>
                     {node.children.length === 0 && !isSearching && (

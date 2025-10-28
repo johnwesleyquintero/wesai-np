@@ -81,6 +81,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
     } = useAiActions(editorState, setEditorState, dispatch);
 
     const isEffectivelyReadOnly = !!previewVersion || viewMode === 'preview' || !!isFullAiActionLoading;
+    const isReadOnlyForVisuals = (!!previewVersion || viewMode === 'preview') && !isFullAiActionLoading;
 
     const { 
         spellingErrors, isCheckingSpelling, activeSpellingError, setActiveSpellingError,
@@ -573,7 +574,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
             <EditorHeader note={note} onToggleFavorite={() => toggleFavorite(note.id)} saveStatus={saveStatus} editorTitle={editorState.title} onEnhance={handleEnhanceNote} onSummarize={summarizeAndFindActionForFullNote} onToggleHistory={() => dispatch({type: 'SET_HISTORY_OPEN', payload: !isHistoryOpen})} isHistoryOpen={isHistoryOpen} onApplyTemplate={handleApplyTemplate} isMobileView={isMobileView} onToggleSidebar={onToggleSidebar} onUndo={undo} onRedo={redo} canUndo={canUndo} canRedo={canRedo} viewMode={viewMode} onToggleViewMode={() => dispatch({type: 'SET_VIEW_MODE', payload: viewMode === 'edit' ? 'preview' : 'edit'})} wordCount={wordCount} charCount={charCount} aiActionError={aiActionError} setAiActionError={(err) => dispatch({ type: 'SET_AI_ACTION_ERROR', payload: err })} isFullAiActionLoading={isFullAiActionLoading} isApiKeyMissing={isApiKeyMissing} />
             {isAiRateLimited && <div className="bg-yellow-100 dark:bg-yellow-900/30 border-b border-yellow-300 dark:border-yellow-700/50 py-2 px-4 text-center text-sm text-yellow-800 dark:text-yellow-200 flex-shrink-0">AI features are temporarily paused due to high usage. They will be available again shortly.</div>}
             
-            <div ref={editorPaneRef} className="flex-1 overflow-y-auto relative">
+            <div ref={editorPaneRef} className={`flex-1 overflow-y-auto relative transition-opacity ${isReadOnlyForVisuals ? 'opacity-70' : ''}`}>
                  {!!previewVersion && <div className={`bg-yellow-100 dark:bg-yellow-900/30 py-2 text-center text-sm text-yellow-800 dark:text-yellow-200 max-w-3xl mx-auto ${editorPaddingClass}`}>You are previewing a version from {new Date(previewVersion.savedAt).toLocaleString()}.</div>}
 
                 <div className={`mx-auto py-12 ${editorPaddingClass} transition-all duration-300 ${isFullAiActionLoading ? 'opacity-50 pointer-events-none' : ''} ${isFocusMode ? 'max-w-4xl' : 'max-w-3xl'}`}>

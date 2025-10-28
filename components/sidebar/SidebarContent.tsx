@@ -2,7 +2,8 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Note, TreeNode } from '../../types';
 import NoteCard from '../NoteCard';
 import {
-    PencilSquareIcon, PlusIcon, FolderPlusIcon, LightBulbIcon, TrashIcon, XMarkIcon
+    PencilSquareIcon, PlusIcon, FolderPlusIcon, LightBulbIcon, TrashIcon, XMarkIcon,
+    ArrowDownTrayIcon
 } from '../Icons';
 import SidebarNode from '../SidebarNode';
 import CollapsibleSection from './CollapsibleSection';
@@ -272,8 +273,14 @@ const SidebarContent: React.FC = () => {
                 <div
                     ref={rootDropRef}
                     {...rootDragAndDropProps}
-                    className={`transition-colors p-1 rounded-md min-h-[10rem] ${isRootFileOver ? 'bg-light-primary/10' : ''}`}
+                    className="p-1 rounded-md min-h-[10rem] relative"
                 >
+                    {isRootFileOver && (
+                        <div className="file-drop-overlay">
+                            <ArrowDownTrayIcon className="w-6 h-6 mr-2" />
+                            Drop to Import
+                        </div>
+                    )}
                     {renderFavorites()}
                     {renderSmartCollections()}
                     <CollapsibleSection

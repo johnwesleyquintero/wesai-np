@@ -22,7 +22,11 @@ const CollapsibleSection: React.FC<{
                     {actions}
                 </div>
             </div>
-            {isExpanded && <div className="pl-1 pr-2">{children}</div>}
+            <div className={`collapsible-content ${isExpanded ? 'expanded' : ''}`}>
+                <div>
+                    <div className="pl-1 pr-2">{children}</div>
+                </div>
+            </div>
         </div>
     );
 };

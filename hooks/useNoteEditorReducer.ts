@@ -26,7 +26,7 @@ export const initialNoteEditorUIState: NoteEditorUIState = {
     saveStatus: 'saved',
     isHistoryOpen: false,
     previewVersion: null,
-    viewMode: 'edit',
+    viewMode: 'preview',
     selection: null,
     noteLinker: null,
     templateLinker: null,

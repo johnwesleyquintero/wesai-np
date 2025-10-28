@@ -138,10 +138,13 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         hasAutoTitledRef.current = false;
         setLastWarnedTimestamp(null);
         
+        // When a new note is created, switch to edit mode by default.
+        // Existing notes will default to 'preview' via RESET_STATE_FOR_NEW_NOTE.
         if (note.title === 'Untitled Note' && note.content === '') {
+            dispatch({ type: 'SET_VIEW_MODE', payload: 'edit' });
             setTimeout(() => titleInputRef.current?.focus(), 100);
         }
-    }, [note.id, resetEditorState, resetAiSuggestions, setActiveSpellingError]);
+    }, [note.id, note.title, note.content, resetEditorState, resetAiSuggestions, setActiveSpellingError, dispatch]);
     
     useEffect(() => {
         if (note.id !== prevNoteRef.current.id) {
@@ -168,15 +171,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
                 tags: prevNoteRef.current.tags,
             });
 
-            if (hasLocalChanges) {
-                if (lastWarnedTimestamp !== note.updatedAt) {
-                    showToast({
-                        message: `"${note.title}" was updated in another tab. Your next save will overwrite.`,
-                        type: 'info',
-                    });
-                    setLastWarnedTimestamp(note.updatedAt);
-                }
-            } else {
+            if (!hasLocalChanges) {
                 resetEditorState({ title: note.title, content: note.content, tags: note.tags });
                 setLastWarnedTimestamp(null);
                 showToast({

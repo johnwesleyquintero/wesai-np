@@ -14,6 +14,21 @@ interface SettingsModalProps {
     onClose: () => void;
 }
 
+type SettingsTab = 'general' | 'templates' | 'data';
+
+const TabButton: React.FC<{ active: boolean; onClick: () => void; children: React.ReactNode; }> = ({ active, onClick, children }) => (
+    <button
+        onClick={onClick}
+        className={`px-4 py-3 text-sm font-semibold border-b-2 ${
+            active
+                ? 'border-light-primary dark:border-dark-primary text-light-primary dark:text-dark-primary'
+                : 'border-transparent text-light-text/60 dark:text-dark-text/60 hover:text-light-text dark:hover:text-dark-text'
+        }`}
+    >
+        {children}
+    </button>
+);
+
 const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
     const { templates, addTemplate, updateTemplate, deleteTemplate, notes, collections, smartCollections, importData } = useStoreContext();
     const { showToast } = useToast();
@@ -29,6 +44,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
     
     const [isKeyVisible, setIsKeyVisible] = useState(false);
     const [apiKeyError, setApiKeyError] = useState<string | null>(null);
+    const [activeTab, setActiveTab] = useState<SettingsTab>('general');
 
     const apiKeyInputRef = useRef<HTMLInputElement>(null);
     const saveButtonRef = useRef<HTMLButtonElement>(null);
@@ -38,6 +54,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
 
     useEffect(() => {
         if (isOpen) {
+            setActiveTab('general');
             setLocalApiKey(apiKey || '');
             setIsKeyVisible(false);
             setTimeout(() => {
@@ -87,9 +104,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
     const handleSignOut = async () => {
         await supabase.auth.signOut();
         onClose();
-        // Clear local non-Supabase state if necessary
-        // e.g. localStorage.clear();
-        // window.location.reload(); // To ensure clean state
     };
     
     const handleExport = () => {
@@ -190,45 +204,55 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                          <h2 id="settings-modal-title" className="text-2xl font-bold">Settings</h2>
                     </div>
                     
+                    <div className="px-6 border-b border-light-border dark:border-dark-border flex-shrink-0">
+                        <div className="flex -mb-px">
+                            <TabButton active={activeTab === 'general'} onClick={() => setActiveTab('general')}>General</TabButton>
+                            <TabButton active={activeTab === 'templates'} onClick={() => setActiveTab('templates')}>Templates</TabButton>
+                            <TabButton active={activeTab === 'data'} onClick={() => setActiveTab('data')}>Data</TabButton>
+                        </div>
+                    </div>
+
                     <div className="overflow-y-auto p-6">
-                        <div className="space-y-6">
-                             <div>
-                                <h3 className="text-lg font-semibold mb-3">Gemini API Key</h3>
-                                <p className="text-sm text-light-text/60 dark:text-dark-text/60 mb-3">
-                                    Your personal API key for Google Gemini is required for all AI features. Your key is stored securely in your browser's local storage and is never sent to our servers.
-                                </p>
-                                <div className="relative">
-                                    <input
-                                        ref={apiKeyInputRef}
-                                        type={isKeyVisible ? 'text' : 'password'}
-                                        value={localApiKey}
-                                        onChange={(e) => setLocalApiKey(e.target.value)}
-                                        placeholder="Enter your Gemini API key"
-                                        className="w-full p-2 pr-10 bg-light-ui dark:bg-dark-ui rounded-md border border-light-border dark:border-dark-border focus:ring-2 focus:ring-light-primary focus:outline-none"
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={() => setIsKeyVisible(!isKeyVisible)}
-                                        className="absolute inset-y-0 right-0 flex items-center px-3 text-light-text/60 dark:text-dark-text/60"
-                                        aria-label={isKeyVisible ? 'Hide API key' : 'Show API key'}
-                                    >
-                                        {isKeyVisible ? <EyeSlashIcon /> : <EyeIcon />}
-                                    </button>
+                        {activeTab === 'general' && (
+                            <div className="space-y-6">
+                                <div>
+                                    <h3 className="text-lg font-semibold mb-3">Gemini API Key</h3>
+                                    <p className="text-sm text-light-text/60 dark:text-dark-text/60 mb-3">
+                                        Your personal API key for Google Gemini is required for all AI features. Your key is stored securely in your browser's local storage and is never sent to our servers.
+                                    </p>
+                                    <div className="relative">
+                                        <input
+                                            ref={apiKeyInputRef}
+                                            type={isKeyVisible ? 'text' : 'password'}
+                                            value={localApiKey}
+                                            onChange={(e) => setLocalApiKey(e.target.value)}
+                                            placeholder="Enter your Gemini API key"
+                                            className="w-full p-2 pr-10 bg-light-ui dark:bg-dark-ui rounded-md border border-light-border dark:border-dark-border focus:ring-2 focus:ring-light-primary focus:outline-none"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setIsKeyVisible(!isKeyVisible)}
+                                            className="absolute inset-y-0 right-0 flex items-center px-3 text-light-text/60 dark:text-dark-text/60"
+                                            aria-label={isKeyVisible ? 'Hide API key' : 'Show API key'}
+                                        >
+                                            {isKeyVisible ? <EyeSlashIcon /> : <EyeIcon />}
+                                        </button>
+                                    </div>
+                                    {apiKeyError && <p className="text-xs text-red-500 mt-1">{apiKeyError}</p>}
+                                    <a href="https://ai.google.dev/" target="_blank" rel="noopener noreferrer" className="text-xs text-light-primary dark:text-dark-primary hover:underline mt-2 block">
+                                        Get an API key from Google AI Studio &rarr;
+                                    </a>
                                 </div>
-                                {apiKeyError && <p className="text-xs text-red-500 mt-1">{apiKeyError}</p>}
-                                <a href="https://ai.google.dev/" target="_blank" rel="noopener noreferrer" className="text-xs text-light-primary dark:text-dark-primary hover:underline mt-2 block">
-                                    Get an API key from Google AI Studio &rarr;
-                                </a>
+                                <div>
+                                    <h3 className="text-lg font-semibold mb-3">Account</h3>
+                                    <button onClick={handleSignOut} className="w-full text-center px-4 py-2 rounded-md bg-light-ui dark:bg-dark-ui hover:bg-light-ui-hover dark:hover:bg-dark-ui-hover">Sign Out</button>
+                                </div>
                             </div>
-
+                        )}
+                        {activeTab === 'templates' && (
                              <div>
-                                <h3 className="text-lg font-semibold mb-3">Account</h3>
-                                 <button onClick={handleSignOut} className="w-full text-center px-4 py-2 rounded-md bg-light-ui dark:bg-dark-ui hover:bg-light-ui-hover dark:hover:bg-dark-ui-hover">Sign Out</button>
-                            </div>
-
-                            <div>
                                 <h3 className="text-lg font-semibold mb-3">Note Templates</h3>
-                                <div className="space-y-2 max-h-40 overflow-y-auto pr-2">
+                                <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
                                     {templates.map(template => (
                                         <div key={template.id} className="flex items-center justify-between bg-light-ui/50 dark:bg-dark-ui/50 p-2 rounded-md">
                                             <span className="font-medium truncate pr-2">{template.title}</span>
@@ -247,7 +271,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                                     <PlusIcon className="w-4 h-4 mr-2" /> Add New Template
                                 </button>
                             </div>
-                            
+                        )}
+                        {activeTab === 'data' && (
                             <div>
                                 <h3 className="text-lg font-semibold mb-3">Data Management</h3>
                                 <p className="text-sm text-light-text/60 dark:text-dark-text/60 mb-3">
@@ -258,7 +283,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                                     <button onClick={handleImportClick} className="flex-1 px-4 py-2 rounded-md bg-light-ui dark:bg-dark-ui hover:bg-light-ui-hover dark:hover:bg-dark-ui-hover">Import Data...</button>
                                 </div>
                             </div>
-                        </div>
+                        )}
                     </div>
 
                     <div className="flex justify-end items-center space-x-4 p-6 border-t border-light-border dark:border-dark-border flex-shrink-0">
@@ -289,5 +314,4 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
     );
 };
 
-// Fix: Add default export for lazy loading.
 export default SettingsModal;

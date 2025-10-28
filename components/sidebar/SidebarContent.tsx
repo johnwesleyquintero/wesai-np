@@ -1,5 +1,5 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { Note, TreeNode } from '../../types';
+import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
+import { Note, TreeNode, Collection } from '../../types';
 import NoteCard from '../NoteCard';
 import {
     PencilSquareIcon, PlusIcon, FolderPlusIcon, LightBulbIcon, TrashIcon, XMarkIcon,
@@ -104,6 +104,24 @@ const SidebarContent: React.FC = () => {
     }, [expandedFolders, searchData]);
 
     const visibleNodeIds = React.useMemo(() => getVisibleNodes(fileTree), [fileTree, getVisibleNodes]);
+    
+    const activeNotePath = useMemo(() => {
+        const path = new Set<string>();
+        if (!activeNoteId) return path;
+        
+        // Create a map of all items (notes and collections) for efficient lookup.
+        const allItemsMap = new Map<string, Note | Collection>();
+        notes.forEach(note => allItemsMap.set(note.id, note));
+        collections.forEach(collection => allItemsMap.set(collection.id, collection));
+    
+        let current = allItemsMap.get(activeNoteId);
+        while (current?.parentId) {
+            path.add(current.parentId);
+            current = allItemsMap.get(current.parentId);
+        }
+        return path;
+    }, [activeNoteId, notes, collections]);
+
 
     useEffect(() => {
         if (focusedNodeId && !visibleNodeIds.includes(focusedNodeId)) {
@@ -305,6 +323,9 @@ const SidebarContent: React.FC = () => {
                                     expandedFolders={expandedFolders}
                                     onToggleFolder={toggleFolder}
                                     isFocused={focusedNodeId === node.id}
+                                    isActivePath={activeNotePath.has(node.id)}
+                                    focusedNodeId={focusedNodeId}
+                                    activeNotePath={activeNotePath}
                                 />
                             ))
                         ) : (

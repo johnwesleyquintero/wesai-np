@@ -26,6 +26,14 @@ const AccordionItem: React.FC<{ title: string; children: ReactNode }> = ({ title
 const ChangelogContent = () => (
     <div className="space-y-6 text-sm">
         <div>
+            <h3 className="font-bold text-base mb-2">July 29, 2024</h3>
+            <ul className="list-disc pl-5 space-y-1">
+                <li><strong className="font-semibold">UI Polish & Refinements:</strong> Reorganized the Settings modal into clear tabs (General, Templates, Data), streamlined the AI chat action bar with icons for a cleaner look, and added visual dividers to context menus for better grouping of actions.</li>
+                <li><strong className="font-semibold">Active Path Highlighting:</strong> The sidebar now highlights the entire folder path of the active note, making it easier to see where you are in your workspace.</li>
+                <li><strong className="font-semibold">Consistent Error Handling:</strong> Centralized AI error reporting into the global notification system for a more consistent and less intrusive user experience.</li>
+            </ul>
+        </div>
+        <div>
             <h3 className="font-bold text-base mb-2">July 28, 2024</h3>
             <ul className="list-disc pl-5 space-y-1">
                 <li><strong className="font-semibold">AI-Driven Onboarding:</strong> Replaced the static checklist with a generative onboarding experience. New users are now greeted with AI-crafted notes that guide them through the app's core features.</li>

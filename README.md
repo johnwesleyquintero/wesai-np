@@ -15,6 +15,7 @@ WesCore is a centralized cockpit for operators to execute workflows, manage data
 - **Cloud Image Storage:** Images are uploaded to secure cloud storage, keeping your note content clean and your database lean.
 - **Smart Folders:** Create dynamic, saved searches that automatically display notes matching a specific AI-powered query (e.g., "all notes about marketing from the last month").
 - **Bi-Directional Linking:** Connect ideas by linking notes using `[[note-id|display text]]` syntax. A "Linked Mentions" section automatically displays all backlinks to the current note.
+- **Active Path Highlighting:** The sidebar visually indicates the full path to your currently selected note, improving spatial awareness within your file tree.
 - **Tagging System:** Assign multiple tags to notes for flexible, cross-folder organization.
 - **PWA Ready:** Installable as a Progressive Web App with offline caching of core assets for faster load times and a native-like experience.
 
@@ -45,6 +46,7 @@ WesCore is a centralized cockpit for operators to execute workflows, manage data
 - **Robust Editing Experience:** A reliable undo/redo system that covers all note attributes (title, content, tags) ensures you never lose an idea.
 - **Command Palette:** Press `Ctrl/Cmd + K` to access nearly every application feature, from creating notes to executing AI actions.
 - **Slash Commands:** Type `/` in the editor to quickly insert headings, lists, to-do items, dividers, and trigger AI actions.
+- **Edit Last Message:** Press `ArrowUp` in an empty chat input to quickly recall, edit, and resubmit your last query.
 - **Saved Chat Responders:** Save and reuse common prompts in the "Responder" chat mode, turning complex customer service tasks into one-click actions.
 - **Collapsible Sidebar:** Maximize your writing space on desktop by collapsing the sidebar to a compact, icon-only view.
 - **Drag & Drop Import:** Drag text or markdown files directly into the editor or onto a folder in the sidebar to instantly create new notes.

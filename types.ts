@@ -131,6 +131,7 @@ export interface ContextMenuItem {
     isDestructive?: boolean;
     children?: ContextMenuItem[];
     disabled?: boolean;
+    divider?: boolean;
 }
 
 export type TreeNode = (Note | (Collection & { type: 'collection' })) & {

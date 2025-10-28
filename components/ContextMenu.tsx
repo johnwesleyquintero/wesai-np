@@ -145,7 +145,9 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, items, onClose, isSubMe
             className="bg-light-background dark:bg-dark-background rounded-lg shadow-xl border border-light-border dark:border-dark-border w-56 animate-fade-in-down py-1"
         >
             {items.map((item, index) => (
-                <MenuItem key={index} item={item} onClose={onClose} />
+                item.divider
+                    ? <div key={`divider-${index}`} className="my-1 h-px bg-light-border dark:border-dark-border" />
+                    : <MenuItem key={index} item={item} onClose={onClose} />
             ))}
         </div>
     );

@@ -17,10 +17,16 @@ interface SidebarNodeProps {
     expandedFolders: Record<string, boolean>;
     onToggleFolder: (folderId: string) => void;
     isFocused: boolean;
+    isActivePath: boolean;
+    // FIX: Add focusedNodeId and activeNotePath to props for recursive passing.
+    focusedNodeId: string | null;
+    activeNotePath: Set<string>;
 }
 
 const SidebarNode: React.FC<SidebarNodeProps> = ({ 
-    node, level, activeNoteId, searchTerm, searchData, onSelectNote, expandedFolders, onToggleFolder, isFocused
+    node, level, activeNoteId, searchTerm, searchData, onSelectNote, expandedFolders, onToggleFolder, isFocused, isActivePath,
+    // FIX: Destructure focusedNodeId and activeNotePath from props.
+    focusedNodeId, activeNotePath
 }) => {
     const { 
         collections, onAddNote, onAddNoteFromFile, updateCollection, renameNoteTitle, moveItem,
@@ -100,6 +106,7 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
             menuItems = [
                 { label: 'New Note in Folder', action: () => onAddNote(node.id), icon: <PencilSquareIcon /> },
                 { label: 'Rename Folder', action: () => setRenamingItemId(node.id), icon: <PencilSquareIcon /> },
+                { divider: true, label: '' },
                 { 
                     label: 'Delete Folder', 
                     action: () => {
@@ -171,6 +178,7 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
                     }, 
                     icon: <DocumentDuplicateIcon /> 
                 },
+                { divider: true, label: '' },
                 {
                     label: 'Copy Note ID',
                     action: () => {
@@ -199,6 +207,7 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
                     }, 
                     icon: <ClipboardDocumentIcon /> 
                 },
+                { divider: true, label: '' },
                 { 
                     label: 'Delete Note', 
                     action: () => showConfirmation({
@@ -260,7 +269,7 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
                 onClick={handleNodeClick}
                 onDoubleClick={handleDoubleClick}
                 onContextMenu={handleContextMenu}
-                className={`group flex items-center justify-between w-full text-left rounded-md pr-2 my-0.5 text-sm cursor-grab transition-all duration-150 ${
+                className={`group flex items-center justify-between w-full text-left rounded-md pr-2 my-0.5 text-sm cursor-grab transition-all duration-150 relative ${
                     isActive
                         ? 'bg-light-primary/30 dark:bg-dark-primary/30 text-light-primary dark:text-dark-primary font-semibold'
                         : 'hover:bg-light-background dark:hover:bg-dark-background'
@@ -270,6 +279,7 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
                   ${isDraggingThisNode ? 'opacity-40' : ''}`}
                 style={{ paddingLeft: `${level * 16 + 8}px` }}
             >
+                {isActivePath && <div className="active-path-indicator" />}
                 <div className="flex items-center truncate py-1.5">
                     <div 
                         className="opacity-0 group-hover:opacity-60 transition-opacity -ml-2 mr-1 p-0.5 rounded"
@@ -321,7 +331,10 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
                             onSelectNote={onSelectNote}
                             expandedFolders={expandedFolders}
                             onToggleFolder={onToggleFolder}
-                            isFocused={isFocused}
+                            isFocused={focusedNodeId === childNode.id}
+                            isActivePath={isActivePath || activeNotePath.has(childNode.id)}
+                            focusedNodeId={focusedNodeId}
+                            activeNotePath={activeNotePath}
                         />
                     ))}
                 </div>

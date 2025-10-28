@@ -109,6 +109,19 @@ const MessageActions: React.FC<{ onDelete: () => void }> = ({ onDelete }) => {
     );
 };
 
+const ActionButton: React.FC<{ tooltip: string; onClick: () => void; children: React.ReactNode }> = ({ tooltip, onClick, children }) => (
+    <div className="relative group">
+        <button onClick={onClick} className="p-1.5 rounded-md text-light-text/60 dark:text-dark-text/60 hover:text-light-text dark:hover:text-dark-text hover:bg-light-ui dark:hover:bg-dark-ui">
+            {children}
+        </button>
+        <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 px-2 py-1 bg-zinc-800 text-white text-xs font-semibold rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+            {tooltip}
+            <div className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-t-4 border-t-zinc-800 border-x-4 border-x-transparent" />
+        </div>
+    </div>
+);
+
+
 interface MessageProps {
     message: ChatMessage;
     onDelete: () => void;
@@ -201,29 +214,31 @@ const Message: React.FC<MessageProps> = ({ message, onDelete, onToggleSources, i
                     </button>
                 )}
                 {isAi && (
-                    <div className="flex items-center gap-2 mt-2 pt-2 border-t border-light-border/50 dark:border-dark-border/50">
+                    <div className="flex items-center gap-1 mt-2 pt-2 border-t border-light-border/50 dark:border-dark-border/50">
                         {isProvidingFeedback ? (
-                            <>
+                            <div className="flex items-center gap-2">
                                 <span className="text-xs font-semibold text-light-text/70 dark:text-dark-text/70">Why?</span>
                                 {feedbackReasons.map(reason => (
                                     <button key={reason} onClick={() => handleSelectReason(reason)} className="px-2 py-0.5 text-xs rounded-full bg-light-ui dark:bg-dark-ui hover:bg-light-ui-hover dark:hover:bg-dark-ui-hover">{reason}</button>
                                 ))}
                                 <button onClick={() => setIsProvidingFeedback(false)} className="text-xs font-semibold hover:underline">Cancel</button>
-                            </>
+                            </div>
                         ) : (
                             <>
                                 {message.sources && message.sources.length > 0 && (
-                                    <button onClick={() => onToggleSources(message.sources!)} className="flex items-center gap-1 text-xs font-semibold text-light-text/60 dark:text-dark-text/60 hover:text-light-text dark:hover:text-dark-text">
-                                        <DocumentTextIcon className="w-4 h-4" /> {isSourcesPinned ? 'Hide Sources' : 'Show Sources'}
-                                    </button>
+                                    <ActionButton tooltip={isSourcesPinned ? 'Hide Sources' : 'Show Sources'} onClick={() => onToggleSources(message.sources!)}>
+                                        <DocumentTextIcon className="w-4 h-4" />
+                                    </ActionButton>
                                 )}
-                                <button onClick={handleSaveAsNote} className="flex items-center gap-1 text-xs font-semibold text-light-text/60 dark:text-dark-text/60 hover:text-light-text dark:hover:text-dark-text">
-                                    <DocumentPlusIcon className="w-4 h-4" /> Save as Note
-                                </button>
-                                <button onClick={handleCopyToClipboard} className="flex items-center gap-1 text-xs font-semibold text-light-text/60 dark:text-dark-text/60 hover:text-light-text dark:hover:text-dark-text">
-                                    <ClipboardDocumentIcon className="w-4 h-4" /> Copy
-                                </button>
+                                <ActionButton tooltip="Save as Note" onClick={handleSaveAsNote}>
+                                    <DocumentPlusIcon className="w-4 h-4" />
+                                </ActionButton>
+                                <ActionButton tooltip="Copy to Clipboard" onClick={handleCopyToClipboard}>
+                                    <ClipboardDocumentIcon className="w-4 h-4" />
+                                </ActionButton>
+
                                 <div className="flex-1" />
+                                
                                 <button 
                                     onClick={() => handleFeedback(message.id, { rating: 'up' })}
                                     disabled={!!message.feedback}

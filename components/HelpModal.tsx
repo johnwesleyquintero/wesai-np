@@ -26,6 +26,12 @@ const AccordionItem: React.FC<{ title: string; children: ReactNode }> = ({ title
 const ChangelogContent = () => (
     <div className="space-y-6 text-sm">
         <div>
+            <h3 className="font-bold text-base mb-2">July 30, 2024</h3>
+            <ul className="list-disc pl-5 space-y-1">
+                <li><strong className="font-semibold">Manual Save in Editor:</strong> Replaced the automatic "saving..." indicator with an explicit "Save" button. This gives you more control and a calmer writing environment, while still saving your work automatically if you navigate away.</li>
+            </ul>
+        </div>
+        <div>
             <h3 className="font-bold text-base mb-2">July 29, 2024</h3>
             <ul className="list-disc pl-5 space-y-1">
                 <li><strong className="font-semibold">UI Polish & Refinements:</strong> Reorganized the Settings modal into clear tabs (General, Templates, Data), streamlined the AI chat action bar with icons for a cleaner look, and added visual dividers to context menus for better grouping of actions.</li>

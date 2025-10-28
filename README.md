@@ -44,6 +44,7 @@ WesCore is a centralized cockpit for operators to execute workflows, manage data
 - **Frictionless Demo Mode:** Explore a fully-featured demo workspace instantly, without needing to sign up or provide an API key.
 - **Full Keyboard Navigation:** Navigate the entire sidebar, select notes, and expand folders using only your keyboard for maximum efficiency.
 - **Robust Editing Experience:** A reliable undo/redo system that covers all note attributes (title, content, tags) ensures you never lose an idea.
+- **Manual Save Control:** The editor features an explicit "Save" button that appears only when there are unsaved changes, giving you full control over when to commit your work. The distracting auto-save-on-pause is gone, but the safety net of saving automatically when you navigate away remains.
 - **Command Palette:** Press `Ctrl/Cmd + K` to access nearly every application feature, from creating notes to executing AI actions.
 - **Slash Commands:** Type `/` in the editor to quickly insert headings, lists, to-do items, dividers, and trigger AI actions.
 - **Edit Last Message:** Press `ArrowUp` in an empty chat input to quickly recall, edit, and resubmit your last query.

@@ -18,14 +18,12 @@ interface SidebarNodeProps {
     onToggleFolder: (folderId: string) => void;
     isFocused: boolean;
     isActivePath: boolean;
-    // FIX: Add focusedNodeId and activeNotePath to props for recursive passing.
     focusedNodeId: string | null;
     activeNotePath: Set<string>;
 }
 
 const SidebarNode: React.FC<SidebarNodeProps> = ({ 
     node, level, activeNoteId, searchTerm, searchData, onSelectNote, expandedFolders, onToggleFolder, isFocused, isActivePath,
-    // FIX: Destructure focusedNodeId and activeNotePath from props.
     focusedNodeId, activeNotePath
 }) => {
     const { 
@@ -332,7 +330,7 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
                             expandedFolders={expandedFolders}
                             onToggleFolder={onToggleFolder}
                             isFocused={focusedNodeId === childNode.id}
-                            isActivePath={isActivePath || activeNotePath.has(childNode.id)}
+                            isActivePath={activeNotePath.has(childNode.id)}
                             focusedNodeId={focusedNodeId}
                             activeNotePath={activeNotePath}
                         />

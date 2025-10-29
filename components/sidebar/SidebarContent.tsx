@@ -3,7 +3,7 @@ import { Note, TreeNode, Collection } from '../../types';
 import NoteCard from '../NoteCard';
 import {
     PencilSquareIcon, PlusIcon, FolderPlusIcon, LightBulbIcon, TrashIcon, XMarkIcon,
-    ArrowDownTrayIcon
+    ArrowDownTrayIcon, SparklesIcon
 } from '../Icons';
 import SidebarNode from '../SidebarNode';
 import CollapsibleSection from './CollapsibleSection';
@@ -253,16 +253,20 @@ const SidebarContent: React.FC = () => {
     
     const { isSearching, visibleIds } = searchData;
 
+    if (isAiSearching) {
+        return (
+            <div className="flex items-center justify-center h-full text-sm text-light-text/60 dark:text-dark-text/60">
+                <SparklesIcon className="w-4 h-4 mr-2 animate-spin text-light-primary dark:text-dark-primary" />
+                AI is searching...
+            </div>
+        );
+    }
+    
     if (isSearching && visibleIds?.size === 0) {
         return (
             <div className="text-center px-4 py-8 text-sm text-light-text/60 dark:text-dark-text/60">
-                {isAiSearching && 'AI is searching...'}
-                {!isAiSearching && searchTerm && (
-                    <>
-                        <p className="font-semibold">No results for "{searchTerm}"</p>
-                        <p className="mt-1">Try a different keyword or use AI Search for conceptual matches.</p>
-                    </>
-                )}
+                <p className="font-semibold">No results for "{activeSmartCollection ? activeSmartCollection.query : searchTerm}"</p>
+                <p className="mt-1">Try a different keyword or use AI Search for conceptual matches.</p>
             </div>
         );
     }

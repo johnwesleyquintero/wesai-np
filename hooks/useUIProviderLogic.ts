@@ -36,7 +36,7 @@ export const useUIProviderLogic = () => {
     const [renamingItemId, setRenamingItemId] = useState<string | null>(null);
     const [draggingItemId, setDraggingItemId] = useState<string | null>(null);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-    const [isHelpOpen, setIsHelpOpen] = useState(false); // FIX: Add state for HelpModal
+    const [isHelpOpen, setIsHelpOpen] = useState(false);
     const [initialSettingsTab, setInitialSettingsTab] = useState<SettingsTab>('general');
     const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
     const [isSmartFolderModalOpen, setIsSmartFolderModalOpen] = useState(false);
@@ -105,7 +105,7 @@ export const useUIProviderLogic = () => {
         setInitialSettingsTab(tab);
         setIsSettingsOpen(true);
     }, []);
-    const openHelpModal = useCallback(() => setIsHelpOpen(true), []); // FIX: Add function to open HelpModal
+    const openHelpModal = useCallback(() => setIsHelpOpen(true), []);
     const openSmartFolderModal = useCallback((folder: SmartCollection | null, query?: string) => {
         setSmartFolderToEdit(folder);
         setInitialSmartFolderQuery(query);
@@ -150,7 +150,7 @@ export const useUIProviderLogic = () => {
         initialSmartFolderQuery,
         isDemoMode, setIsDemoMode,
         isFocusMode, toggleFocusMode,
-        isHelpOpen, setIsHelpOpen, openHelpModal, // FIX: Export HelpModal state and functions
+        isHelpOpen, setIsHelpOpen, openHelpModal,
         isAiEnabled, toggleAiEnabled,
     }), [
         theme, toggleTheme, view, isMobileView, isSidebarOpen,
@@ -162,7 +162,7 @@ export const useUIProviderLogic = () => {
         draggingItemId,
         confirmation, showConfirmation, hideConfirmation,
         initialSmartFolderQuery, isDemoMode, isFocusMode, toggleFocusMode,
-        isHelpOpen, openHelpModal, setIsHelpOpen, // FIX: Add to dependency array
+        isHelpOpen, openHelpModal, setIsHelpOpen,
         isAiEnabled, toggleAiEnabled,
     ]);
 };

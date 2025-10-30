@@ -5,7 +5,7 @@ import {
     PencilSquareIcon, PlusIcon, FolderPlusIcon, BrainIcon, TrashIcon, XMarkIcon,
     ArrowDownTrayIcon, SparklesIcon
 } from '../Icons';
-import SidebarNode from '../sidebar/SidebarNode';
+import SidebarNode from './SidebarNode';
 import CollapsibleSection from './CollapsibleSection';
 import { useStoreContext, useUIContext } from '../../context/AppContext';
 import { useDragAndDrop } from '../../hooks/useDragAndDrop';

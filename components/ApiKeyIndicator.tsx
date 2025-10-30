@@ -12,8 +12,6 @@ const ApiKeyIndicator: React.FC = () => {
                 <span>AI features are disabled. Please add your Gemini API key.</span>
             </div>
             <button
-                // FIX: The onClick handler for a button passes a MouseEvent, which is not compatible with the 'tab' parameter of openSettings.
-                // This wraps the call in an arrow function to ensure openSettings is called correctly with the 'general' tab specified.
                 onClick={() => openSettings('general')}
                 className="flex items-center gap-1.5 font-semibold underline hover:text-yellow-900 dark:hover:text-yellow-100"
             >

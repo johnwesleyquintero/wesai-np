@@ -269,7 +269,7 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
                 onContextMenu={handleContextMenu}
                 className={`group flex items-center justify-between w-full text-left rounded-md pr-2 my-0.5 text-sm cursor-grab transition-all duration-150 relative ${
                     isActive
-                        ? 'bg-light-primary/30 dark:bg-dark-primary/30 text-light-primary dark:text-dark-primary font-semibold'
+                        ? 'bg-light-primary/30 dark:bg-dark-primary/30 text-light-text dark:text-dark-text font-semibold'
                         : 'hover:bg-light-background dark:hover:bg-dark-background'
                 } ${isDropTarget ? 'outline-2 outline-dashed outline-light-primary dark:outline-dark-primary bg-light-primary/10 dark:bg-dark-primary/10' : ''}
                   ${isFocused ? 'ring-2 ring-light-primary/50 dark:ring-dark-primary/50' : ''}
@@ -277,7 +277,7 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
                   ${isDraggingThisNode ? 'opacity-40' : ''}`}
                 style={{ paddingLeft: `${level * 16 + 8}px` }}
             >
-                {isActivePath && <div className="active-path-indicator" />}
+                {isActivePath && !isActive && <div className="active-path-indicator" />}
                 <div className="flex items-center truncate py-1.5">
                     <div 
                         className="opacity-0 group-hover:opacity-60 transition-opacity -ml-2 mr-1 p-0.5 rounded"
@@ -328,6 +328,7 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
                             searchData={searchData}
                             onSelectNote={onSelectNote}
                             expandedFolders={expandedFolders}
+                            // FIX: Changed `toggleFolder` to `onToggleFolder` to match the prop name.
                             onToggleFolder={onToggleFolder}
                             isFocused={focusedNodeId === childNode.id}
                             isActivePath={activeNotePath.has(childNode.id)}

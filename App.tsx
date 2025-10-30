@@ -30,7 +30,6 @@ const AnalyticsDashboard = React.lazy(() => import('./components/AnalyticsDashbo
 const TrendAnalysisDashboard = React.lazy(() => import('./components/TrendAnalysisDashboard'));
 const GraphView = React.lazy(() => import('./components/GraphView'));
 const CoachMark = React.lazy(() => import('./components/CoachMark'));
-// FIX: Import HelpModal to be rendered.
 const HelpModal = React.lazy(() => import('./components/HelpModal'));
 
 
@@ -56,7 +55,7 @@ function AppContent() {
         toggleSidebarCollapsed,
         confirmation, hideConfirmation,
         isFocusMode,
-        isHelpOpen, setIsHelpOpen, // FIX: Get HelpModal state from UI context.
+        isHelpOpen, setIsHelpOpen,
     } = useUIContext();
     
     const { onboardingSteps, isOnboardingComplete, activeCoachMark, dismissCoachMark } = useOnboarding();
@@ -211,7 +210,6 @@ function AppContent() {
 
                 <WelcomeModal isOpen={isWelcomeModalOpen} onClose={closeWelcomeModal} />
 
-                {/* FIX: Render the HelpModal component. */}
                 <HelpModal isOpen={isHelpOpen} onClose={() => setIsHelpOpen(false)} />
                 
                 {activeCoachMark && (

@@ -12,6 +12,7 @@ const CollapsedSidebar: React.FC = () => {
     const {
         toggleSidebarCollapsed, setIsCommandPaletteOpen, setView, view,
         toggleTheme, theme, openSettings, isApiKeyMissing, openHelpModal,
+        isAiEnabled,
     } = useUIContext();
 
     return (
@@ -59,18 +60,22 @@ const CollapsedSidebar: React.FC = () => {
                 <FooterButton onClick={() => setView('NOTES')} tooltip="Notes" isActive={view === 'NOTES'}>
                     <DocumentTextIcon />
                 </FooterButton>
-                <FooterButton onClick={() => setView('GRAPH')} tooltip="Graph View" isActive={view === 'GRAPH'}>
-                    <GraphIcon />
-                </FooterButton>
-                <FooterButton onClick={() => setView('TREND_ANALYSIS')} tooltip="Trend Analysis" isActive={view === 'TREND_ANALYSIS'}>
-                    <TrendingUpIcon />
-                </FooterButton>
-                <FooterButton onClick={() => setView('CTR_ANALYTICS')} tooltip="CTR Analytics" isActive={view === 'CTR_ANALYTICS'}>
-                    <ChartBarIcon />
-                </FooterButton>
-                <FooterButton onClick={() => setView('CHAT')} tooltip="Ask AI" isActive={view === 'CHAT'}>
-                    <SparklesIcon />
-                </FooterButton>
+                {isAiEnabled && (
+                    <>
+                        <FooterButton onClick={() => setView('GRAPH')} tooltip="Graph View" isActive={view === 'GRAPH'}>
+                            <GraphIcon />
+                        </FooterButton>
+                        <FooterButton onClick={() => setView('TREND_ANALYSIS')} tooltip="Trend Analysis" isActive={view === 'TREND_ANALYSIS'}>
+                            <TrendingUpIcon />
+                        </FooterButton>
+                        <FooterButton onClick={() => setView('CTR_ANALYTICS')} tooltip="CTR Analytics" isActive={view === 'CTR_ANALYTICS'}>
+                            <ChartBarIcon />
+                        </FooterButton>
+                        <FooterButton onClick={() => setView('CHAT')} tooltip="Ask AI" isActive={view === 'CHAT'}>
+                            <SparklesIcon />
+                        </FooterButton>
+                    </>
+                )}
                 <FooterButton onClick={toggleTheme} tooltip={`Switch to ${theme === 'light' ? 'Dark' : 'Light'} Mode`}>
                     {theme === 'light' ? <MoonIcon /> : <SunIcon />}
                 </FooterButton>

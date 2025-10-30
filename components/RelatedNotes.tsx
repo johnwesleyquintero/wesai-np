@@ -4,6 +4,7 @@ import { useDebounce } from '../hooks/useDebounce';
 import { semanticSearchNotes } from '../services/geminiService';
 import { useStoreContext, useUIContext } from '../context/AppContext';
 import { SparklesIcon, DocumentTextIcon } from './Icons';
+import { useToast } from '../context/ToastContext';
 
 interface RelatedNotesProps {
     note: Note;
@@ -14,10 +15,10 @@ const MIN_CONTENT_LENGTH_FOR_SUGGESTIONS = 100;
 const RelatedNotes: React.FC<RelatedNotesProps> = ({ note }) => {
     const { notes, setActiveNoteId, logAiSuggestionEvent, getSuggestionAnalytics } = useStoreContext();
     const { setView, isAiRateLimited } = useUIContext();
+    const { showToast } = useToast();
 
     const [relatedNoteIds, setRelatedNoteIds] = useState<string[] | null>(null);
     const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
 
     const debouncedContent = useDebounce(note.content, 2000);
     const searchIdRef = useRef(0);
@@ -46,7 +47,6 @@ const RelatedNotes: React.FC<RelatedNotesProps> = ({ note }) => {
             const currentSearchId = ++searchIdRef.current;
             lastSearchedContentRef.current = contentToSearch;
             setIsLoading(true);
-            setError(null);
             try {
                 const searchQuery = `${note.title}\n${contentToSearch}`;
                 const [ids, allAnalytics] = await Promise.all([
@@ -74,7 +74,8 @@ const RelatedNotes: React.FC<RelatedNotesProps> = ({ note }) => {
                 }
             } catch (err) {
                  if (currentSearchId === searchIdRef.current) {
-                    setError(err instanceof Error ? err.message : 'An unknown error occurred.');
+                    const message = err instanceof Error ? err.message : 'Failed to get AI suggestions.';
+                    showToast({ message, type: 'error' });
                     setRelatedNoteIds([]);
                  }
             } finally {
@@ -85,7 +86,7 @@ const RelatedNotes: React.FC<RelatedNotesProps> = ({ note }) => {
         };
 
         fetchRelated();
-    }, [debouncedContent, note.id, note.title, notes, isAiRateLimited, getSuggestionAnalytics]);
+    }, [debouncedContent, note.id, note.title, notes, isAiRateLimited, getSuggestionAnalytics, showToast]);
 
     const relatedNotes = useMemo(() => {
         if (!relatedNoteIds) return [];
@@ -124,15 +125,6 @@ const RelatedNotes: React.FC<RelatedNotesProps> = ({ note }) => {
         );
     }
     
-    if (error) {
-         return (
-             <div className="mt-8 pt-4 border-t border-light-border dark:border-dark-border">
-                <h3 className="text-sm font-semibold text-red-500 mb-2">Could not find related notes.</h3>
-                <p className="text-xs text-light-text/60 dark:text-dark-text/60">{error}</p>
-             </div>
-         )
-    }
-
     if (!relatedNotes || relatedNotes.length === 0) {
         return null;
     }

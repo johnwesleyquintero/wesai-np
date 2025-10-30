@@ -9,8 +9,8 @@ interface EditorTitleProps {
     suggestion: string | null;
     onApplySuggestion: (title: string) => void;
     isSuggesting: boolean;
-    error: string | null;
     isApiKeyMissing: boolean;
+    isAiEnabled: boolean;
 }
 
 const EditorTitle: React.FC<EditorTitleProps> = ({
@@ -21,8 +21,8 @@ const EditorTitle: React.FC<EditorTitleProps> = ({
     suggestion,
     onApplySuggestion,
     isSuggesting,
-    error,
     isApiKeyMissing,
+    isAiEnabled,
 }) => (
     <>
         <input
@@ -34,12 +34,11 @@ const EditorTitle: React.FC<EditorTitleProps> = ({
             className={`w-full bg-transparent text-3xl sm:text-4xl font-bold focus:outline-none rounded-md ${isReadOnly ? 'cursor-not-allowed opacity-70' : ''}`}
             readOnly={isReadOnly}
         />
-        {!isApiKeyMissing && !isReadOnly && (
+        {!isApiKeyMissing && !isReadOnly && isAiEnabled && (
             <TitleSuggestion
                 suggestion={suggestion}
                 onApply={onApplySuggestion}
                 isLoading={isSuggesting}
-                error={error}
             />
         )}
     </>

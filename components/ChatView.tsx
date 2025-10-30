@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useChatContext, useStoreContext, useUIContext } from '../context/AppContext';
 import { ChatMessage, ChatMode, ChatStatus, Note } from '../types';
 import MarkdownPreview from './MarkdownPreview';
-import { PaperAirplaneIcon, SparklesIcon, XCircleIcon, DocumentPlusIcon, PaperClipIcon, ClipboardDocumentIcon, EllipsisHorizontalIcon, TrashIcon, ThumbsUpIcon, ThumbsDownIcon, DocumentTextIcon, XMarkIcon, ChevronDownIcon, BookmarkIcon } from './Icons';
+import { PaperAirplaneIcon, SparklesIcon, XCircleIcon, DocumentPlusIcon, PaperClipIcon, ClipboardDocumentIcon, EllipsisHorizontalIcon, TrashIcon, ThumbsUpIcon, ThumbsDownIcon, DocumentTextIcon, XMarkIcon, ChevronDownIcon, BookmarkIcon, Cog6ToothIcon } from './Icons';
 import { useToast } from '../context/ToastContext';
 import ChatViewSkeleton from './ChatViewSkeleton';
 
@@ -221,7 +221,7 @@ const Message: React.FC<MessageProps> = ({ message, onDelete, onToggleSources, i
                                 {feedbackReasons.map(reason => (
                                     <button key={reason} onClick={() => handleSelectReason(reason)} className="px-2 py-0.5 text-xs rounded-full bg-light-ui dark:bg-dark-ui hover:bg-light-ui-hover dark:hover:bg-dark-ui-hover">{reason}</button>
                                 ))}
-                                <button onClick={() => setIsProvidingFeedback(false)} className="text-xs font-semibold hover:underline">Cancel</button>
+                                <button onClick={() => setIsProvidingFeedback(false)} className="px-2 py-0.5 text-xs rounded-full bg-light-ui dark:bg-dark-ui hover:bg-light-ui-hover dark:hover:bg-dark-ui-hover flex items-center gap-1"><XMarkIcon className="w-3 h-3"/> Cancel</button>
                             </div>
                         ) : (
                             <>
@@ -425,6 +425,7 @@ const ChatInput: React.FC = () => {
 
 const ChatView: React.FC = () => {
     const { chatMessages, chatStatus, activeToolName, deleteMessage } = useChatContext();
+    const { isAiEnabled, openSettings } = useUIContext();
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const [pinnedSourcesInfo, setPinnedSourcesInfo] = useState<{ messageId: string; sources: Note[] } | null>(null);
 
@@ -434,6 +435,28 @@ const ChatView: React.FC = () => {
     
     if (!chatMessages) {
         return <ChatViewSkeleton />;
+    }
+
+    if (!isAiEnabled) {
+        return (
+            <div className="flex-1 flex flex-col h-full bg-light-background dark:bg-dark-background">
+                <ChatHeader />
+                <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
+                    <SparklesIcon className="w-16 h-16 mb-4 text-light-text/30 dark:text-dark-text/30" />
+                    <h2 className="text-xl font-bold">AI Features Disabled</h2>
+                    <p className="mt-2 max-w-sm text-light-text/60 dark:text-dark-text/60">
+                        To use the AI Chat Assistant, please enable AI features in the settings.
+                    </p>
+                    <button
+                        onClick={() => openSettings('general')}
+                        className="mt-6 flex items-center gap-2 px-4 py-2 rounded-md bg-light-ui dark:bg-dark-ui hover:bg-light-ui-hover dark:hover:bg-dark-ui-hover font-semibold"
+                    >
+                        <Cog6ToothIcon />
+                        Open Settings
+                    </button>
+                </div>
+            </div>
+        );
     }
 
     const getStatusMessage = () => {

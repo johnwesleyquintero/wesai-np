@@ -5,11 +5,10 @@ interface TitleSuggestionProps {
     suggestion: string | null;
     onApply: (title: string) => void;
     isLoading: boolean;
-    error: string | null;
 }
 
-const TitleSuggestion: React.FC<TitleSuggestionProps> = ({ suggestion, onApply, isLoading, error }) => {
-    if (!isLoading && !error && !suggestion) {
+const TitleSuggestion: React.FC<TitleSuggestionProps> = ({ suggestion, onApply, isLoading }) => {
+    if (!isLoading && !suggestion) {
         return null;
     }
 
@@ -27,12 +26,7 @@ const TitleSuggestion: React.FC<TitleSuggestionProps> = ({ suggestion, onApply, 
                     Generating title...
                 </div>
             )}
-            {error && (
-                <div className="text-red-500">
-                    <span className="font-semibold">Error:</span> {error}
-                </div>
-            )}
-            {!isLoading && !error && suggestion && (
+            {!isLoading && suggestion && (
                 <div className="flex items-center gap-2">
                     <span className="text-light-text/70 dark:text-dark-text/70">AI Suggestion:</span>
                      <button

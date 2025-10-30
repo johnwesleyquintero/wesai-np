@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useDebounce } from './useDebounce';
 import { suggestTags, suggestTitle, suggestTitleAndTags } from '../services/geminiService';
+import { useToast } from '../context/ToastContext';
 
 type EditorState = { title: string; content: string; tags: string[] };
 
@@ -8,14 +9,13 @@ const MIN_CONTENT_LENGTH_FOR_SUGGESTIONS = 50;
 
 export const useAiSuggestions = (
     editorState: EditorState,
-    isAiRateLimited: boolean
+    isDisabled: boolean
 ) => {
+    const { showToast } = useToast();
     const [suggestedTags, setSuggestedTags] = useState<string[]>([]);
     const [isSuggestingTags, setIsSuggestingTags] = useState(false);
-    const [tagSuggestionError, setTagSuggestionError] = useState<string | null>(null);
     const [suggestedTitle, setSuggestedTitle] = useState<string | null>(null);
     const [isSuggestingTitle, setIsSuggestingTitle] = useState(false);
-    const [titleSuggestionError, setTitleSuggestionError] = useState<string | null>(null);
 
     const lastAnalyzedContentForTagsRef = useRef<string | null>(null);
     const lastAnalyzedContentForTitleRef = useRef<string | null>(null);
@@ -25,11 +25,11 @@ export const useAiSuggestions = (
     const debouncedEditorState = useDebounce(editorState, 5000);
 
     const suggestTagsForFullNote = useCallback((title: string, content: string) => {
+        if (isDisabled) return;
         const currentSuggestionId = ++tagSuggestionIdRef.current;
         lastAnalyzedContentForTagsRef.current = content;
 
         setIsSuggestingTags(true);
-        setTagSuggestionError(null);
         setSuggestedTags([]);
 
         suggestTags(title, content).then(tags => {
@@ -38,32 +38,38 @@ export const useAiSuggestions = (
                 setSuggestedTags(newSuggestions);
             }
         }).catch(err => {
-            if (currentSuggestionId === tagSuggestionIdRef.current) setTagSuggestionError(err.message);
+            if (currentSuggestionId === tagSuggestionIdRef.current) {
+                const message = err.message || 'Failed to suggest tags.';
+                showToast({ message, type: 'error' });
+            }
         }).finally(() => {
             if (currentSuggestionId === tagSuggestionIdRef.current) setIsSuggestingTags(false);
         });
-    }, [editorState.tags]);
+    }, [editorState.tags, showToast, isDisabled]);
 
     const suggestTitleForFullNote = useCallback((content: string) => {
+        if (isDisabled) return;
         const currentSuggestionId = ++titleSuggestionIdRef.current;
         lastAnalyzedContentForTitleRef.current = content;
 
         setIsSuggestingTitle(true);
-        setTitleSuggestionError(null);
         setSuggestedTitle(null);
 
         suggestTitle(content).then(title => {
             if (currentSuggestionId === titleSuggestionIdRef.current && title) setSuggestedTitle(title);
         }).catch(err => {
-            if (currentSuggestionId === titleSuggestionIdRef.current) setTitleSuggestionError(err.message);
+            if (currentSuggestionId === titleSuggestionIdRef.current) {
+                 const message = err.message || 'Failed to suggest a title.';
+                 showToast({ message, type: 'error' });
+            }
         }).finally(() => {
             if (currentSuggestionId === titleSuggestionIdRef.current) setIsSuggestingTitle(false);
         });
-    }, []);
+    }, [showToast, isDisabled]);
 
     // Effect for automatic suggestions on debounced state change
     useEffect(() => {
-        if (isAiRateLimited) return;
+        if (isDisabled) return;
         
         const contentForAnalysis = debouncedEditorState.content;
         if (contentForAnalysis.length < MIN_CONTENT_LENGTH_FOR_SUGGESTIONS) {
@@ -77,7 +83,9 @@ export const useAiSuggestions = (
         const needsTags = hasNoTags && contentForAnalysis !== lastAnalyzedContentForTagsRef.current;
 
         if (!needsTitle && !needsTags) {
-            if (!isGenericTitle) setSuggestedTitle(null); // Clear title if user wrote one
+            if (!isGenericTitle) {
+                setSuggestedTitle(null);
+            }
             return;
         }
 
@@ -90,8 +98,6 @@ export const useAiSuggestions = (
             lastAnalyzedContentForTagsRef.current = contentForAnalysis;
             setIsSuggestingTitle(true);
             setIsSuggestingTags(true);
-            setTitleSuggestionError(null);
-            setTagSuggestionError(null);
             
             suggestTitleAndTags(contentForAnalysis).then(({ title, tags }) => {
                 if (currentSuggestionId === titleSuggestionIdRef.current) {
@@ -101,9 +107,8 @@ export const useAiSuggestions = (
                 }
             }).catch(err => {
                 if (currentSuggestionId === titleSuggestionIdRef.current) {
-                    const errorMsg = err.message || 'Failed to generate suggestions.';
-                    setTitleSuggestionError(errorMsg);
-                    setTagSuggestionError(errorMsg);
+                    const message = err.message || 'Failed to generate suggestions.';
+                    showToast({ message, type: 'error' });
                 }
             }).finally(() => {
                 if (currentSuggestionId === titleSuggestionIdRef.current) {
@@ -117,14 +122,12 @@ export const useAiSuggestions = (
             suggestTagsForFullNote(debouncedEditorState.title, contentForAnalysis);
         }
 
-    }, [debouncedEditorState, isAiRateLimited, editorState.tags, suggestTitleForFullNote, suggestTagsForFullNote]);
+    }, [debouncedEditorState, isDisabled, editorState.tags, suggestTitleForFullNote, suggestTagsForFullNote, showToast]);
 
     // Function to reset state for a new note
     const resetAiSuggestions = useCallback(() => {
         setSuggestedTags([]);
-        setTagSuggestionError(null);
         setSuggestedTitle(null);
-        setTitleSuggestionError(null);
         tagSuggestionIdRef.current += 1;
         titleSuggestionIdRef.current += 1;
         lastAnalyzedContentForTagsRef.current = null;
@@ -132,9 +135,9 @@ export const useAiSuggestions = (
     }, []);
 
     return {
-        suggestedTags, isSuggestingTags, tagSuggestionError,
-        suggestedTitle, isSuggestingTitle, titleSuggestionError,
-        setSuggestedTags, setSuggestedTitle, setTitleSuggestionError,
+        suggestedTags, isSuggestingTags,
+        suggestedTitle, isSuggestingTitle,
+        setSuggestedTags, setSuggestedTitle,
         suggestTagsForFullNote, suggestTitleForFullNote, resetAiSuggestions,
     };
 };

@@ -19,7 +19,7 @@ const SidebarSearch: React.FC<SidebarSearchProps> = ({ onboardingSteps, isOnboar
         searchTerm, handleSearchTermChange: setSearchTerm, searchMode, setSearchMode,
         isAiSearching, aiSearchError, activeSmartCollection, recentQueries,
     } = useStoreContext();
-    const { isApiKeyMissing, isAiRateLimited, openSmartFolderModal } = useUIContext();
+    const { isApiKeyMissing, isAiRateLimited, openSmartFolderModal, isAiEnabled } = useUIContext();
     const [isSearchFocused, setIsSearchFocused] = useState(false);
 
     return (
@@ -61,7 +61,7 @@ const SidebarSearch: React.FC<SidebarSearchProps> = ({ onboardingSteps, isOnboar
                     <div className="relative group">
                         <button
                             onClick={() => openSmartFolderModal(null, searchTerm)}
-                            disabled={!searchTerm.trim() || !!activeSmartCollection}
+                            disabled={!searchTerm.trim() || !!activeSmartCollection || !isAiEnabled}
                             className="p-1 rounded-md text-light-text/60 dark:text-dark-text/60 hover:bg-light-ui dark:hover:bg-dark-ui disabled:opacity-30 disabled:cursor-not-allowed"
                             aria-label="Save search as smart folder"
                         >
@@ -74,7 +74,7 @@ const SidebarSearch: React.FC<SidebarSearchProps> = ({ onboardingSteps, isOnboar
                     </div>
                 </div>
             </div>
-            {!isApiKeyMissing && <div className="flex items-center mt-2 text-xs">
+            {isAiEnabled && !isApiKeyMissing && <div className="flex items-center mt-2 text-xs">
                 <div className="flex w-full bg-light-background dark:bg-dark-background p-0.5 rounded-md border border-light-border dark:border-dark-border">
                      <button
                         onClick={() => setSearchMode('KEYWORD')}

@@ -30,7 +30,7 @@ type NoteState = { title: string; content: string; tags: string[] };
 
 const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
     const { updateNote, toggleFavorite, notes, restoreNoteVersion } = useStoreContext();
-    const { isMobileView, onToggleSidebar, isAiRateLimited, isSettingsOpen, isCommandPaletteOpen, isSmartFolderModalOpen, isWelcomeModalOpen, isApiKeyMissing, isFocusMode, showConfirmation } = useUIContext();
+    const { isMobileView, onToggleSidebar, isAiRateLimited, isSettingsOpen, isCommandPaletteOpen, isSmartFolderModalOpen, isWelcomeModalOpen, isApiKeyMissing, isFocusMode, showConfirmation, isAiEnabled } = useUIContext();
     const { session } = useAuthContext();
     const { showToast } = useToast();
     const { registerEditorActions, unregisterEditorActions } = useEditorContext();
@@ -68,7 +68,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         suggestedTitle, isSuggestingTitle,
         setSuggestedTags, setSuggestedTitle,
         suggestTagsForFullNote, suggestTitleForFullNote, resetAiSuggestions
-    } = useAiSuggestions(editorState, isAiRateLimited);
+    } = useAiSuggestions(editorState, isAiRateLimited || !isAiEnabled);
     
     const {
         applyAiActionToFullNote,
@@ -83,7 +83,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
     const { 
         spellingErrors, isCheckingSpelling, activeSpellingError, setActiveSpellingError,
         spellingSuggestions, isLoadingSuggestions, suggestionError 
-    } = useSpellcheck(editorState.content, isEffectivelyReadOnly || isAiRateLimited || isApiKeyMissing);
+    } = useSpellcheck(editorState.content, isEffectivelyReadOnly || isAiRateLimited || isApiKeyMissing || !isAiEnabled);
 
     const backlinks = useBacklinks(note.id, notes);
     
@@ -442,7 +442,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
     }, [isEffectivelyReadOnly, session, note.id, showToast, editorState, setEditorState]);
     
     const handleContentBlur = () => {
-        if (!hasAutoTitledRef.current && editorState.title === 'Untitled Note' && editorState.content.trim()) {
+        if (isAiEnabled && !hasAutoTitledRef.current && editorState.title === 'Untitled Note' && editorState.content.trim()) {
             const firstLine = editorState.content.split('\n')[0].trim().replace(/^#+\s*/, '');
             if (firstLine) {
                 const newTitle = firstLine.length > 100 ? firstLine.substring(0, 100) + '...' : firstLine;
@@ -566,7 +566,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
 
     return (
         <div className="flex-1 flex flex-col h-full relative bg-light-background dark:bg-dark-background" onDragOver={(e) => { e.preventDefault(); if (!isEffectivelyReadOnly) dispatch({ type: 'SET_DRAG_OVER', payload: true }); }} onDragLeave={() => dispatch({ type: 'SET_DRAG_OVER', payload: false })} onDrop={handleDrop} onPaste={handlePaste}>
-            <EditorHeader note={note} onToggleFavorite={() => toggleFavorite(note.id)} saveStatus={saveStatus} handleSave={handleSave} editorTitle={editorState.title} onEnhance={handleEnhanceNote} onSummarize={summarizeAndFindActionForFullNote} onToggleHistory={() => dispatch({type: 'SET_HISTORY_OPEN', payload: !isHistoryOpen})} isHistoryOpen={isHistoryOpen} onApplyTemplate={handleApplyTemplate} isMobileView={isMobileView} onToggleSidebar={onToggleSidebar} onUndo={undo} onRedo={redo} canUndo={canUndo} canRedo={canRedo} viewMode={viewMode} onToggleViewMode={() => dispatch({type: 'SET_VIEW_MODE', payload: viewMode === 'edit' ? 'preview' : 'edit'})} wordCount={wordCount} charCount={charCount} isFullAiActionLoading={isFullAiActionLoading} isApiKeyMissing={isApiKeyMissing} />
+            <EditorHeader note={note} onToggleFavorite={() => toggleFavorite(note.id)} saveStatus={saveStatus} handleSave={handleSave} editorTitle={editorState.title} onEnhance={handleEnhanceNote} onSummarize={summarizeAndFindActionForFullNote} onToggleHistory={() => dispatch({type: 'SET_HISTORY_OPEN', payload: !isHistoryOpen})} isHistoryOpen={isHistoryOpen} onApplyTemplate={handleApplyTemplate} isMobileView={isMobileView} onToggleSidebar={onToggleSidebar} onUndo={undo} onRedo={redo} canUndo={canUndo} canRedo={canRedo} viewMode={viewMode} onToggleViewMode={() => dispatch({type: 'SET_VIEW_MODE', payload: viewMode === 'edit' ? 'preview' : 'edit'})} wordCount={wordCount} charCount={charCount} isFullAiActionLoading={isFullAiActionLoading} isApiKeyMissing={isApiKeyMissing} isAiEnabled={isAiEnabled} />
             {isAiRateLimited && <div className="bg-yellow-100 dark:bg-yellow-900/30 border-b border-yellow-300 dark:border-yellow-700/50 py-2 px-4 text-center text-sm text-yellow-800 dark:text-yellow-200 flex-shrink-0">AI features are temporarily paused due to high usage. They will be available again shortly.</div>}
             
             <div ref={editorPaneRef} className={`flex-1 overflow-y-auto relative transition-opacity ${isReadOnlyForVisuals ? 'opacity-70' : ''}`}>
@@ -582,6 +582,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
                         onApplySuggestion={handleApplyTitleSuggestion}
                         isSuggesting={isSuggestingTitle}
                         isApiKeyMissing={isApiKeyMissing}
+                        isAiEnabled={isAiEnabled}
                     />
                     <EditorContent
                         textareaRef={textareaRef}
@@ -608,6 +609,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
                         onAddTag={handleAddTag}
                         isLoadingTags={isSuggestingTags}
                         isApiKeyMissing={isApiKeyMissing}
+                        isAiEnabled={isAiEnabled}
                     />
                 </div>
             </div>
@@ -617,7 +619,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
             {(noteLinker || noteLinkerForSelection) && <NoteLinker query={noteLinker?.query || ''} onSelect={handleInsertLink} onClose={() => { dispatch({ type: 'SET_NOTE_LINKER', payload: null }); dispatch({ type: 'SET_NOTE_LINKER_FOR_SELECTION', payload: null }); }} position={noteLinker?.position || { top: noteLinkerForSelection!.rect.bottom, left: noteLinkerForSelection!.rect.left }} />}
             {templateLinker && <TemplateLinker query={templateLinker.query} onSelect={handleInsertSyncedBlock} onClose={() => dispatch({ type: 'SET_TEMPLATE_LINKER', payload: null })} position={templateLinker.position} />}
             {slashCommand && <SlashCommandMenu query={slashCommand.query} position={slashCommand.position} onSelect={handleSelectCommand} onClose={() => dispatch({ type: 'SET_SLASH_COMMAND', payload: null })} textareaRef={textareaRef} />}
-            <InlineAiMenu selection={selection} onAction={async (action) => { if (selection) { const newPos = await handleInlineAiAction(action, selection); if (newPos !== null && textareaRef.current) { textareaRef.current.focus(); setTimeout(() => textareaRef.current?.setSelectionRange(newPos, newPos), 0); } } }} onFormat={handleFormatSelection} isLoading={isAiActionLoading} onClose={() => dispatch({ type: 'SET_SELECTION', payload: null })} isApiKeyMissing={isApiKeyMissing} />
+            <InlineAiMenu selection={selection} onAction={async (action) => { if (selection) { const newPos = await handleInlineAiAction(action, selection); if (newPos !== null && textareaRef.current) { textareaRef.current.focus(); setTimeout(() => textareaRef.current?.setSelectionRange(newPos, newPos), 0); } } }} onFormat={handleFormatSelection} isLoading={isAiActionLoading} onClose={() => dispatch({ type: 'SET_SELECTION', payload: null })} isApiKeyMissing={isApiKeyMissing} isAiEnabled={isAiEnabled} />
             <SpellcheckMenu activeError={activeSpellingError} suggestions={spellingSuggestions} onSelect={handleApplySuggestion} isLoading={isLoadingSuggestions} error={suggestionError} onClose={() => setActiveSpellingError(null)} />
             {isHistoryOpen && <VersionHistorySidebar history={note.history || []} onClose={handleCloseHistory} onPreview={(version) => dispatch({ type: 'SET_PREVIEW_VERSION', payload: version })} onRestore={handleRestore} activeVersionTimestamp={previewVersion?.savedAt} />}
             {isDragOver && <div className="absolute inset-0 bg-light-primary/10 dark:bg-dark-primary/10 border-4 border-dashed border-light-primary dark:border-dark-primary rounded-2xl m-4 pointer-events-none flex items-center justify-center"><p className="text-light-primary dark:text-dark-primary font-bold text-2xl">Drop file to import</p></div>}

@@ -14,6 +14,7 @@ interface InlineAiMenuProps {
     isLoading: boolean;
     onClose: () => void;
     isApiKeyMissing: boolean;
+    isAiEnabled: boolean;
 }
 
 const actionMap: { action: InlineAction; label: string }[] = [
@@ -32,7 +33,7 @@ const FormatButton: React.FC<{ onClick: () => void, 'aria-label': string, childr
 );
 
 
-const InlineAiMenu: React.FC<InlineAiMenuProps> = ({ selection, onAction, onFormat, isLoading, onClose, isApiKeyMissing }) => {
+const InlineAiMenu: React.FC<InlineAiMenuProps> = ({ selection, onAction, onFormat, isLoading, onClose, isApiKeyMissing, isAiEnabled }) => {
     const [isAiMenuOpen, setIsAiMenuOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
 
@@ -75,8 +76,8 @@ const InlineAiMenu: React.FC<InlineAiMenuProps> = ({ selection, onAction, onForm
                     <FormatButton onClick={() => handleFormatClick('italic')} aria-label="Italic"><ItalicIcon /></FormatButton>
                     <FormatButton onClick={() => handleFormatClick('code')} aria-label="Code"><CodeBracketIcon /></FormatButton>
                     <FormatButton onClick={() => handleFormatClick('link')} aria-label="Link"><LinkIcon /></FormatButton>
-                    {!isApiKeyMissing && <div className="w-px h-6 bg-light-border dark:border-dark-border mx-1" />}
-                    {!isApiKeyMissing && (
+                    {!isApiKeyMissing && isAiEnabled && <div className="w-px h-6 bg-light-border dark:border-dark-border mx-1" />}
+                    {!isApiKeyMissing && isAiEnabled && (
                         <div className="relative">
                             <button 
                                 onClick={() => setIsAiMenuOpen(prev => !prev)}

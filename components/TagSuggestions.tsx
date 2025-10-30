@@ -5,11 +5,10 @@ interface TagSuggestionsProps {
     suggestions: string[];
     onAddTag: (tag: string) => void;
     isLoading: boolean;
-    error: string | null;
 }
 
-const TagSuggestions: React.FC<TagSuggestionsProps> = ({ suggestions, onAddTag, isLoading, error }) => {
-    if (!isLoading && !error && suggestions.length === 0) {
+const TagSuggestions: React.FC<TagSuggestionsProps> = ({ suggestions, onAddTag, isLoading }) => {
+    if (!isLoading && suggestions.length === 0) {
         return null;
     }
 
@@ -24,12 +23,7 @@ const TagSuggestions: React.FC<TagSuggestionsProps> = ({ suggestions, onAddTag, 
                     Analyzing note...
                  </div>
             )}
-            {error && (
-                <div className="text-sm text-red-500">
-                    <span className="font-semibold">Error:</span> {error}
-                </div>
-            )}
-            {!isLoading && !error && suggestions.length > 0 && (
+            {!isLoading && suggestions.length > 0 && (
                 <div className="flex flex-wrap gap-2">
                     {suggestions.map(tag => (
                         <button

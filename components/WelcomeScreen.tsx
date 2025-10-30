@@ -11,7 +11,7 @@ const WelcomeScreen: React.FC<{
     onToggleSidebarCollapsed?: () => void;
 }> = ({ onToggleSidebar, isMobileView, onAddNote, isSidebarCollapsed, onToggleSidebarCollapsed }) => {
     const { onAddNoteFromFile } = useStoreContext();
-    const { setView, openSettings } = useUIContext();
+    const { setView, openSettings, isAiEnabled } = useUIContext();
 
     const triggerNoteImport = () => {
         const input = document.createElement('input');
@@ -59,20 +59,22 @@ const WelcomeScreen: React.FC<{
                 <div className="mt-12 w-full max-w-2xl">
                     <h3 className="text-sm font-semibold uppercase text-light-text/50 dark:text-dark-text/50 tracking-wider mb-4">Quick Actions</h3>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div onClick={() => setView('CHAT')} className="bg-light-ui/50 dark:bg-dark-ui/50 p-4 rounded-lg text-left cursor-pointer hover:bg-light-ui dark:hover:bg-dark-ui transition-colors">
-                            <SparklesIcon className="w-6 h-6 mb-2 text-light-primary dark:text-dark-primary" />
-                            <h4 className="font-semibold text-light-text dark:text-dark-text">Explore AI Chat</h4>
-                            <p className="text-xs mt-1">Ask questions and generate content.</p>
-                        </div>
+                        {isAiEnabled && (
+                            <div onClick={() => setView('CHAT')} className="bg-light-ui/50 dark:bg-dark-ui/50 p-4 rounded-lg text-left cursor-pointer hover:bg-light-ui dark:hover:bg-dark-ui transition-colors">
+                                <SparklesIcon className="w-6 h-6 mb-2 text-light-primary dark:text-dark-primary" />
+                                <h4 className="font-semibold text-light-text dark:text-dark-text">Explore AI Chat</h4>
+                                <p className="text-xs mt-1">Ask questions and generate content.</p>
+                            </div>
+                        )}
                         <div onClick={triggerNoteImport} className="bg-light-ui/50 dark:bg-dark-ui/50 p-4 rounded-lg text-left cursor-pointer hover:bg-light-ui dark:hover:bg-dark-ui transition-colors">
                             <ArrowDownTrayIcon className="w-6 h-6 mb-2" />
                             <h4 className="font-semibold text-light-text dark:text-dark-text">Import from File</h4>
                             <p className="text-xs mt-1">Create a note from a `.md` or `.txt` file.</p>
                         </div>
-                        <div onClick={openSettings} className="bg-light-ui/50 dark:bg-dark-ui/50 p-4 rounded-lg text-left cursor-pointer hover:bg-light-ui dark:hover:bg-dark-ui transition-colors">
+                        <div onClick={() => openSettings('general')} className="bg-light-ui/50 dark:bg-dark-ui/50 p-4 rounded-lg text-left cursor-pointer hover:bg-light-ui dark:hover:bg-dark-ui transition-colors">
                             <Cog6ToothIcon className="w-6 h-6 mb-2" />
-                            <h4 className="font-semibold text-light-text dark:text-dark-text">Configure AI</h4>
-                            <p className="text-xs mt-1">Add your API key & manage templates.</p>
+                            <h4 className="font-semibold text-light-text dark:text-dark-text">Configure App</h4>
+                            <p className="text-xs mt-1">Add API key, manage templates & AI.</p>
                         </div>
                     </div>
                 </div>

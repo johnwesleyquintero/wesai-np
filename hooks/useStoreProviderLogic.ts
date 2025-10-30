@@ -42,7 +42,7 @@ const buildTree = (notes: Note[], collections: Collection[]): TreeNode[] => {
 
 export const useStoreProviderLogic = () => {
     const { session } = useAuthContext();
-    const { isDemoMode, setView, isMobileView, setIsSidebarOpen, hideConfirmation } = useUIContext();
+    const { isDemoMode, setView, isMobileView, setIsSidebarOpen, hideConfirmation, isAiEnabled } = useUIContext();
     const { showToast } = useToast();
     
     const supabaseStore = useSupabaseStore(session?.user);
@@ -75,7 +75,7 @@ export const useStoreProviderLogic = () => {
     }, [debouncedSearchTerm, addRecentQuery, activeSmartCollectionId]);
     
     useEffect(() => {
-        if (searchMode === 'AI' && debouncedSearchTerm.trim()) {
+        if (searchMode === 'AI' && debouncedSearchTerm.trim() && isAiEnabled) {
             const performAiSearch = async () => {
                 setIsAiSearching(true);
                 setAiSearchError(null);
@@ -95,7 +95,7 @@ export const useStoreProviderLogic = () => {
             setAiSearchError(null);
             setIsAiSearching(false);
         }
-    }, [debouncedSearchTerm, searchMode, notes]);
+    }, [debouncedSearchTerm, searchMode, notes, isAiEnabled]);
     
     const favoriteNotes = useMemo(() => notes.filter(n => n.isFavorite).sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()), [notes]);
 
@@ -128,6 +128,26 @@ export const useStoreProviderLogic = () => {
 
     const activeNote = useMemo(() => activeNoteId ? getNoteById(activeNoteId) : null, [activeNoteId, getNoteById]);
     const activeSmartCollection = useMemo(() => activeSmartCollectionId ? store.smartCollections.find(sc => sc.id === activeSmartCollectionId) : null, [activeSmartCollectionId, store.smartCollections]);
+    
+    const activeNotePath = useMemo(() => {
+        const path = new Set<string>();
+        if (!activeNoteId) return path;
+        
+        const allItemsMap = new Map<string, Note | Collection>();
+        notes.forEach(note => allItemsMap.set(note.id, note));
+        collections.forEach(collection => allItemsMap.set(collection.id, collection));
+    
+        let current = allItemsMap.get(activeNoteId);
+        if (current) {
+            path.add(current.id);
+            while (current.parentId) {
+                path.add(current.parentId);
+                current = allItemsMap.get(current.parentId);
+                if (!current) break;
+            }
+        }
+        return path;
+    }, [activeNoteId, notes, collections]);
 
     const onAddNote = useCallback(async (parentId: string | null = null, title: string = "Untitled Note", content: string = "") => {
         const newNoteId = await createNote(parentId, title, content);
@@ -151,6 +171,10 @@ export const useStoreProviderLogic = () => {
     const handleDeleteCollectionConfirm = useCallback(async (collection: any) => { await deleteCollection(collection.id); hideConfirmation(); }, [deleteCollection, hideConfirmation]);
     const handleDeleteSmartCollectionConfirm = useCallback(async (smartCollection: SmartCollection) => { await deleteSmartCollection(smartCollection.id); hideConfirmation(); }, [deleteSmartCollection, hideConfirmation]);
     const handleActivateSmartCollection = useCallback((collection: SmartCollection) => {
+        if (!isAiEnabled) {
+            showToast({ message: "AI features are disabled in settings.", type: "error" });
+            return;
+        }
         setActiveSmartCollectionId(collection.id);
         const performAiSearch = async () => {
             setIsAiSearching(true);
@@ -164,7 +188,7 @@ export const useStoreProviderLogic = () => {
             } finally { setIsAiSearching(false); }
         };
         performAiSearch();
-    }, [notes]);
+    }, [notes, isAiEnabled, showToast]);
     const handleSearchTermChange = useCallback((term: string) => { if (activeSmartCollectionId) setActiveSmartCollectionId(null); setSearchTerm(term); }, [activeSmartCollectionId]);
     const handleClearActiveSmartCollection = useCallback(() => { setActiveSmartCollectionId(null); setSearchTerm(''); }, []);
 
@@ -175,6 +199,7 @@ export const useStoreProviderLogic = () => {
         activeSmartCollection, handleActivateSmartCollection, handleClearActiveSmartCollection,
         handleDeleteNoteConfirm, handleDeleteCollectionConfirm, handleDeleteSmartCollectionConfirm,
         recentQueries,
+        activeNotePath,
     }), [
         store, onAddNote, onAddNoteFromFile, fileTree,
         activeNoteId, activeNote, favoriteNotes, searchData, searchTerm,
@@ -182,5 +207,6 @@ export const useStoreProviderLogic = () => {
         activeSmartCollection, handleActivateSmartCollection, handleClearActiveSmartCollection,
         handleDeleteNoteConfirm, handleDeleteCollectionConfirm, handleDeleteSmartCollectionConfirm,
         recentQueries,
+        activeNotePath,
     ]);
 };

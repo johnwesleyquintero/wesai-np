@@ -2,10 +2,10 @@ import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react'
 import { Note, TreeNode, Collection } from '../../types';
 import NoteCard from '../NoteCard';
 import {
-    PencilSquareIcon, PlusIcon, FolderPlusIcon, LightBulbIcon, TrashIcon, XMarkIcon,
+    PencilSquareIcon, PlusIcon, FolderPlusIcon, BrainIcon, TrashIcon, XMarkIcon,
     ArrowDownTrayIcon, SparklesIcon
 } from '../Icons';
-import SidebarNode from '../SidebarNode';
+import SidebarNode from '../sidebar/SidebarNode';
 import CollapsibleSection from './CollapsibleSection';
 import { useStoreContext, useUIContext } from '../../context/AppContext';
 import { useDragAndDrop } from '../../hooks/useDragAndDrop';
@@ -23,11 +23,12 @@ const SidebarContent: React.FC = () => {
         setActiveNoteId,
         handleDeleteNoteConfirm, handleDeleteSmartCollectionConfirm,
         activeSmartCollection,
+        activeNotePath,
     } = useStoreContext();
     
     const {
         isMobileView, setIsSidebarOpen, setView,
-        openSmartFolderModal, onOpenContextMenu, showConfirmation,
+        openSmartFolderModal, onOpenContextMenu, showConfirmation, isAiEnabled
     } = useUIContext();
     const { showToast } = useToast();
     
@@ -104,24 +105,6 @@ const SidebarContent: React.FC = () => {
     }, [expandedFolders, searchData]);
 
     const visibleNodeIds = React.useMemo(() => getVisibleNodes(fileTree), [fileTree, getVisibleNodes]);
-    
-    const activeNotePath = useMemo(() => {
-        const path = new Set<string>();
-        if (!activeNoteId) return path;
-        
-        // Create a map of all items (notes and collections) for efficient lookup.
-        const allItemsMap = new Map<string, Note | Collection>();
-        notes.forEach(note => allItemsMap.set(note.id, note));
-        collections.forEach(collection => allItemsMap.set(collection.id, collection));
-    
-        let current = allItemsMap.get(activeNoteId);
-        while (current?.parentId) {
-            path.add(current.parentId);
-            current = allItemsMap.get(current.parentId);
-        }
-        return path;
-    }, [activeNoteId, notes, collections]);
-
 
     useEffect(() => {
         if (focusedNodeId && !visibleNodeIds.includes(focusedNodeId)) {
@@ -238,7 +221,7 @@ const SidebarContent: React.FC = () => {
                          ])}
                     >
                          <div className="flex items-center truncate">
-                            <LightBulbIcon className="w-4 h-4 mr-2 flex-shrink-0 text-light-primary dark:text-dark-primary" />
+                            <BrainIcon className="w-4 h-4 mr-2 flex-shrink-0 text-light-primary dark:text-dark-primary" />
                             <span className="truncate">{sc.name}</span>
                         </div>
                     </div>
@@ -282,7 +265,7 @@ const SidebarContent: React.FC = () => {
                     <div className="px-4 mb-2">
                         <div className="flex items-center justify-between p-2 rounded-lg bg-light-primary/10 dark:bg-dark-primary/10 text-sm">
                             <div className="flex items-center gap-2 font-semibold truncate">
-                                <LightBulbIcon className="w-4 h-4 text-light-primary dark:text-dark-primary flex-shrink-0" />
+                                <BrainIcon className="w-4 h-4 text-light-primary dark:text-dark-primary flex-shrink-0" />
                                 <span className="truncate">{activeSmartCollection.name}</span>
                             </div>
                             <button onClick={onClearActiveSmartCollection} className="p-1 rounded-full hover:bg-light-primary/20 dark:hover:bg-dark-primary/20 flex-shrink-0">
@@ -304,7 +287,7 @@ const SidebarContent: React.FC = () => {
                         </div>
                     )}
                     {renderFavorites()}
-                    {renderSmartCollections()}
+                    {isAiEnabled && renderSmartCollections()}
                     <CollapsibleSection
                         title="Folders"
                         count={notes.length}
@@ -327,9 +310,8 @@ const SidebarContent: React.FC = () => {
                                     expandedFolders={expandedFolders}
                                     onToggleFolder={toggleFolder}
                                     isFocused={focusedNodeId === node.id}
-                                    isActivePath={activeNotePath.has(node.id)}
-                                    focusedNodeId={focusedNodeId}
                                     activeNotePath={activeNotePath}
+                                    focusedNodeId={focusedNodeId}
                                 />
                             ))
                         ) : (

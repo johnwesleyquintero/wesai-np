@@ -20,8 +20,8 @@ interface EditorMetaProps {
     suggestedTags: string[];
     onAddTag: (tag: string) => void;
     isLoadingTags: boolean;
-    tagSuggestionError: string | null;
     isApiKeyMissing: boolean;
+    isAiEnabled: boolean;
 }
 
 const EditorMeta: React.FC<EditorMetaProps> = ({
@@ -34,12 +34,12 @@ const EditorMeta: React.FC<EditorMetaProps> = ({
     suggestedTags,
     onAddTag,
     isLoadingTags,
-    tagSuggestionError,
     isApiKeyMissing,
+    isAiEnabled,
 }) => (
     <div className="mt-12 space-y-8">
         <BacklinksDisplay backlinks={backlinks} />
-        {!isApiKeyMissing && <RelatedNotes note={note} />}
+        {!isApiKeyMissing && isAiEnabled && <RelatedNotes note={note} />}
         <div id="onboarding-tag-input" className={`pt-6 border-t border-light-border dark:border-dark-border ${isReadOnly ? 'opacity-60' : ''}`}>
             <TagInput
                 tags={tags}
@@ -47,12 +47,11 @@ const EditorMeta: React.FC<EditorMetaProps> = ({
                 readOnly={isReadOnly}
                 allExistingTags={allExistingTags}
             />
-            {!isApiKeyMissing && !isReadOnly && (
+            {!isApiKeyMissing && !isReadOnly && isAiEnabled && (
                 <TagSuggestions
                     suggestions={suggestedTags}
                     onAddTag={onAddTag}
                     isLoading={isLoadingTags}
-                    error={tagSuggestionError}
                 />
             )}
         </div>

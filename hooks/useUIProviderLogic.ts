@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { SmartCollection, ContextMenuItem, ViewState, ConfirmationState, ConfirmationOptions } from '../types';
 import { useMobileView } from './useMobileView';
 import { useApiKey } from './useApiKey';
+import { SettingsTab } from '../components/SettingsModal';
 
 const initialConfirmationState: ConfirmationState = {
     isOpen: false,
@@ -12,6 +13,14 @@ const initialConfirmationState: ConfirmationState = {
 
 export const useUIProviderLogic = () => {
     const [theme, setTheme] = useState<'light' | 'dark'>(() => (localStorage.getItem('theme') as 'light' | 'dark') || 'light');
+    const [isAiEnabled, setIsAiEnabled] = useState<boolean>(() => {
+        try {
+            // Default to true if the setting doesn't exist
+            return localStorage.getItem('wesai-ai-enabled') !== 'false';
+        } catch {
+            return true;
+        }
+    });
     const [view, setView] = useState<ViewState>('NOTES');
     const isMobileView = useMobileView();
     const [isSidebarOpen, setIsSidebarOpen] = useState(!isMobileView);
@@ -27,13 +36,14 @@ export const useUIProviderLogic = () => {
     const [renamingItemId, setRenamingItemId] = useState<string | null>(null);
     const [draggingItemId, setDraggingItemId] = useState<string | null>(null);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+    const [isHelpOpen, setIsHelpOpen] = useState(false); // FIX: Add state for HelpModal
+    const [initialSettingsTab, setInitialSettingsTab] = useState<SettingsTab>('general');
     const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
     const [isSmartFolderModalOpen, setIsSmartFolderModalOpen] = useState(false);
     const [smartFolderToEdit, setSmartFolderToEdit] = useState<SmartCollection | null>(null);
     const [initialSmartFolderQuery, setInitialSmartFolderQuery] = useState<string | undefined>();
     const [contextMenu, setContextMenu] = useState<{ x: number; y: number; items: ContextMenuItem[] } | null>(null);
     const [isWelcomeModalOpen, setIsWelcomeModalOpen] = useState(false);
-    const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
     const [confirmation, setConfirmation] = useState<ConfirmationState>(initialConfirmationState);
     const { apiKey } = useApiKey();
     const [isDemoMode, setIsDemoMode] = useState(false);
@@ -91,7 +101,11 @@ export const useUIProviderLogic = () => {
     const toggleTheme = useCallback(() => setTheme(prevTheme => (prevTheme === 'light' ? 'dark' : 'light')), []);
     const toggleSidebarCollapsed = useCallback(() => setIsSidebarCollapsed(prev => !prev), []);
     const onToggleSidebar = useCallback(() => setIsSidebarOpen(p => !p), []);
-    const openSettings = useCallback(() => setIsSettingsOpen(true), []);
+    const openSettings = useCallback((tab: SettingsTab = 'general') => {
+        setInitialSettingsTab(tab);
+        setIsSettingsOpen(true);
+    }, []);
+    const openHelpModal = useCallback(() => setIsHelpOpen(true), []); // FIX: Add function to open HelpModal
     const openSmartFolderModal = useCallback((folder: SmartCollection | null, query?: string) => {
         setSmartFolderToEdit(folder);
         setInitialSmartFolderQuery(query);
@@ -99,8 +113,19 @@ export const useUIProviderLogic = () => {
     }, []);
     const onOpenContextMenu = useCallback((e: React.MouseEvent, items: ContextMenuItem[]) => { e.preventDefault(); e.stopPropagation(); setContextMenu({ x: e.clientX, y: e.clientY, items }); }, []);
     const closeWelcomeModal = useCallback(() => { localStorage.setItem('wesai-seen-welcome', 'true'); setIsWelcomeModalOpen(false); }, []);
-    const openHelpModal = useCallback(() => setIsHelpModalOpen(true), []);
     const toggleFocusMode = useCallback(() => setIsFocusMode(prev => !prev), []);
+
+    const toggleAiEnabled = useCallback(() => {
+        setIsAiEnabled(prev => {
+            const newState = !prev;
+            try {
+                localStorage.setItem('wesai-ai-enabled', String(newState));
+            } catch (error) {
+                console.error("Failed to save AI enabled state to localStorage", error);
+            }
+            return newState;
+        });
+    }, []);
     
     const showConfirmation = useCallback((options: ConfirmationOptions) => {
         setConfirmation({ ...options, isOpen: true });
@@ -110,29 +135,34 @@ export const useUIProviderLogic = () => {
         setConfirmation(prev => ({ ...initialConfirmationState, isOpen: false }));
     }, []);
 
+    const isApiKeyMissingValue = !apiKey && !isDemoMode && isAiEnabled;
+
     return useMemo(() => ({
         theme, toggleTheme, view, setView, isMobileView, isSidebarOpen, setIsSidebarOpen,
         onToggleSidebar, isSidebarCollapsed, toggleSidebarCollapsed,
         isAiRateLimited, renamingItemId, setRenamingItemId, isSettingsOpen, setIsSettingsOpen,
-        openSettings, isCommandPaletteOpen, setIsCommandPaletteOpen, isSmartFolderModalOpen,
+        openSettings, initialSettingsTab, isCommandPaletteOpen, setIsCommandPaletteOpen, isSmartFolderModalOpen,
         setIsSmartFolderModalOpen, smartFolderToEdit, openSmartFolderModal, contextMenu,
-        setContextMenu, onOpenContextMenu, isWelcomeModalOpen, closeWelcomeModal, isApiKeyMissing: !apiKey && !isDemoMode,
+        setContextMenu, onOpenContextMenu, isWelcomeModalOpen, closeWelcomeModal, 
+        isApiKeyMissing: isApiKeyMissingValue,
         draggingItemId, setDraggingItemId,
         confirmation, showConfirmation, hideConfirmation,
-        isHelpModalOpen, setIsHelpModalOpen, openHelpModal,
         initialSmartFolderQuery,
         isDemoMode, setIsDemoMode,
         isFocusMode, toggleFocusMode,
+        isHelpOpen, setIsHelpOpen, openHelpModal, // FIX: Export HelpModal state and functions
+        isAiEnabled, toggleAiEnabled,
     }), [
         theme, toggleTheme, view, isMobileView, isSidebarOpen,
         onToggleSidebar, isSidebarCollapsed, toggleSidebarCollapsed,
         isAiRateLimited, renamingItemId, isSettingsOpen,
-        openSettings, isCommandPaletteOpen, isSmartFolderModalOpen,
+        openSettings, initialSettingsTab, isCommandPaletteOpen, isSmartFolderModalOpen,
         smartFolderToEdit, openSmartFolderModal, contextMenu,
-        onOpenContextMenu, isWelcomeModalOpen, closeWelcomeModal, apiKey,
+        onOpenContextMenu, isWelcomeModalOpen, closeWelcomeModal, isApiKeyMissingValue,
         draggingItemId,
         confirmation, showConfirmation, hideConfirmation,
-        isHelpModalOpen, openHelpModal,
-        initialSmartFolderQuery, isDemoMode, isFocusMode, toggleFocusMode
+        initialSmartFolderQuery, isDemoMode, isFocusMode, toggleFocusMode,
+        isHelpOpen, openHelpModal, setIsHelpOpen, // FIX: Add to dependency array
+        isAiEnabled, toggleAiEnabled,
     ]);
 };

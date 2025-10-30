@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { PlusIcon, EyeIcon, EyeSlashIcon, ClipboardDocumentIcon } from './Icons';
+import { PlusIcon, EyeIcon, EyeSlashIcon, ClipboardDocumentIcon, ArrowDownTrayIcon, ArrowUpTrayIcon } from './Icons';
 import TemplateEditorModal from './TemplateEditorModal';
 import { Template } from '../types';
-import { useStoreContext } from '../context/AppContext';
+import { useStoreContext, useUIContext } from '../context/AppContext';
 import ConfirmationModal from './ConfirmationModal';
 import { useToast } from '../context/ToastContext';
 import { useModalAccessibility } from '../hooks/useModalAccessibility';
@@ -12,9 +12,11 @@ import { useApiKey } from '../hooks/useApiKey';
 interface SettingsModalProps {
     isOpen: boolean;
     onClose: () => void;
+    initialTab: SettingsTab;
 }
 
-type SettingsTab = 'general' | 'templates' | 'data';
+// FIX: Export the SettingsTab type.
+export type SettingsTab = 'general' | 'templates' | 'data';
 
 const TabButton: React.FC<{ active: boolean; onClick: () => void; children: React.ReactNode; }> = ({ active, onClick, children }) => (
     <button
@@ -29,8 +31,9 @@ const TabButton: React.FC<{ active: boolean; onClick: () => void; children: Reac
     </button>
 );
 
-const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
+const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialTab }) => {
     const { templates, addTemplate, updateTemplate, deleteTemplate, notes, collections, smartCollections, importData } = useStoreContext();
+    const { isAiEnabled, toggleAiEnabled } = useUIContext();
     const { showToast } = useToast();
     
     const { apiKey, saveApiKey } = useApiKey();
@@ -44,7 +47,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
     
     const [isKeyVisible, setIsKeyVisible] = useState(false);
     const [apiKeyError, setApiKeyError] = useState<string | null>(null);
-    const [activeTab, setActiveTab] = useState<SettingsTab>('general');
+    const [activeTab, setActiveTab] = useState<SettingsTab>(initialTab);
 
     const apiKeyInputRef = useRef<HTMLInputElement>(null);
     const saveButtonRef = useRef<HTMLButtonElement>(null);
@@ -54,18 +57,20 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
 
     useEffect(() => {
         if (isOpen) {
-            setActiveTab('general');
+            setActiveTab(initialTab);
             setLocalApiKey(apiKey || '');
             setIsKeyVisible(false);
             setTimeout(() => {
-                if (!apiKey) {
-                    apiKeyInputRef.current?.focus();
-                } else {
-                    saveButtonRef.current?.focus();
+                if (initialTab === 'general') {
+                    if (!apiKey) {
+                        apiKeyInputRef.current?.focus();
+                    } else {
+                        saveButtonRef.current?.focus();
+                    }
                 }
             }, 100);
         }
-    }, [isOpen, apiKey]);
+    }, [isOpen, apiKey, initialTab]);
     
     useEffect(() => {
         const validateApiKey = (key: string) => {
@@ -243,6 +248,30 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                                         Get an API key from Google AI Studio &rarr;
                                     </a>
                                 </div>
+                                <div className="pt-6 border-t border-light-border dark:border-dark-border">
+                                    <h3 className="text-lg font-semibold mb-3">AI Engine</h3>
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <p className="font-medium">Enable AI Features</p>
+                                            <p className="text-sm text-light-text/60 dark:text-dark-text/60">
+                                                Enables chat, suggestions, search, and more.
+                                            </p>
+                                        </div>
+                                        <button
+                                            role="switch"
+                                            aria-checked={isAiEnabled}
+                                            onClick={toggleAiEnabled}
+                                            className={`${isAiEnabled ? 'bg-light-primary dark:bg-dark-primary' : 'bg-light-border dark:bg-dark-border'} relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-light-primary dark:focus:ring-offset-dark-background`}
+                                        >
+                                            <span
+                                                className={`${isAiEnabled ? 'translate-x-6' : 'translate-x-1'} inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
+                                            />
+                                        </button>
+                                    </div>
+                                    <p className="text-xs text-light-text/60 dark:text-dark-text/60 mt-3">
+                                        Disabling this will turn WesCore into a standard notepad and prevent any usage of your Gemini API key.
+                                    </p>
+                                </div>
                                 <div>
                                     <h3 className="text-lg font-semibold mb-3">Account</h3>
                                     <button onClick={handleSignOut} className="w-full text-center px-4 py-2 rounded-md bg-light-ui dark:bg-dark-ui hover:bg-light-ui-hover dark:hover:bg-dark-ui-hover">Sign Out</button>
@@ -276,11 +305,17 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                             <div>
                                 <h3 className="text-lg font-semibold mb-3">Data Management</h3>
                                 <p className="text-sm text-light-text/60 dark:text-dark-text/60 mb-3">
-                                    Export all your data to a single file for backup, or import a backup file to restore your notepad.
+                                    Export all your data to a single JSON file for backup, or import a backup file to restore your entire workspace.
                                 </p>
                                 <div className="flex space-x-4">
-                                    <button onClick={handleExport} className="flex-1 px-4 py-2 rounded-md bg-light-ui dark:bg-dark-ui hover:bg-light-ui-hover dark:hover:bg-dark-ui-hover">Export All Data</button>
-                                    <button onClick={handleImportClick} className="flex-1 px-4 py-2 rounded-md bg-light-ui dark:bg-dark-ui hover:bg-light-ui-hover dark:hover:bg-dark-ui-hover">Import Data...</button>
+                                    <button onClick={handleExport} className="flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-md bg-light-ui dark:bg-dark-ui hover:bg-light-ui-hover dark:hover:bg-dark-ui-hover">
+                                        <ArrowDownTrayIcon />
+                                        Export All Data
+                                    </button>
+                                    <button onClick={handleImportClick} className="flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-md bg-light-ui dark:bg-dark-ui hover:bg-light-ui-hover dark:hover:bg-dark-ui-hover">
+                                        <ArrowUpTrayIcon />
+                                        Import Data...
+                                    </button>
                                 </div>
                             </div>
                         )}

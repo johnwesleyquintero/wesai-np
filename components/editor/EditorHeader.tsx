@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { Note, Template } from '../../types';
-import { StarIcon, TrashIcon, SparklesIcon, HistoryIcon, ArrowDownTrayIcon, DocumentDuplicateIcon, Bars3Icon, ArrowUturnLeftIcon, ArrowUturnRightIcon, EyeIcon, PencilSquareIcon, CheckBadgeIcon, ClipboardDocumentIcon, InformationCircleIcon, EllipsisVerticalIcon, DocumentPlusIcon, FocusIcon, UnfocusIcon } from '../Icons';
+import { StarIcon, TrashIcon, SparklesIcon, HistoryIcon, Bars3Icon, ArrowUturnLeftIcon, ArrowUturnRightIcon, EyeIcon, PencilSquareIcon, FocusIcon, UnfocusIcon } from '../Icons';
 import { useToast } from '../../context/ToastContext';
-import NoteInfoPopover from '../NoteInfoPopover';
 import { useStoreContext, useUIContext } from '../../context/AppContext';
+import MoreActionsMenu from './MoreActionsMenu';
 
 interface EditorHeaderProps {
     note: Note;
@@ -28,6 +28,7 @@ interface EditorHeaderProps {
     charCount: number;
     isFullAiActionLoading: string | null;
     isApiKeyMissing: boolean;
+    isAiEnabled: boolean;
 }
 
 interface StatusIndicatorProps {
@@ -131,98 +132,14 @@ const AiMenu: React.FC<{
     );
 };
 
-const MoreActionsMenu: React.FC<{
-    note: Note;
-    onApplyTemplate: (template: Template) => void;
-    onSaveAsTemplate: () => void;
-    isDisabled: boolean;
-}> = ({ note, onApplyTemplate, onSaveAsTemplate, isDisabled }) => {
-    const [isOpen, setIsOpen] = useState(false);
-    const [isTemplatesSubMenuOpen, setIsTemplatesSubMenuOpen] = useState(false);
-    const { showToast } = useToast();
-    const { templates } = useStoreContext();
-
-    const sanitizeFilename = (name: string) => name.replace(/[\\/\\?%*:|"<>]/g, '-').trim() || 'Untitled';
-    
-    const handleExport = (format: 'md' | 'json') => {
-        setIsOpen(false);
-        const filename = `${sanitizeFilename(note.title)}.${format}`;
-        let content = '';
-        let mimeType = '';
-
-        if (format === 'md') {
-            const tagsLine = note.tags.length > 0 ? `**Tags:** ${note.tags.join(', ')}\n\n` : '';
-            content = `# ${note.title}\n\n${tagsLine}---\n\n${note.content}`;
-            mimeType = 'text/markdown';
-        } else {
-            content = JSON.stringify(note, null, 2);
-            mimeType = 'application/json';
-        }
-
-        const blob = new Blob([content], { type: mimeType });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-    };
-
-    const handleCopyMarkdown = () => {
-        setIsOpen(false);
-        const markdownContent = `# ${note.title}\n\n${note.content}`;
-        navigator.clipboard.writeText(markdownContent)
-            .then(() => showToast({ message: "Note copied as Markdown!", type: 'success' }))
-            .catch(err => showToast({ message: "Failed to copy note.", type: 'error' }));
-    };
-
-    return (
-        <div className="relative">
-            <button onClick={() => setIsOpen(prev => !prev)} className="p-2 rounded-md hover:bg-light-ui dark:hover:bg-dark-ui transition-colors disabled:opacity-50 disabled:cursor-not-allowed" disabled={isDisabled}>
-                <EllipsisVerticalIcon />
-            </button>
-            {isOpen && (
-                <div className="absolute right-0 mt-2 w-56 bg-light-background dark:bg-dark-background rounded-md shadow-lg border border-light-border dark:border-dark-border z-10 py-1">
-                    <div
-                        onMouseEnter={() => setIsTemplatesSubMenuOpen(true)}
-                        onMouseLeave={() => setIsTemplatesSubMenuOpen(false)}
-                        className="relative"
-                    >
-                        <button className="w-full text-left flex items-center justify-between gap-2 block px-4 py-2 text-sm hover:bg-light-ui dark:hover:bg-dark-ui">
-                           <span className="flex items-center gap-2"><DocumentDuplicateIcon /> Apply Template</span> &rarr;
-                        </button>
-                        {isTemplatesSubMenuOpen && (
-                             <div className="absolute right-full -top-1 mr-1 w-56 bg-light-background dark:bg-dark-background rounded-md shadow-lg border border-light-border dark:border-dark-border py-1">
-                                {templates.length > 0 ? (
-                                    templates.map(template => <button key={template.id} onClick={() => { onApplyTemplate(template); setIsOpen(false); }} className="w-full text-left block px-4 py-2 text-sm hover:bg-light-ui dark:hover:bg-dark-ui">{template.title}</button>)
-                                ) : (
-                                    <p className="px-4 py-2 text-sm text-light-text/60 dark:text-dark-text/60">No templates.</p>
-                                )}
-                            </div>
-                        )}
-                    </div>
-                    <button onClick={() => { onSaveAsTemplate(); setIsOpen(false); }} className="w-full text-left flex items-center gap-2 block px-4 py-2 text-sm hover:bg-light-ui dark:hover:bg-dark-ui"><DocumentPlusIcon /> Save as Template</button>
-                    <div className="my-1 border-t border-light-border dark:border-dark-border"></div>
-                    <button onClick={handleCopyMarkdown} className="w-full text-left flex items-center gap-2 block px-4 py-2 text-sm hover:bg-light-ui dark:hover:bg-dark-ui"><ClipboardDocumentIcon /> Copy as Markdown</button>
-                    <button onClick={() => handleExport('md')} className="w-full text-left flex items-center gap-2 block px-4 py-2 text-sm hover:bg-light-ui dark:hover:bg-dark-ui"><ArrowDownTrayIcon /> Export as .md</button>
-                    <button onClick={() => handleExport('json')} className="w-full text-left flex items-center gap-2 block px-4 py-2 text-sm hover:bg-light-ui dark:hover:bg-dark-ui"><ArrowDownTrayIcon /> Export as .json</button>
-                </div>
-            )}
-        </div>
-    );
-};
-
 const EditorHeader: React.FC<EditorHeaderProps> = ({ 
     note, onToggleFavorite, saveStatus, handleSave, editorTitle, onEnhance, onSummarize, onToggleHistory, isHistoryOpen, 
     onApplyTemplate, isMobileView, onToggleSidebar, onUndo, onRedo, canUndo, canRedo,
     viewMode, onToggleViewMode, wordCount, charCount,
-    isFullAiActionLoading, isApiKeyMissing
+    isFullAiActionLoading, isApiKeyMissing, isAiEnabled,
 }) => {
     const { addTemplate, handleDeleteNoteConfirm } = useStoreContext();
     const { showConfirmation, isFocusMode, toggleFocusMode } = useUIContext();
-    const [isInfoOpen, setIsInfoOpen] = useState(false);
     const { showToast } = useToast();
 
     const isDisabled = !!isFullAiActionLoading || saveStatus === 'saving';
@@ -271,7 +188,7 @@ const EditorHeader: React.FC<EditorHeaderProps> = ({
                             </button>
                             <div className="w-px h-6 bg-light-border dark:border-dark-border mx-1"></div>
                             
-                            {!isApiKeyMissing && <AiMenu 
+                            {!isApiKeyMissing && isAiEnabled && <AiMenu 
                                 onEnhance={onEnhance}
                                 onSummarize={onSummarize}
                                 isDisabled={isDisabled}
@@ -283,14 +200,6 @@ const EditorHeader: React.FC<EditorHeaderProps> = ({
                             <button onClick={onToggleViewMode} disabled={isDisabled} className={`p-2 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${viewMode === 'preview' ? 'bg-light-ui dark:bg-dark-ui' : 'hover:bg-light-ui dark:hover:bg-dark-ui'}`} aria-label={viewMode === 'preview' ? 'Switch to Edit Mode' : 'Switch to Preview Mode'}>
                                 {viewMode === 'preview' ? <PencilSquareIcon /> : <EyeIcon />}
                             </button>
-                            
-                            <div className="relative">
-                                <button onClick={() => setIsInfoOpen(prev => !prev)} disabled={isDisabled} className={`p-2 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${isInfoOpen ? 'bg-light-ui dark:bg-dark-ui' : 'hover:bg-light-ui dark:hover:bg-dark-ui'}`} aria-label="Note Information">
-                                    <InformationCircleIcon />
-                                </button>
-                                {isInfoOpen && <NoteInfoPopover note={note} wordCount={wordCount} charCount={charCount} />}
-                            </div>
-
                             <div className="w-px h-6 bg-light-border dark:border-dark-border mx-1"></div>
                         </>
                     )}
@@ -322,6 +231,8 @@ const EditorHeader: React.FC<EditorHeaderProps> = ({
                             onApplyTemplate={onApplyTemplate}
                             onSaveAsTemplate={handleSaveAsTemplate}
                             isDisabled={isDisabled}
+                            wordCount={wordCount}
+                            charCount={charCount}
                         />
                     )}
                 </div>

@@ -23,6 +23,7 @@ export const useCommands = (onComplete: () => void): Command[] => {
         isAiRateLimited,
         onToggleSidebar,
         showConfirmation,
+        isAiEnabled,
     } = useUIContext();
 
     const { editorActions } = useEditorContext();
@@ -55,16 +56,19 @@ export const useCommands = (onComplete: () => void): Command[] => {
                 icon: React.createElement(DocumentTextIcon),
                 keywords: 'view notes editor',
                 section: 'Navigation',
-            },
-            {
+            }
+        );
+        
+        if (isAiEnabled) {
+            allCommands.push({
                 id: 'switch-to-chat',
                 name: 'Switch to Chat',
                 action: () => { setView('CHAT'); onComplete(); },
                 icon: React.createElement(SparklesIcon),
                 keywords: 'view chat ask ai',
                 section: 'Navigation',
-            }
-        );
+            });
+        }
 
         // Section: Note (Contextual)
         if (activeNote && view === 'NOTES') {
@@ -118,7 +122,7 @@ export const useCommands = (onComplete: () => void): Command[] => {
         }
         
         // Section: AI (Contextual)
-        if (activeNote && view === 'NOTES' && editorActions && !isAiRateLimited) {
+        if (activeNote && view === 'NOTES' && editorActions && !isAiRateLimited && isAiEnabled) {
             allCommands.push(
                 {
                     id: 'ai-fix',
@@ -214,7 +218,8 @@ export const useCommands = (onComplete: () => void): Command[] => {
         editorActions,
         isAiRateLimited,
         onComplete,
-        onToggleSidebar
+        onToggleSidebar,
+        isAiEnabled,
     ]);
 
     return commands;

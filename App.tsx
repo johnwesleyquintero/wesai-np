@@ -29,8 +29,9 @@ const WelcomeModal = React.lazy(() => import('./components/WelcomeModal'));
 const AnalyticsDashboard = React.lazy(() => import('./components/AnalyticsDashboard'));
 const TrendAnalysisDashboard = React.lazy(() => import('./components/TrendAnalysisDashboard'));
 const GraphView = React.lazy(() => import('./components/GraphView'));
-const HelpModal = React.lazy(() => import('./components/HelpModal'));
 const CoachMark = React.lazy(() => import('./components/CoachMark'));
+// FIX: Import HelpModal to be rendered.
+const HelpModal = React.lazy(() => import('./components/HelpModal'));
 
 
 const WELCOME_SCREEN_SIDEBAR_WIDTH_KEY = 'wesai-sidebar-width';
@@ -45,16 +46,17 @@ function AppContent() {
 
     const {
         isMobileView, setIsSidebarOpen, view, setView,
-        isSettingsOpen, setIsSettingsOpen, isCommandPaletteOpen, setIsCommandPaletteOpen,
+        isSettingsOpen, setIsSettingsOpen, initialSettingsTab,
+        isCommandPaletteOpen, setIsCommandPaletteOpen,
         isSmartFolderModalOpen, setIsSmartFolderModalOpen, smartFolderToEdit, initialSmartFolderQuery,
         isWelcomeModalOpen, closeWelcomeModal,
-        isHelpModalOpen, setIsHelpModalOpen,
         contextMenu, setContextMenu,
         isApiKeyMissing,
         isSidebarCollapsed,
         toggleSidebarCollapsed,
         confirmation, hideConfirmation,
         isFocusMode,
+        isHelpOpen, setIsHelpOpen, // FIX: Get HelpModal state from UI context.
     } = useUIContext();
     
     const { onboardingSteps, isOnboardingComplete, activeCoachMark, dismissCoachMark } = useOnboarding();
@@ -196,6 +198,7 @@ function AppContent() {
                 <SettingsModal
                     isOpen={isSettingsOpen}
                     onClose={() => setIsSettingsOpen(false)}
+                    initialTab={initialSettingsTab}
                 />
 
                 <SmartFolderModal
@@ -208,7 +211,8 @@ function AppContent() {
 
                 <WelcomeModal isOpen={isWelcomeModalOpen} onClose={closeWelcomeModal} />
 
-                <HelpModal isOpen={isHelpModalOpen} onClose={() => setIsHelpModalOpen(false)} />
+                {/* FIX: Render the HelpModal component. */}
+                <HelpModal isOpen={isHelpOpen} onClose={() => setIsHelpOpen(false)} />
                 
                 {activeCoachMark && (
                     <CoachMark

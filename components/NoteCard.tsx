@@ -27,20 +27,23 @@ const NoteCard: React.FC<NoteCardProps> = ({
         <div
             onClick={onClick}
             onContextMenu={onContextMenu}
-            className={`p-3 mb-2 rounded-lg cursor-pointer transition-colors active:scale-95 transform transition-transform ${
+            className={`group p-3 mb-2 rounded-lg cursor-pointer transition-all active:scale-95 transform hover:-translate-y-0.5 hover:shadow-md ${
                 isActive
                     ? 'bg-light-primary/30 dark:bg-dark-primary/30'
                     : 'hover:bg-light-background dark:hover:bg-dark-background'
             }`}
         >
-            <h3 className="font-semibold truncate flex justify-between items-center">
+            <h3 className={`font-semibold truncate flex justify-between items-center transition-colors ${
+                    !isActive && 'group-hover:text-light-primary dark:group-hover:text-dark-primary'
+                }`}
+            >
                 <Highlight text={title} highlight={searchTerm} />
                 {isFavorite && <StarIcon className="w-4 h-4 text-yellow-500" filled />}
             </h3>
             <p className="text-sm text-light-text/70 dark:text-dark-text/70 note-card-preview">
                  <Highlight text={preview || 'No content'} highlight={searchTerm} />
             </p>
-            <p className="text-xs text-light-text/50 dark:text-dark-text/50 mt-1">{formatDate(updatedAt)}</p>
+            <p className="text-xs font-semibold text-light-text/50 dark:text-dark-text/50 mt-1">{formatDate(updatedAt)}</p>
         </div>
     );
 };

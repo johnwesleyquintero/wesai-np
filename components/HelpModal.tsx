@@ -26,19 +26,21 @@ const AccordionItem: React.FC<{ title: string; children: ReactNode }> = ({ title
 const ChangelogContent = () => (
     <div className="space-y-6 text-sm">
         <div>
-            <h3 className="font-bold text-base mb-2">July 31, 2024</h3>
+            <h3 className="font-bold text-base mb-2">October 29, 2025</h3>
+            <ul className="list-disc pl-5 space-y-1">
+                <li><strong className="font-semibold">Manual Save Control:</strong> Replaced the automatic "saving..." indicator with an explicit "Save" button for more control. The app still saves automatically when you navigate away.</li>
+                <li><strong className="font-semibold">Actionable Notifications:</strong> All pop-up notifications now include a manual dismiss button.</li>
+                <li><strong className="font-semibold">Edit Last Chat Message:</strong> Press <kbd>ArrowUp</kbd> in an empty chat input to recall and edit your last sent message.</li>
+            </ul>
+        </div>
+        <div>
+            <h3 className="font-bold text-base mb-2">October 28, 2025</h3>
             <ul className="list-disc pl-5 space-y-1">
                 <li><strong className="font-semibold">Incremental UI/UX Polish:</strong> Implemented a series of refinements including tabbed interfaces for Settings and Help modals, icon-based action buttons in chat, active path highlighting in the sidebar, and more consistent error notifications.</li>
             </ul>
         </div>
         <div>
-            <h3 className="font-bold text-base mb-2">July 30, 2024</h3>
-            <ul className="list-disc pl-5 space-y-1">
-                <li><strong className="font-semibold">Manual Save in Editor:</strong> Replaced the automatic "saving..." indicator with an explicit "Save" button. This gives you more control and a calmer writing environment, while still saving your work automatically if you navigate away.</li>
-            </ul>
-        </div>
-        <div>
-            <h3 className="font-bold text-base mb-2">July 29, 2024</h3>
+            <h3 className="font-bold text-base mb-2">October 26, 2025</h3>
             <ul className="list-disc pl-5 space-y-1">
                 <li><strong className="font-semibold">UI Polish & Refinements:</strong> Reorganized the Settings modal into clear tabs (General, Templates, Data), streamlined the AI chat action bar with icons for a cleaner look, and added visual dividers to context menus for better grouping of actions.</li>
                 <li><strong className="font-semibold">Active Path Highlighting:</strong> The sidebar now highlights the entire folder path of the active note, making it easier to see where you are in your workspace.</li>
@@ -46,33 +48,26 @@ const ChangelogContent = () => (
             </ul>
         </div>
         <div>
-            <h3 className="font-bold text-base mb-2">July 28, 2024</h3>
+            <h3 className="font-bold text-base mb-2">October 25, 2025</h3>
             <ul className="list-disc pl-5 space-y-1">
                 <li><strong className="font-semibold">AI-Driven Onboarding:</strong> Replaced the static checklist with a generative onboarding experience. New users are now greeted with AI-crafted notes that guide them through the app's core features.</li>
                 <li><strong className="font-semibold">Saved Chat Responders:</strong> Added the ability to save and quickly reuse common prompts in the "Responder" chat mode, accelerating customer service workflows.</li>
             </ul>
         </div>
         <div>
-            <h3 className="font-bold text-base mb-2">July 27, 2024</h3>
+            <h3 className="font-bold text-base mb-2">October 24, 2025</h3>
             <ul className="list-disc pl-5 space-y-1">
                 <li><strong className="font-semibold">Enhanced AI Feedback:</strong> Added one-click reason tags (e.g., "Incorrect") when downvoting an AI chat response to provide more detailed feedback for model improvement.</li>
             </ul>
         </div>
         <div>
-            <h3 className="font-bold text-base mb-2">July 26, 2024</h3>
+            <h3 className="font-bold text-base mb-2">October 23, 2025</h3>
             <ul className="list-disc pl-5 space-y-1">
                 <li><strong className="font-semibold">Help Center Added:</strong> You're looking at it! A new central place for help and to see what's new.</li>
             </ul>
         </div>
         <div>
-            <h3 className="font-bold text-base mb-2">July 25, 2024</h3>
-            <ul className="list-disc pl-5 space-y-1">
-                <li><strong className="font-semibold">Edit Last Chat Message:</strong> Press `ArrowUp` in an empty chat input to recall and edit your last message.</li>
-                <li><strong className="font-semibold">Improved Notifications:</strong> Toast notifications now have a manual dismiss button for better control.</li>
-            </ul>
-        </div>
-        <div>
-            <h3 className="font-bold text-base mb-2">July 24, 2024</h3>
+            <h3 className="font-bold text-base mb-2">October 21, 2025</h3>
              <ul className="list-disc pl-5 space-y-1">
                 <li><strong className="font-semibold">UI Polish:</strong> Added loading indicators to AI search and empty states for sidebar sections to improve user feedback.</li>
             </ul>
@@ -90,12 +85,32 @@ const HelpContent = () => (
                 <li>Paste your key into the "Gemini API Key" field and save.</li>
             </ol>
         </AccordionItem>
+        <AccordionItem title="What are the different AI Chat modes?">
+            <p className="mb-2">The AI Chat has multiple modes for different tasks:</p>
+             <ul className="list-disc pl-5 space-y-2">
+                <li><strong>Assistant:</strong> Your knowledge co-pilot. It answers questions based on the content of your notes.</li>
+                <li><strong>Responder:</strong> Drafts professional customer service responses using your notes as a knowledge base.</li>
+                <li><strong>WesCore Co-pilot:</strong> An operational assistant that can create, find, and manage notes for you using natural language commands.</li>
+                 <li><strong>Amazon Copywriter:</strong> Generates Amazon product listing copy based on product info and research notes.</li>
+            </ul>
+        </AccordionItem>
+        <AccordionItem title="How do I link notes?">
+            <p className="mb-2">You can create links between notes to build a web of knowledge. When you're in a note, you can see all the notes that link to it in the "Linked Mentions" section.</p>
+             <p>To create a link, type `[[` to open the note linker, search for the note you want to link to, and press Enter. You can also right-click a note in the sidebar and select "Copy Note Link" to get the link syntax.</p>
+        </AccordionItem>
+        <AccordionItem title="What are Templates & Synced Blocks?">
+            <p className="mb-2">**Templates** are reusable note structures you can create in **Settings &rarr; Templates**. You can apply a template to a new or existing note to pre-fill its content.</p>
+            <p>A **Synced Block** is a powerful feature that lets you embed the content of a template directly into a note. Use the `/` command and select "Synced Block". If you update the original template, the content in every note where it's synced will update automatically.</p>
+        </AccordionItem>
         <AccordionItem title="What are Smart Folders?">
             <p>Smart Folders are like saved searches that stay up-to-date. They use AI to automatically find and display notes that match a conceptual query you provide, like "all notes about marketing strategies from last month".</p>
         </AccordionItem>
-         <AccordionItem title="How do I link notes?">
-            <p className="mb-2">You can create links between notes to build a web of knowledge. When you're in a note, you can see all the notes that link to it in the "Linked Mentions" section.</p>
-             <p>To create a link, type `[[` to open the note linker, search for the note you want to link to, and press Enter. You can also right-click a note in the sidebar and select "Copy Note Link" to get the link syntax.</p>
+         <AccordionItem title="How do I backup my data?">
+            <p className="mb-2">You have full control over your data. Go to **Settings &rarr; Data** to:</p>
+             <ul className="list-disc pl-5 space-y-1">
+                <li><strong>Export All Data:</strong> Download a single JSON file containing all your notes, folders, and templates.</li>
+                <li><strong>Import Data:</strong> Restore your workspace from a previously exported backup file. **Warning:** This will overwrite all existing data.</li>
+            </ul>
         </AccordionItem>
         <AccordionItem title="What are the key keyboard shortcuts?">
              <ul className="list-disc pl-5 space-y-2">

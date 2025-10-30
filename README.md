@@ -9,9 +9,10 @@ WesCore is a centralized cockpit for operators to execute workflows, manage data
 ### Core System & Organization
 - **Secure & Private Cloud Sync:** All data is stored securely in your own Supabase backend and protected by granular security policies. Real-time, authenticated subscriptions keep all your devices perfectly in sync.
 - **Flexible Authentication:** Sign up quickly with an email and password or use the convenient one-click Google Sign-In option.
-- **Generative Onboarding Experience:** Instead of a static checklist, new users are greeted with a set of AI-generated notes that immersively guide them through core features, teaching the app with its own functionality from the first second.
+- **Immersive Onboarding Experience:** Instead of a static checklist, new users can explore a pre-populated demo workspace. These curated notes immersively guide them through core features, teaching the app with its own functionality.
 - **Drag & Drop Organization:** Intuitively organize your workspace by dragging notes and folders to reorder them or nest them within each other. Drop files directly onto folders to import them.
-- **Rich Markdown Editor:** A full-featured Markdown editor with syntax highlighting and a live preview mode that supports tables, images, embedded YouTube/Vimeo videos, callout blocks, and more.
+- **Rich Markdown Editor:** A full-featured Markdown editor with syntax highlighting, a live preview mode, and support for tables, images, embedded YouTube/Vimeo videos, callout blocks, and auto-pairing of brackets and quotes for a smoother writing flow.
+- **Automatic Titling:** If you leave a note untitled, its title will be automatically generated from the first line of content when you move on.
 - **Cloud Image Storage:** Images are uploaded to secure cloud storage, keeping your note content clean and your database lean.
 - **Smart Folders:** Create dynamic, saved searches that automatically display notes matching a specific AI-powered query (e.g., "all notes about marketing from the last month").
 - **Bi-Directional Linking:** Connect ideas by linking notes using `[[note-id|display text]]` syntax. A "Linked Mentions" section automatically displays all backlinks to the current note.
@@ -26,7 +27,7 @@ WesCore is a centralized cockpit for operators to execute workflows, manage data
     - **Amazon Copywriter:** Generates compelling, SEO-optimized Amazon product listing copy based on product info and research notes.
     - **WesCore Co-pilot (with Tools):** Your operational co-pilot. This assistant uses **Function Calling** to understand natural language commands and interact with your workspace. It can create, find, read, update, delete, and organize notes; manage templates; and even perform bulk find-and-replace operations across your entire workspace.
 - **Proactive Related Notes (AI Co-Pilot):** As you write, the AI analyzes your content in real-time to proactively surface semantically related notes from your knowledge base, helping you discover hidden connections without breaking your flow.
-- **Knowledge Graph Visualization:** A dynamic, interactive force-directed graph that visually represents the connections between your notes, allowing you to explore your web of ideas.
+- **Knowledge Graph Visualization:** A dynamic, interactive force-directed graph that visually represents the connections between your notes. Preview notes on hover, zoom and pan, and even create new links by holding `Alt` and dragging between nodes.
 - **Self-Improving Intelligence & Analytics:**
     - **CTR Analytics:** A foundational feedback loop makes the AI smarter. The system logs every suggestion "impression" and user "click," providing a dashboard to measure relevance and continuously refine the AI's performance.
     - **Trend Analysis Dashboard:** Visualize conceptual clusters, "hot topics," and the most frequent connections between your ideas, giving you a strategic overview of your knowledge base.
@@ -37,7 +38,7 @@ WesCore is a centralized cockpit for operators to execute workflows, manage data
 - **Content Generation & Summarization:**
     - Automatically suggest descriptive titles and relevant tags based on your note's content.
     - Generate a concise summary and extract a checklist of action items from your note with a single command.
-- **Multimodal Input:** Provide visual context to the AI by attaching images to your prompts in any assistant mode via drag-and-drop or a file picker.
+- **Multimodal Input:** Provide visual context to the AI by attaching images to your prompts in any assistant mode via drag-and-drop, a file picker, or pasting directly from your clipboard.
 
 ### Productivity and Workflow
 - **Optimized for Performance & Scale:** A highly-optimized Supabase backend with custom database indexing ensures data retrieval is instantaneous. The frontend is built with lazy-loading components for a fast initial load.
@@ -45,6 +46,7 @@ WesCore is a centralized cockpit for operators to execute workflows, manage data
 - **Full Keyboard Navigation:** Navigate the entire sidebar, select notes, and expand folders using only your keyboard for maximum efficiency.
 - **Robust Editing Experience:** A reliable undo/redo system that covers all note attributes (title, content, tags) ensures you never lose an idea.
 - **Manual Save Control:** The editor features an explicit "Save" button that appears only when there are unsaved changes, giving you full control over when to commit your work. The distracting auto-save-on-pause is gone, but the safety net of saving automatically when you navigate away remains.
+- **Actionable UI Feedback:** All pop-up notifications are actionable, with manual dismiss controls, so they never interrupt your flow.
 - **Command Palette:** Press `Ctrl/Cmd + K` to access nearly every application feature, from creating notes to executing AI actions.
 - **Slash Commands:** Type `/` in the editor to quickly insert headings, lists, to-do items, dividers, and trigger AI actions.
 - **Edit Last Message:** Press `ArrowUp` in an empty chat input to quickly recall, edit, and resubmit your last query.

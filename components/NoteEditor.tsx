@@ -412,8 +412,13 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         const items = e.clipboardData?.items;
         if (!items) return;
 
-        // FIX: Explicitly cast Array.from(items) to DataTransferItem[] to ensure correct type inference for `imageItem`.
-        const imageItem = (Array.from(items) as DataTransferItem[]).find((item) => item.type.startsWith('image/'));
+        let imageItem: DataTransferItem | undefined;
+        for (let i = 0; i < items.length; i++) {
+            if (items[i].type.startsWith('image/')) {
+                imageItem = items[i];
+                break;
+            }
+        }
 
         if (imageItem) {
             e.preventDefault();

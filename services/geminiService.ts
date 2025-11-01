@@ -188,7 +188,14 @@ Text: "${text}"`,
         payload,
         {
             errorMessage: 'Error in findMisspelledWords:',
-            processResponse: (res) => JSON.parse(res.text.trim()),
+            processResponse: (res) => {
+                try {
+                    return JSON.parse(res.text.trim());
+                } catch (e) {
+                    console.error('Failed to parse JSON for misspelled words:', e, res.text);
+                    return [];
+                }
+            },
             onError: () => [] // Fail gracefully
         }
     );
@@ -211,7 +218,14 @@ export const getSpellingSuggestions = async (word: string): Promise<string[]> =>
         payload,
         {
             errorMessage: 'Error in getSpellingSuggestions:',
-            processResponse: (res) => JSON.parse(res.text.trim()),
+            processResponse: (res) => {
+                try {
+                    return JSON.parse(res.text.trim());
+                } catch (e) {
+                    console.error('Failed to parse JSON for spelling suggestions:', e, res.text);
+                    return [];
+                }
+            },
             onError: () => []
         }
     );
@@ -246,7 +260,12 @@ ${notesContext}`,
                 },
             },
         });
-        return JSON.parse(response.text.trim());
+        try {
+            return JSON.parse(response.text.trim());
+        } catch (parseError) {
+             console.error('Failed to parse JSON in semanticSearchNotes:', parseError, response.text);
+             throw new Error("AI search returned invalid data format.");
+        }
     } catch (e) {
         console.error('Error in semanticSearchNotes:', e);
         fireRateLimitEvent(e);
@@ -284,7 +303,14 @@ ${note2.content}`,
         payload,
         {
             errorMessage: 'Error in suggestNoteConsolidation:',
-            processResponse: (res) => JSON.parse(res.text.trim()),
+            processResponse: (res) => {
+                try {
+                    return JSON.parse(res.text.trim());
+                } catch(e) {
+                    console.error('Failed to parse JSON for note consolidation:', e, res.text);
+                    throw new Error("AI returned invalid data format.");
+                }
+            },
             onError: () => { throw new Error("Failed to generate consolidation. Please try again."); }
         }
     );
@@ -320,11 +346,16 @@ Content: ${content.substring(0, 1000)}`,
         {
             errorMessage: 'Error suggesting title and tags:',
             processResponse: (res) => {
-                const result = JSON.parse(res.text.trim());
-                if (result.title) {
-                    result.title = result.title.replace(/["\.]/g, '');
+                try {
+                    const result = JSON.parse(res.text.trim());
+                    if (result.title) {
+                        result.title = result.title.replace(/["\.]/g, '');
+                    }
+                    return result;
+                } catch(e) {
+                    console.error('Failed to parse JSON for title/tags:', e, res.text);
+                    throw new Error("AI returned invalid data format.");
                 }
-                return result;
             },
             onError: () => { throw new Error("Failed to suggest title and tags."); }
         }
@@ -451,7 +482,14 @@ Content: ${content.substring(0, 500)}`,
         payload,
         {
             errorMessage: 'Error suggesting tags:',
-            processResponse: (res) => JSON.parse(res.text.trim()),
+            processResponse: (res) => {
+                try {
+                    return JSON.parse(res.text.trim());
+                } catch(e) {
+                    console.error('Failed to parse JSON for tags:', e, res.text);
+                    throw new Error("AI returned invalid data format.");
+                }
+            },
             onError: () => { throw new Error("Failed to suggest tags."); }
         }
     );
@@ -526,7 +564,14 @@ ${content}`,
         payload,
         {
             errorMessage: 'Error in summarizeAndExtractActions:',
-            processResponse: (res) => JSON.parse(res.text.trim()),
+            processResponse: (res) => {
+                try {
+                    return JSON.parse(res.text.trim());
+                } catch(e) {
+                    console.error('Failed to parse JSON for summary:', e, res.text);
+                    throw new Error("AI returned invalid data format.");
+                }
+            },
             onError: () => { throw new Error("Failed to summarize and find actions."); }
         }
     );

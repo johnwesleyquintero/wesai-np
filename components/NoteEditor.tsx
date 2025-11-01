@@ -103,6 +103,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const titleInputRef = useRef<HTMLInputElement>(null);
     const editorPaneRef = useRef<HTMLDivElement>(null);
+    const cursorMeasureRef = useRef<HTMLPreElement>(null);
     const hasAutoTitledRef = useRef(false);
 
     const displayedTitle = previewVersion ? previewVersion.title : editorState.title;
@@ -276,20 +277,25 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         editorElements: [titleInputRef, textareaRef],
     });
 
-    const getCursorPositionRect = (textarea: HTMLTextAreaElement, position: number): DOMRect => {
-        const pre = document.createElement('pre');
+    const getCursorPositionRect = useCallback((textarea: HTMLTextAreaElement, position: number): DOMRect => {
+        const pre = cursorMeasureRef.current;
+        if (!pre) return new DOMRect();
+
         const styles = window.getComputedStyle(textarea);
         [...styles].forEach(key => pre.style.setProperty(key, styles.getPropertyValue(key)));
-        pre.style.position = 'absolute'; pre.style.visibility = 'hidden';
-        pre.style.whiteSpace = 'pre-wrap'; pre.style.wordWrap = 'break-word';
+        pre.style.whiteSpace = 'pre-wrap';
+        pre.style.wordWrap = 'break-word';
+
         const before = editorState.content.substring(0, position);
-        const span = document.createElement('span'); span.textContent = '.';
-        pre.textContent = before; pre.appendChild(span);
-        document.body.appendChild(pre);
+        const span = document.createElement('span');
+        span.textContent = '.';
+        pre.textContent = before;
+        pre.appendChild(span);
         const rect = span.getBoundingClientRect();
-        document.body.removeChild(pre);
+        pre.textContent = ''; // Clear content to prevent memory leaks
+
         return rect;
-    };
+    }, [editorState.content]);
     
     const getLineInfoForPosition = (content: string, position: number) => {
         const start = content.lastIndexOf('\n', position - 1) + 1;
@@ -317,7 +323,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         } else if (!shouldShow && hoveredParagraph) {
             setHoveredParagraph(null);
         }
-    }, [editorState.content, viewMode, hoveredParagraph, gutterMenu, isEffectivelyReadOnly, isAiEnabled, isApiKeyMissing]);
+    }, [editorState.content, viewMode, hoveredParagraph, gutterMenu, isEffectivelyReadOnly, isAiEnabled, isApiKeyMissing, getCursorPositionRect]);
 
 
     const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -598,6 +604,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
 
     return (
         <div className="flex-1 flex flex-col h-full relative bg-light-background dark:bg-dark-background" onDragOver={(e) => { e.preventDefault(); if (!isEffectivelyReadOnly) dispatch({ type: 'SET_DRAG_OVER', payload: true }); }} onDragLeave={() => dispatch({ type: 'SET_DRAG_OVER', payload: false })} onDrop={handleDrop} onPaste={handlePaste}>
+            <pre ref={cursorMeasureRef} style={{ position: 'absolute', visibility: 'hidden', top: -9999, left: -9999, pointerEvents: 'none' }} />
             <EditorHeader note={note} onToggleFavorite={() => toggleFavorite(note.id)} saveStatus={saveStatus} handleSave={handleSave} editorTitle={editorState.title} onEnhance={handleEnhanceNote} onSummarize={summarizeAndFindActionForFullNote} onToggleHistory={() => dispatch({type: 'SET_HISTORY_OPEN', payload: !isHistoryOpen})} isHistoryOpen={isHistoryOpen} onApplyTemplate={handleApplyTemplate} isMobileView={isMobileView} onToggleSidebar={onToggleSidebar} onUndo={undo} onRedo={redo} canUndo={canUndo} canRedo={canRedo} viewMode={viewMode} onToggleViewMode={() => dispatch({type: 'SET_VIEW_MODE', payload: viewMode === 'edit' ? 'preview' : 'edit'})} wordCount={wordCount} charCount={charCount} isFullAiActionLoading={isFullAiActionLoading} isApiKeyMissing={isApiKeyMissing} isAiEnabled={isAiEnabled} />
             {isAiRateLimited && <div className="bg-yellow-100 dark:bg-yellow-900/30 border-b border-yellow-300 dark:border-yellow-700/50 py-2 px-4 text-center text-sm text-yellow-800 dark:text-yellow-200 flex-shrink-0">AI features are temporarily paused due to high usage. They will be available again shortly.</div>}
             

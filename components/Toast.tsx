@@ -26,10 +26,14 @@ const toastConfig = {
 const Toast: React.FC<ToastProps> = ({ message, type, onDismiss }) => {
     const [isVisible, setIsVisible] = useState(false);
     const timeoutRef = useRef<number | null>(null);
+    const dismissedRef = useRef(false);
     const isMounted = useIsMounted();
 
 
     const handleDismiss = React.useCallback(() => {
+        if (dismissedRef.current) return;
+        dismissedRef.current = true;
+
         if (timeoutRef.current) {
             clearTimeout(timeoutRef.current);
             timeoutRef.current = null;

@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { SmartCollection, ContextMenuItem, ViewState, ConfirmationState, ConfirmationOptions } from '../types';
+import { SmartCollection, ContextMenuItem, ViewState, ConfirmationState, ConfirmationOptions, SettingsTab } from '../types';
 import { useMobileView } from './useMobileView';
 import { useApiKey } from './useApiKey';
-import { SettingsTab } from '../components/SettingsModal';
 
 const initialConfirmationState: ConfirmationState = {
     isOpen: false,

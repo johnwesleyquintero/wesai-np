@@ -84,7 +84,9 @@ export const useStoreProviderLogic = () => {
                     const resultIds = await semanticSearchNotes(debouncedSearchTerm, notes);
                     setAiSearchResultIds(resultIds);
                 } catch (error) {
-                    setAiSearchError(error instanceof Error ? error.message : "An unknown AI search error occurred.");
+                    const message = error instanceof Error ? error.message : "An unknown AI search error occurred.";
+                    showToast({ message, type: 'error' });
+                    setAiSearchResultIds([]); // Clear results on error
                 } finally {
                     setIsAiSearching(false);
                 }
@@ -95,7 +97,7 @@ export const useStoreProviderLogic = () => {
             setAiSearchError(null);
             setIsAiSearching(false);
         }
-    }, [debouncedSearchTerm, searchMode, notes, isAiEnabled]);
+    }, [debouncedSearchTerm, searchMode, notes, isAiEnabled, showToast]);
     
     const favoriteNotes = useMemo(() => notes.filter(n => n.isFavorite).sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()), [notes]);
 
@@ -184,7 +186,8 @@ export const useStoreProviderLogic = () => {
                 const resultIds = await semanticSearchNotes(collection.query, notes);
                 setAiSearchResultIds(resultIds);
             } catch (error) {
-                setAiSearchError(error instanceof Error ? error.message : "An unknown AI search error occurred.");
+                const message = error instanceof Error ? error.message : "An unknown AI search error occurred.";
+                showToast({ message, type: 'error' });
             } finally { setIsAiSearching(false); }
         };
         performAiSearch();

@@ -328,7 +328,6 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
                             searchData={searchData}
                             onSelectNote={onSelectNote}
                             expandedFolders={expandedFolders}
-                            // FIX: Changed `toggleFolder` to `onToggleFolder` to match the prop name.
                             onToggleFolder={onToggleFolder}
                             isFocused={focusedNodeId === childNode.id}
                             isActivePath={activeNotePath.has(childNode.id)}

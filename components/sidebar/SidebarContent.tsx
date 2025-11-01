@@ -5,7 +5,7 @@ import {
     PencilSquareIcon, PlusIcon, FolderPlusIcon, BrainIcon, TrashIcon, XMarkIcon,
     ArrowDownTrayIcon, SparklesIcon
 } from '../Icons';
-import SidebarNode from './SidebarNode';
+import SidebarNode from '../SidebarNode';
 import CollapsibleSection from './CollapsibleSection';
 import { useStoreContext, useUIContext } from '../../context/AppContext';
 import { useDragAndDrop } from '../../hooks/useDragAndDrop';
@@ -310,6 +310,7 @@ const SidebarContent: React.FC = () => {
                                     expandedFolders={expandedFolders}
                                     onToggleFolder={toggleFolder}
                                     isFocused={focusedNodeId === node.id}
+                                    isActivePath={activeNotePath.has(node.id)}
                                     activeNotePath={activeNotePath}
                                     focusedNodeId={focusedNodeId}
                                 />

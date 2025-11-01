@@ -134,6 +134,8 @@ export interface ContextMenuItem {
     divider?: boolean;
 }
 
+export type SettingsTab = 'general' | 'templates' | 'data';
+
 export type TreeNode = (Note | (Collection & { type: 'collection' })) & {
     children: TreeNode[];
 };

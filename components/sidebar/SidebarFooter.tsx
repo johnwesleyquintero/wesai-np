@@ -5,7 +5,6 @@ import {
 } from '../Icons';
 import FooterButton from './FooterButton';
 import { useUIContext } from '../../context/AppContext';
-import { SettingsTab } from '../SettingsModal';
 
 const SidebarFooter: React.FC = () => {
     const {

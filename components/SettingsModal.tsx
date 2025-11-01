@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { PlusIcon, EyeIcon, EyeSlashIcon, ClipboardDocumentIcon, ArrowDownTrayIcon, ArrowUpTrayIcon } from './Icons';
 import TemplateEditorModal from './TemplateEditorModal';
-import { Template } from '../types';
+import { Template, SettingsTab } from '../types';
 import { useStoreContext, useUIContext } from '../context/AppContext';
 import ConfirmationModal from './ConfirmationModal';
 import { useToast } from '../context/ToastContext';
@@ -14,9 +14,6 @@ interface SettingsModalProps {
     onClose: () => void;
     initialTab: SettingsTab;
 }
-
-// FIX: Export the SettingsTab type.
-export type SettingsTab = 'general' | 'templates' | 'data';
 
 const TabButton: React.FC<{ active: boolean; onClick: () => void; children: React.ReactNode; }> = ({ active, onClick, children }) => (
     <button

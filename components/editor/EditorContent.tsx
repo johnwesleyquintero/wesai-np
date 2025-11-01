@@ -11,6 +11,8 @@ interface EditorContentProps {
     onSelect: () => void;
     onScroll: () => void;
     onKeyDown: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
+    onKeyUp: () => void;
+    onClick: () => void;
     onBlur: () => void;
     onToggleTask: (lineNumber: number) => void;
     sharedEditorClasses: string;
@@ -26,6 +28,8 @@ const EditorContent: React.FC<EditorContentProps> = ({
     onSelect,
     onScroll,
     onKeyDown,
+    onKeyUp,
+    onClick,
     onBlur,
     onToggleTask,
     sharedEditorClasses
@@ -45,6 +49,8 @@ const EditorContent: React.FC<EditorContentProps> = ({
                 onSelect={onSelect}
                 onScroll={onScroll}
                 onKeyDown={onKeyDown}
+                onKeyUp={onKeyUp}
+                onClick={onClick}
                 onBlur={onBlur}
                 value={displayedContent}
                 onChange={onChange}

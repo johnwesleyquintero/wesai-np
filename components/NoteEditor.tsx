@@ -21,6 +21,8 @@ import { useNoteEditorReducer } from '../hooks/useNoteEditorReducer';
 import { useAiSuggestions } from '../hooks/useAiSuggestions';
 import { useAiActions } from '../hooks/useAiActions';
 import { useEditorHotkeys } from '../hooks/useEditorHotkeys';
+import { SparklesIcon } from './Icons';
+import ParagraphActionMenu from './editor/ParagraphActionMenu';
 
 interface NoteEditorProps {
     note: Note;
@@ -56,11 +58,12 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
     
     const prevNoteRef = useRef(note);
     const [lastWarnedTimestamp, setLastWarnedTimestamp] = useState<string | null>(null);
+    const [hoveredParagraph, setHoveredParagraph] = useState<{ start: number; rect: DOMRect } | null>(null);
 
     const [uiState, dispatch] = useNoteEditorReducer();
     const {
         saveStatus, isHistoryOpen, previewVersion, viewMode, selection, noteLinker, templateLinker, noteLinkerForSelection,
-        slashCommand, isDragOver, isAiActionLoading, isFullAiActionLoading
+        slashCommand, isDragOver, isAiActionLoading, isFullAiActionLoading, gutterMenu,
     } = uiState;
 
     const { 
@@ -74,11 +77,11 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         applyAiActionToFullNote,
         summarizeAndFindActionForFullNote,
         handleEnhanceNote,
-        handleInlineAiAction
+        handleInlineAiAction,
+        handleParagraphAiAction,
     } = useAiActions(editorState, setEditorState, dispatch);
 
     const isEffectivelyReadOnly = !!previewVersion || viewMode === 'preview' || !!isFullAiActionLoading;
-    const isReadOnlyForVisuals = (!!previewVersion || viewMode === 'preview') && !isFullAiActionLoading;
 
     const { 
         spellingErrors, isCheckingSpelling, activeSpellingError, setActiveSpellingError,
@@ -134,9 +137,8 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         setActiveSpellingError(null);
         hasAutoTitledRef.current = false;
         setLastWarnedTimestamp(null);
+        setHoveredParagraph(null);
         
-        // When a new note is created, switch to edit mode by default.
-        // Existing notes will default to 'preview' via RESET_STATE_FOR_NEW_NOTE.
         if (note.title === 'Untitled Note' && note.content === '') {
             dispatch({ type: 'SET_VIEW_MODE', payload: 'edit' });
             setTimeout(() => titleInputRef.current?.focus(), 100);
@@ -180,7 +182,6 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         prevNoteRef.current = note;
     }, [note, resetEditorState, showToast, lastWarnedTimestamp]);
 
-    // Effect to manage save status (unsaved/saved) based on changes
     useEffect(() => {
         if (previewVersion) return;
 
@@ -195,7 +196,6 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
                 dispatch({ type: 'SET_SAVE_STATUS', payload: 'unsaved' });
             }
         } else {
-            // This handles the case where user undoes changes to the saved state
             if (saveStatus !== 'saved') {
                 dispatch({ type: 'SET_SAVE_STATUS', payload: 'saved' });
             }
@@ -259,6 +259,8 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         dispatch({ type: 'SET_TEMPLATE_LINKER', payload: null });
         dispatch({ type: 'SET_NOTE_LINKER_FOR_SELECTION', payload: null });
         dispatch({ type: 'SET_SLASH_COMMAND', payload: null });
+        setHoveredParagraph(null);
+        dispatch({ type: 'SET_GUTTER_MENU', payload: null });
     }, [dispatch, setActiveSpellingError]);
     
     useEffect(() => {
@@ -289,6 +291,35 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         return rect;
     };
     
+    const getLineInfoForPosition = (content: string, position: number) => {
+        const start = content.lastIndexOf('\n', position - 1) + 1;
+        let end = content.indexOf('\n', position);
+        if (end === -1) end = content.length;
+        const text = content.substring(start, end).trim();
+        return { text, start, end };
+    };
+
+    const updateGutterState = useCallback(() => {
+        const textarea = textareaRef.current;
+        if (!textarea || viewMode !== 'edit' || gutterMenu) {
+            if (hoveredParagraph) setHoveredParagraph(null);
+            return;
+        }
+
+        const { selectionStart } = textarea;
+        const { text, start } = getLineInfoForPosition(editorState.content, selectionStart);
+        
+        const shouldShow = text && !isEffectivelyReadOnly && isAiEnabled && !isApiKeyMissing;
+
+        if (shouldShow && hoveredParagraph?.start !== start) {
+            const rect = getCursorPositionRect(textarea, start);
+            setHoveredParagraph({ start, rect });
+        } else if (!shouldShow && hoveredParagraph) {
+            setHoveredParagraph(null);
+        }
+    }, [editorState.content, viewMode, hoveredParagraph, gutterMenu, isEffectivelyReadOnly, isAiEnabled, isApiKeyMissing]);
+
+
     const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
         const { value, selectionStart } = e.target;
         setEditorState({ ...editorState, content: value });
@@ -311,6 +342,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
             if (slashCommand) dispatch({ type: 'SET_SLASH_COMMAND', payload: null });
             if (noteLinker) dispatch({ type: 'SET_NOTE_LINKER', payload: null });
         }
+        updateGutterState();
     };
     
     const handleSelect = () => {
@@ -344,6 +376,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
                 setActiveSpellingError(null);
             }
         }
+        updateGutterState();
     };
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -412,13 +445,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         const items = e.clipboardData?.items;
         if (!items) return;
 
-        let imageItem: DataTransferItem | undefined;
-        for (let i = 0; i < items.length; i++) {
-            if (items[i].type.startsWith('image/')) {
-                imageItem = items[i];
-                break;
-            }
-        }
+        const imageItem = (Array.from(items) as DataTransferItem[]).find((item) => item.type.startsWith('image/'));
 
         if (imageItem) {
             e.preventDefault();
@@ -577,7 +604,20 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
             <div ref={editorPaneRef} className={`flex-1 overflow-y-auto relative transition-opacity`}>
                  {!!previewVersion && <div className={`bg-yellow-100 dark:bg-yellow-900/30 py-2 text-center text-sm text-yellow-800 dark:text-yellow-200 max-w-3xl mx-auto ${editorPaddingClass}`}>You are previewing a version from {new Date(previewVersion.savedAt).toLocaleString()}.</div>}
 
-                <div className={`mx-auto py-12 ${editorPaddingClass} transition-all duration-300 ${isFullAiActionLoading ? 'opacity-50 pointer-events-none' : ''} ${isFocusMode ? 'max-w-4xl' : 'max-w-3xl'}`}>
+                <div className={`relative mx-auto py-12 ${editorPaddingClass} transition-all duration-300 ${isFullAiActionLoading ? 'opacity-50 pointer-events-none' : ''} ${isFocusMode ? 'max-w-4xl' : 'max-w-3xl'}`}>
+                    {hoveredParagraph && (
+                        <button
+                            className="editor-gutter-button"
+                            style={{ top: `${hoveredParagraph.rect.top - editorPaneRef.current!.getBoundingClientRect().top}px` }}
+                            onClick={(e) => {
+                                const { start } = hoveredParagraph;
+                                const { end } = getLineInfoForPosition(editorState.content, start);
+                                dispatch({ type: 'SET_GUTTER_MENU', payload: { anchorRect: e.currentTarget.getBoundingClientRect(), start, end } });
+                            }}
+                        >
+                            <SparklesIcon />
+                        </button>
+                    )}
                     <EditorTitle
                         titleInputRef={titleInputRef}
                         value={displayedTitle}
@@ -599,6 +639,8 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
                         onSelect={handleSelect}
                         onScroll={handleScroll}
                         onKeyDown={handleKeyDown}
+                        onKeyUp={updateGutterState}
+                        onClick={updateGutterState}
                         onBlur={handleContentBlur}
                         onToggleTask={handleToggleTask}
                         sharedEditorClasses={sharedEditorClasses}
@@ -627,6 +669,15 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
             <InlineAiMenu selection={selection} onAction={async (action) => { if (selection) { const newPos = await handleInlineAiAction(action, selection); if (newPos !== null && textareaRef.current) { textareaRef.current.focus(); setTimeout(() => textareaRef.current?.setSelectionRange(newPos, newPos), 0); } } }} onFormat={handleFormatSelection} isLoading={isAiActionLoading} onClose={() => dispatch({ type: 'SET_SELECTION', payload: null })} isApiKeyMissing={isApiKeyMissing} isAiEnabled={isAiEnabled} />
             <SpellcheckMenu activeError={activeSpellingError} suggestions={spellingSuggestions} onSelect={handleApplySuggestion} isLoading={isLoadingSuggestions} error={suggestionError} onClose={() => setActiveSpellingError(null)} />
             {isHistoryOpen && <VersionHistorySidebar history={note.history || []} onClose={handleCloseHistory} onPreview={(version) => dispatch({ type: 'SET_PREVIEW_VERSION', payload: version })} onRestore={handleRestore} activeVersionTimestamp={previewVersion?.savedAt} />}
+            {gutterMenu && (
+                <ParagraphActionMenu
+                    anchorRect={gutterMenu.anchorRect}
+                    onClose={() => dispatch({ type: 'SET_GUTTER_MENU', payload: null })}
+                    onAction={(action) => {
+                        handleParagraphAiAction(action, { start: gutterMenu.start, end: gutterMenu.end });
+                    }}
+                />
+            )}
             {isDragOver && <div className="absolute inset-0 bg-light-primary/10 dark:bg-dark-primary/10 border-4 border-dashed border-light-primary dark:border-dark-primary rounded-2xl m-4 pointer-events-none flex items-center justify-center"><p className="text-light-primary dark:text-dark-primary font-bold text-2xl">Drop file to import</p></div>}
         </div>
     );

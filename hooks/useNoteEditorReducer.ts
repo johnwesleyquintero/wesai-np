@@ -19,6 +19,7 @@ export interface NoteEditorUIState {
     isDragOver: boolean;
     isAiActionLoading: boolean; // inline
     isFullAiActionLoading: string | null; // full note
+    gutterMenu: { anchorRect: DOMRect; start: number; end: number } | null;
 }
 
 export const initialNoteEditorUIState: NoteEditorUIState = {
@@ -34,6 +35,7 @@ export const initialNoteEditorUIState: NoteEditorUIState = {
     isDragOver: false,
     isAiActionLoading: false,
     isFullAiActionLoading: null,
+    gutterMenu: null,
 };
 
 export type NoteEditorAction =
@@ -49,6 +51,7 @@ export type NoteEditorAction =
     | { type: 'SET_DRAG_OVER'; payload: boolean }
     | { type: 'SET_AI_ACTION_LOADING'; payload: boolean }
     | { type: 'SET_FULL_AI_ACTION_LOADING'; payload: string | null }
+    | { type: 'SET_GUTTER_MENU'; payload: { anchorRect: DOMRect; start: number; end: number } | null }
     | { type: 'RESET_STATE_FOR_NEW_NOTE' };
 
 const reducer = (state: NoteEditorUIState, action: NoteEditorAction): NoteEditorUIState => {
@@ -82,6 +85,8 @@ const reducer = (state: NoteEditorUIState, action: NoteEditorAction): NoteEditor
             return { ...state, isAiActionLoading: action.payload, selection: action.payload ? null : state.selection };
         case 'SET_FULL_AI_ACTION_LOADING':
             return { ...state, isFullAiActionLoading: action.payload };
+        case 'SET_GUTTER_MENU':
+            return { ...state, gutterMenu: action.payload };
         case 'RESET_STATE_FOR_NEW_NOTE':
             return { ...initialNoteEditorUIState };
         default:

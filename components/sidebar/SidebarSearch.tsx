@@ -93,7 +93,6 @@ const SidebarSearch: React.FC<SidebarSearchProps> = ({ onboardingSteps, isOnboar
                 </div>
                  {isAiRateLimited && <span className="text-red-500 ml-2 text-xs">Paused</span>}
             </div>}
-            {aiSearchError && <p className="text-red-500 text-xs mt-1">{aiSearchError}</p>}
         </div>
     );
 };

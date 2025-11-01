@@ -74,10 +74,27 @@ export const useAiActions = (
         }
     }, [editorState, setEditorState, dispatch, showToast]);
 
+    const handleParagraphAiAction = useCallback(async (action: InlineAction, selection: { start: number; end: number }) => {
+        dispatch({ type: 'SET_FULL_AI_ACTION_LOADING', payload: `Applying: ${action}...` });
+        try {
+            const paragraphText = editorState.content.substring(selection.start, selection.end);
+            if (!paragraphText.trim()) return;
+
+            const newText = await performInlineEdit(paragraphText, action);
+            const newContent = editorState.content.substring(0, selection.start) + newText + editorState.content.substring(selection.end);
+            setEditorState({ ...editorState, content: newContent });
+        } catch (error) {
+            showToast({ message: error instanceof Error ? error.message : 'An unknown error occurred.', type: 'error' });
+        } finally {
+            dispatch({ type: 'SET_FULL_AI_ACTION_LOADING', payload: null });
+        }
+    }, [editorState, setEditorState, dispatch, showToast]);
+
     return {
         applyAiActionToFullNote,
         summarizeAndFindActionForFullNote,
         handleEnhanceNote,
         handleInlineAiAction,
+        handleParagraphAiAction,
     };
 };

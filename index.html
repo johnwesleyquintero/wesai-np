@@ -372,6 +372,27 @@
     .dark .active-path-indicator {
         background-color: #22d3ee; /* dark-primary */
     }
+    .editor-gutter-button {
+        position: absolute;
+        left: -0.5rem;
+        opacity: 0.3;
+        transition: opacity 0.2s;
+        cursor: pointer;
+    }
+    .editor-gutter-button:hover {
+        opacity: 1;
+    }
+    .dark .editor-gutter-button {
+        color: #cbd5e1; /* slate-300 */
+    }
+    .dark .editor-gutter-button:hover {
+        color: #f8fafc; /* slate-50 */
+    }
+     @media (min-width: 640px) { /* sm breakpoint */
+        .editor-gutter-button {
+            left: 0rem;
+        }
+    }
   </style>
   <script type="importmap">
 {

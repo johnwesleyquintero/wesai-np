@@ -17,12 +17,13 @@ interface SidebarNodeProps {
     expandedFolders: Record<string, boolean>;
     onToggleFolder: (folderId: string) => void;
     isFocused: boolean;
-    activeNotePath: Set<string>;
+    isActivePath: boolean;
     focusedNodeId: string | null;
+    activeNotePath: Set<string>;
 }
 
 const SidebarNode: React.FC<SidebarNodeProps> = ({ 
-    node, level, activeNoteId, searchTerm, searchData, onSelectNote, expandedFolders, onToggleFolder, isFocused,
+    node, level, activeNoteId, searchTerm, searchData, onSelectNote, expandedFolders, onToggleFolder, isFocused, isActivePath,
     focusedNodeId, activeNotePath
 }) => {
     const { 
@@ -42,7 +43,6 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
     const name = isCollection ? node.name : node.title;
     const isActive = !isCollection && activeNoteId === node.id;
     const isDraggingThisNode = draggingItemId === node.id;
-    const isActivePath = activeNotePath.has(node.id);
 
     const { isSearching, visibleIds, matchIds } = searchData;
     const isVisible = !isSearching || (visibleIds && visibleIds.has(node.id));
@@ -104,6 +104,7 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
             menuItems = [
                 { label: 'New Note in Folder', action: () => onAddNote(node.id), icon: <PencilSquareIcon /> },
                 { label: 'Rename Folder', action: () => setRenamingItemId(node.id), icon: <PencilSquareIcon /> },
+                // FIX: Add missing 'label' property for the divider.
                 { divider: true, label: '' },
                 { 
                     label: 'Delete Folder', 
@@ -176,6 +177,7 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
                     }, 
                     icon: <DocumentDuplicateIcon /> 
                 },
+                // FIX: Add missing 'label' property for the divider.
                 { divider: true, label: '' },
                 {
                     label: 'Copy Note ID',
@@ -205,6 +207,7 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
                     }, 
                     icon: <ClipboardDocumentIcon /> 
                 },
+                // FIX: Add missing 'label' property for the divider.
                 { divider: true, label: '' },
                 { 
                     label: 'Delete Note', 
@@ -328,11 +331,11 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
                             searchData={searchData}
                             onSelectNote={onSelectNote}
                             expandedFolders={expandedFolders}
-                            // FIX: Changed `toggleFolder` to `onToggleFolder` to match the prop name.
                             onToggleFolder={onToggleFolder}
                             isFocused={focusedNodeId === childNode.id}
-                            activeNotePath={activeNotePath}
+                            isActivePath={activeNotePath.has(childNode.id)}
                             focusedNodeId={focusedNodeId}
+                            activeNotePath={activeNotePath}
                         />
                     ))}
                 </div>

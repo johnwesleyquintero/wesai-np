@@ -35,16 +35,26 @@ export const useSpellcheck = (content: string, isDisabled: boolean) => {
         if (contentForSpelling && contentForSpelling !== lastAnalyzedContentForSpellingRef.current) {
             const currentCheckId = ++spellingCheckIdRef.current;
             setIsCheckingSpelling(true);
-            findMisspelledWords(contentForSpelling).then(errors => {
-                if (currentCheckId === spellingCheckIdRef.current) {
-                    lastAnalyzedContentForSpellingRef.current = contentForSpelling;
-                    setSpellingErrors(errors);
-                }
-            }).finally(() => {
-                if (currentCheckId === spellingCheckIdRef.current) {
-                    setIsCheckingSpelling(false);
-                }
-            });
+            findMisspelledWords(contentForSpelling)
+                .then(errors => {
+                    if (currentCheckId === spellingCheckIdRef.current) {
+                        lastAnalyzedContentForSpellingRef.current = contentForSpelling;
+                        setSpellingErrors(errors);
+                    }
+                })
+                .catch(err => {
+                    // Gracefully handle API errors for spellchecking without showing a toast,
+                    // as it could be too noisy for the user. A console warning is sufficient.
+                    if (currentCheckId === spellingCheckIdRef.current) {
+                        console.warn('Spellcheck analysis failed:', err);
+                        setSpellingErrors([]); // Ensure no stale errors are shown
+                    }
+                })
+                .finally(() => {
+                    if (currentCheckId === spellingCheckIdRef.current) {
+                        setIsCheckingSpelling(false);
+                    }
+                });
         } else if (!contentForSpelling) {
              setSpellingErrors([]);
         }

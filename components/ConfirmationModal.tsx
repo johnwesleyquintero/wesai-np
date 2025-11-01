@@ -25,6 +25,7 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
     const [isConfirming, setIsConfirming] = useState(false);
     const [confirmationInput, setConfirmationInput] = useState('');
     const cancelButtonRef = useRef<HTMLButtonElement>(null);
+    const confirmationInputRef = useRef<HTMLInputElement>(null);
     const modalRef = useRef<HTMLDivElement>(null);
 
     useModalAccessibility(isOpen, onClose, modalRef);
@@ -33,9 +34,15 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
         if (isOpen) {
             setIsConfirming(false);
             setConfirmationInput(''); // Reset input on open
-            setTimeout(() => cancelButtonRef.current?.focus(), 100);
+            setTimeout(() => {
+                if (confirmationRequiredText) {
+                    confirmationInputRef.current?.focus();
+                } else {
+                    cancelButtonRef.current?.focus();
+                }
+            }, 100);
         }
-    }, [isOpen]);
+    }, [isOpen, confirmationRequiredText]);
     
     if (!isOpen) return null;
 
@@ -73,6 +80,7 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
                             To confirm, please type "<strong className="text-light-text dark:text-dark-text">{confirmationRequiredText}</strong>" below:
                         </p>
                         <input
+                            ref={confirmationInputRef}
                             type="text"
                             value={confirmationInput}
                             onChange={(e) => setConfirmationInput(e.target.value)}

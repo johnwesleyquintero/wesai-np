@@ -31,8 +31,14 @@ const ParagraphActionMenu: React.FC<ParagraphActionMenuProps> = ({ anchorRect, o
                 onClose();
             }
         };
-        document.addEventListener('mousedown', handleClickOutside);
+
+        // Defer adding the event listener to prevent the same click that opened the menu from closing it.
+        const timerId = setTimeout(() => {
+            document.addEventListener('mousedown', handleClickOutside);
+        }, 0);
+
         return () => {
+            clearTimeout(timerId);
             document.removeEventListener('mousedown', handleClickOutside);
         };
     }, [onClose]);

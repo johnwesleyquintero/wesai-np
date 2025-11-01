@@ -58,7 +58,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
     
     const prevNoteRef = useRef(note);
     const [lastWarnedTimestamp, setLastWarnedTimestamp] = useState<string | null>(null);
-    const [hoveredParagraph, setHoveredParagraph] = useState<{ start: number; rect: DOMRect } | null>(null);
+    const [paragraphGutterTarget, setParagraphGutterTarget] = useState<{ start: number; rect: DOMRect } | null>(null);
 
     const [uiState, dispatch] = useNoteEditorReducer();
     const {
@@ -138,7 +138,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         setActiveSpellingError(null);
         hasAutoTitledRef.current = false;
         setLastWarnedTimestamp(null);
-        setHoveredParagraph(null);
+        setParagraphGutterTarget(null);
         
         if (note.title === 'Untitled Note' && note.content === '') {
             dispatch({ type: 'SET_VIEW_MODE', payload: 'edit' });
@@ -260,7 +260,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         dispatch({ type: 'SET_TEMPLATE_LINKER', payload: null });
         dispatch({ type: 'SET_NOTE_LINKER_FOR_SELECTION', payload: null });
         dispatch({ type: 'SET_SLASH_COMMAND', payload: null });
-        setHoveredParagraph(null);
+        setParagraphGutterTarget(null);
         dispatch({ type: 'SET_GUTTER_MENU', payload: null });
     }, [dispatch, setActiveSpellingError]);
     
@@ -308,7 +308,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
     const updateGutterState = useCallback(() => {
         const textarea = textareaRef.current;
         if (!textarea || viewMode !== 'edit' || gutterMenu) {
-            if (hoveredParagraph) setHoveredParagraph(null);
+            if (paragraphGutterTarget) setParagraphGutterTarget(null);
             return;
         }
 
@@ -317,13 +317,13 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         
         const shouldShow = text && !isEffectivelyReadOnly && isAiEnabled && !isApiKeyMissing;
 
-        if (shouldShow && hoveredParagraph?.start !== start) {
+        if (shouldShow && paragraphGutterTarget?.start !== start) {
             const rect = getCursorPositionRect(textarea, start);
-            setHoveredParagraph({ start, rect });
-        } else if (!shouldShow && hoveredParagraph) {
-            setHoveredParagraph(null);
+            setParagraphGutterTarget({ start, rect });
+        } else if (!shouldShow && paragraphGutterTarget) {
+            setParagraphGutterTarget(null);
         }
-    }, [editorState.content, viewMode, hoveredParagraph, gutterMenu, isEffectivelyReadOnly, isAiEnabled, isApiKeyMissing, getCursorPositionRect]);
+    }, [editorState.content, viewMode, paragraphGutterTarget, gutterMenu, isEffectivelyReadOnly, isAiEnabled, isApiKeyMissing, getCursorPositionRect]);
 
 
     const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -331,6 +331,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         setEditorState({ ...editorState, content: value });
         dispatch({ type: 'SET_SELECTION', payload: null }); 
         setActiveSpellingError(null);
+        dispatch({ type: 'SET_GUTTER_MENU', payload: null });
 
         const textBeforeCursor = value.substring(0, selectionStart);
         const slashMatch = textBeforeCursor.match(/(?:\s|^)\/([\w-]*)$/);
@@ -612,13 +613,13 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
                  {!!previewVersion && <div className={`bg-yellow-100 dark:bg-yellow-900/30 py-2 text-center text-sm text-yellow-800 dark:text-yellow-200 max-w-3xl mx-auto ${editorPaddingClass}`}>You are previewing a version from {new Date(previewVersion.savedAt).toLocaleString()}.</div>}
 
                 <div className={`relative mx-auto py-12 ${editorPaddingClass} transition-all duration-300 ${isFullAiActionLoading ? 'opacity-50 pointer-events-none' : ''} ${isFocusMode ? 'max-w-4xl' : 'max-w-3xl'}`}>
-                    {hoveredParagraph && (
+                    {paragraphGutterTarget && (
                         <button
                             aria-label="AI actions for this paragraph"
                             className="editor-gutter-button"
-                            style={{ top: `${hoveredParagraph.rect.top - editorPaneRef.current!.getBoundingClientRect().top + editorPaneRef.current!.scrollTop}px` }}
+                            style={{ top: `${paragraphGutterTarget.rect.top - editorPaneRef.current!.getBoundingClientRect().top + editorPaneRef.current!.scrollTop}px` }}
                             onClick={(e) => {
-                                const { start } = hoveredParagraph;
+                                const { start } = paragraphGutterTarget;
                                 const { end } = getLineInfoForPosition(editorState.content, start);
                                 dispatch({ type: 'SET_GUTTER_MENU', payload: { anchorRect: e.currentTarget.getBoundingClientRect(), start, end } });
                             }}

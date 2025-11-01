@@ -10,14 +10,7 @@ interface ContextMenuProps {
     isSubMenu?: boolean;
 }
 
-const MenuItem: React.FC<{ item: ContextMenuItem; onClose: () => void; }> = ({ item, onClose }) => {
-    // FIX: Use a more direct type guard. If the `divider` property exists, it's a divider item.
-    // This correctly narrows the type of `item` for the rest of the function, resolving
-    // errors where properties like `children`, `action`, etc., were accessed on the union type.
-    if ('divider' in item) {
-        return null; // Should not happen due to parent logic, but for type safety.
-    }
-
+const MenuItem: React.FC<{ item: Exclude<ContextMenuItem, { divider: true }>; onClose: () => void; }> = ({ item, onClose }) => {
     const itemRef = useRef<HTMLDivElement>(null);
     const [isSubMenuOpen, setIsSubMenuOpen] = useState(false);
     const [subMenuCoords, setSubMenuCoords] = useState<{ x: number, y: number } | null>(null);
@@ -151,10 +144,11 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, items, onClose, isSubMe
             style={{ ...style, zIndex: 50 }}
             className="bg-light-background dark:bg-dark-background rounded-lg shadow-xl border border-light-border dark:border-dark-border w-56 animate-fade-in-down py-1"
         >
+            {/* FIX: Use 'in' operator for more robust type guarding on the ContextMenuItem union type. */}
             {items.map((item, index) => (
-                item.divider
-                    ? <div key={`divider-${index}`} className="my-1 h-px bg-light-border dark:border-dark-border" />
-                    : <MenuItem key={index} item={item} onClose={onClose} />
+                'label' in item
+                    ? <MenuItem key={item.label} item={item} onClose={onClose} />
+                    : <div key={`divider-${index}`} className="my-1 h-px bg-light-border dark:border-dark-border" />
             ))}
         </div>
     );

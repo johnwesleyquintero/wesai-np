@@ -267,28 +267,25 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         }
     }, [editorState, note.title, note.content, note.tags, previewVersion, saveStatus, dispatch]);
     
-    // Add safety net for closing the tab with unsaved changes.
+    // Auto-save on unmount/note change
     useEffect(() => {
-        const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-            // Use ref to get latest state, as state in closure can be stale
-            const isDirty = !areNoteStatesEqual(latestEditorStateRef.current, {
-                title: note.title,
-                content: note.content,
-                tags: note.tags,
+        const noteAtMount = note;
+        return () => {
+            const latestStateForNote = latestEditorStateRef.current;
+            const isDirty = !areNoteStatesEqual(latestStateForNote, {
+                title: noteAtMount.title,
+                content: noteAtMount.content,
+                tags: noteAtMount.tags,
             });
-
+    
             if (isDirty) {
-                e.preventDefault();
-                e.returnValue = ''; // Required for most browsers
+                updateNote(noteAtMount.id, latestStateForNote).catch(error => {
+                     console.error("Failed to save note on unmount/change:", error);
+                     showToast({ message: `Failed to save "${noteAtMount.title}".`, type: 'error' });
+                });
             }
         };
-
-        window.addEventListener('beforeunload', handleBeforeUnload);
-
-        return () => {
-            window.removeEventListener('beforeunload', handleBeforeUnload);
-        };
-    }, [note.title, note.content, note.tags]); // Dependencies ensure the listener has access to the correct 'note' props for comparison
+    }, [note.id, updateNote, showToast]);
 
     const handleSave = useCallback(async () => {
         if (saveStatus === 'saving') return;

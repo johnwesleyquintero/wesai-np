@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useDebounce } from './useDebounce';
 import { suggestTags, suggestTitle, suggestTitleAndTags } from '../services/geminiService';
 import { useToast } from '../context/ToastContext';
@@ -22,7 +22,8 @@ export const useAiSuggestions = (
     const tagSuggestionIdRef = useRef(0);
     const titleSuggestionIdRef = useRef(0);
     
-    const debouncedEditorState = useDebounce(editorState, 2000);
+    const debouncedValue = useDebounce(JSON.stringify(editorState), 2000);
+    const debouncedEditorState = useMemo(() => JSON.parse(debouncedValue), [debouncedValue]);
 
     const suggestTagsForFullNote = useCallback((title: string, content: string) => {
         if (isDisabled) return;

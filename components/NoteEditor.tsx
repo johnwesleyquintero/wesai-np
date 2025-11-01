@@ -61,6 +61,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
     const {
         state: editorState,
         set: setEditorState,
+        setPresent,
         reset: resetEditorState,
         undo,
         redo,
@@ -596,7 +597,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
             const firstLine = editorState.content.split('\n')[0].trim().replace(/^#+\s*/, '');
             if (firstLine) {
                 const newTitle = firstLine.length > 100 ? firstLine.substring(0, 100) + '...' : firstLine;
-                setEditorState({ ...editorState, title: newTitle });
+                setPresent({ ...editorState, title: newTitle });
                 hasAutoTitledRef.current = true;
             }
         }

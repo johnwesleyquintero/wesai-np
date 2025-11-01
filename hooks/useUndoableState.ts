@@ -66,6 +66,18 @@ export const useUndoableState = <T,>(
     });
   }, [isEqual]);
 
+  const setPresent = useCallback((newState: T) => {
+    setHistory(currentHistory => {
+        if (isEqual(newState, currentHistory.present)) {
+            return currentHistory;
+        }
+        return {
+            ...currentHistory,
+            present: newState,
+        };
+    });
+  }, [isEqual]);
+
   const reset = useCallback((newInitialState: T) => {
      setHistory({
         past: [],
@@ -74,5 +86,5 @@ export const useUndoableState = <T,>(
      })
   }, [])
 
-  return { state: history.present, set, undo, redo, reset, canUndo, canRedo };
+  return { state: history.present, set, setPresent, undo, redo, reset, canUndo, canRedo };
 };

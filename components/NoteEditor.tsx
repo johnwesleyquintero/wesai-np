@@ -186,6 +186,13 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         }
     }, [note.id, note.title, note.content, resetEditorState, resetAiSuggestions, setActiveSpellingError, dispatch]);
     
+    // Reset auto-title flag if content is cleared
+    useEffect(() => {
+        if (editorState.content.trim() === '') {
+            hasAutoTitledRef.current = false;
+        }
+    }, [editorState.content]);
+
     useEffect(() => {
         if (note.id !== prevNoteRef.current.id) {
             prevNoteRef.current = note;

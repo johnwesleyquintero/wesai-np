@@ -30,6 +30,8 @@ interface NoteEditorProps {
 
 type NoteState = { title: string; content: string; tags: string[] };
 
+const SCROLL_DISMISS_THRESHOLD = 20;
+
 const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
     const { updateNote, toggleFavorite, notes, restoreNoteVersion } = useStoreContext();
     const { isMobileView, onToggleSidebar, isAiRateLimited, isSettingsOpen, isCommandPaletteOpen, isSmartFolderModalOpen, isWelcomeModalOpen, isApiKeyMissing, isFocusMode, showConfirmation, isAiEnabled } = useUIContext();
@@ -105,6 +107,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
     const editorPaneRef = useRef<HTMLDivElement>(null);
     const cursorMeasureRef = useRef<HTMLPreElement>(null);
     const hasAutoTitledRef = useRef(false);
+    const scrollPosOnPopupOpenRef = useRef<number | null>(null);
 
     const displayedTitle = previewVersion ? previewVersion.title : editorState.title;
     const displayedContent = previewVersion ? previewVersion.content : editorState.content;
@@ -266,15 +269,37 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         return () => unregisterEditorActions();
     }, [registerEditorActions, unregisterEditorActions, editorActions]);
     
+    // When a popup opens, record the current scroll position.
+    useEffect(() => {
+        const hasPopup = !!selection || !!activeSpellingError || !!noteLinker || !!templateLinker || !!noteLinkerForSelection || !!slashCommand || !!gutterMenu;
+        if (hasPopup && scrollPosOnPopupOpenRef.current === null && editorPaneRef.current) {
+            scrollPosOnPopupOpenRef.current = editorPaneRef.current.scrollTop;
+        } else if (!hasPopup) {
+            scrollPosOnPopupOpenRef.current = null; // Reset when all popups are closed
+        }
+    }, [selection, activeSpellingError, noteLinker, templateLinker, noteLinkerForSelection, slashCommand, gutterMenu]);
+
     const handleScroll = useCallback(() => {
-        dispatch({ type: 'SET_SELECTION', payload: null });
-        setActiveSpellingError(null);
-        dispatch({ type: 'SET_NOTE_LINKER', payload: null });
-        dispatch({ type: 'SET_TEMPLATE_LINKER', payload: null });
-        dispatch({ type: 'SET_NOTE_LINKER_FOR_SELECTION', payload: null });
-        dispatch({ type: 'SET_SLASH_COMMAND', payload: null });
+        // Always dismiss the gutter target immediately as its position is now invalid.
         setParagraphGutterTarget(null);
-        dispatch({ type: 'SET_GUTTER_MENU', payload: null });
+
+        // If no other popups are open, we're done.
+        if (scrollPosOnPopupOpenRef.current === null || !editorPaneRef.current) {
+            return;
+        }
+        
+        // Check threshold for other popups.
+        const delta = Math.abs(editorPaneRef.current.scrollTop - scrollPosOnPopupOpenRef.current);
+        if (delta > SCROLL_DISMISS_THRESHOLD) {
+            dispatch({ type: 'SET_SELECTION', payload: null });
+            setActiveSpellingError(null);
+            dispatch({ type: 'SET_NOTE_LINKER', payload: null });
+            dispatch({ type: 'SET_TEMPLATE_LINKER', payload: null });
+            dispatch({ type: 'SET_NOTE_LINKER_FOR_SELECTION', payload: null });
+            dispatch({ type: 'SET_SLASH_COMMAND', payload: null });
+            dispatch({ type: 'SET_GUTTER_MENU', payload: null });
+            // The ref will be reset by the useEffect when popups close.
+        }
     }, [dispatch, setActiveSpellingError]);
     
     useEffect(() => {
@@ -295,15 +320,29 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         if (!pre) return new DOMRect();
 
         const styles = window.getComputedStyle(textarea);
-        [...styles].forEach(key => pre.style.setProperty(key, styles.getPropertyValue(key)));
+        const essentialStyles = [
+            'font-family', 'font-size', 'font-style', 'font-weight', 'line-height',
+            'letter-spacing', 'text-transform', 'padding-top', 'padding-right',
+            'padding-bottom', 'padding-left', 'border-top-width', 'border-right-width',
+            'border-bottom-width', 'border-left-width', 'box-sizing', 'width', 'text-indent'
+        ];
+        
+        // Reset styles to ensure a clean slate for measurement
+        pre.style.cssText = '';
+        
+        essentialStyles.forEach(key => {
+            pre.style.setProperty(key, styles.getPropertyValue(key));
+        });
+
         pre.style.whiteSpace = 'pre-wrap';
         pre.style.wordWrap = 'break-word';
 
         const before = editorState.content.substring(0, position);
         const span = document.createElement('span');
-        span.textContent = '.';
+        span.textContent = '.'; // Use a non-whitespace character for measurement
         pre.textContent = before;
         pre.appendChild(span);
+
         const rect = span.getBoundingClientRect();
         pre.textContent = ''; // Clear content to prevent memory leaks
 
@@ -666,7 +705,6 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
                         isReadOnly={isEffectivelyReadOnly}
                         onChange={handleChange}
                         onSelect={handleSelect}
-                        onScroll={handleScroll}
                         onKeyDown={handleKeyDown}
                         onKeyUp={handleSelect}
                         onClick={handleSelect}

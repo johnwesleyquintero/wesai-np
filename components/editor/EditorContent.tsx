@@ -9,7 +9,6 @@ interface EditorContentProps {
     isReadOnly: boolean;
     onChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
     onSelect: () => void;
-    onScroll: () => void;
     onKeyDown: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
     onKeyUp: () => void;
     onClick: () => void;
@@ -26,7 +25,6 @@ const EditorContent: React.FC<EditorContentProps> = ({
     isReadOnly,
     onChange,
     onSelect,
-    onScroll,
     onKeyDown,
     onKeyUp,
     onClick,
@@ -47,7 +45,6 @@ const EditorContent: React.FC<EditorContentProps> = ({
             <textarea
                 ref={textareaRef}
                 onSelect={onSelect}
-                onScroll={onScroll}
                 onKeyDown={onKeyDown}
                 onKeyUp={onKeyUp}
                 onClick={onClick}

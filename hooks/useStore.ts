@@ -52,19 +52,39 @@ export const useStore = (user: User | undefined) => {
         }
         setLoading(true);
         try {
-            const [notesRes, collectionsRes, smartCollectionsRes, templatesRes] = await Promise.all([
+            const [notesRes, collectionsRes, smartCollectionsRes, templatesRes, versionsRes] = await Promise.all([
                 supabase.from('notes').select('*').eq('user_id', user.id),
                 supabase.from('collections').select('*').eq('user_id', user.id),
                 supabase.from('smart_collections').select('*').eq('user_id', user.id),
                 supabase.from('templates').select('*').eq('user_id', user.id),
+                supabase.from('note_versions').select('*').eq('user_id', user.id).order('saved_at', { ascending: false })
             ]);
 
             if (notesRes.error) throw notesRes.error;
             if (collectionsRes.error) throw collectionsRes.error;
             if (smartCollectionsRes.error) throw smartCollectionsRes.error;
             if (templatesRes.error) throw templatesRes.error;
+            if (versionsRes.error) throw versionsRes.error;
 
-            setNotes((notesRes.data || []).map(processNote));
+
+            const versionsByNoteId = new Map<string, NoteVersion[]>();
+            if (versionsRes.data) {
+                versionsRes.data.forEach(version => {
+                    const v = fromSupabase(version) as NoteVersion & { noteId: string };
+                    if (!versionsByNoteId.has(v.noteId)) {
+                        versionsByNoteId.set(v.noteId, []);
+                    }
+                    versionsByNoteId.get(v.noteId)!.push(v);
+                });
+            }
+    
+            const notesWithHistory = (notesRes.data || []).map(noteData => {
+                const note = processNote(noteData);
+                note.history = versionsByNoteId.get(note.id) || [];
+                return note;
+            });
+    
+            setNotes(notesWithHistory);
             setCollections((collectionsRes.data || []).map(fromSupabase));
             setSmartCollections((smartCollectionsRes.data || []).map(fromSupabase));
             setTemplates((templatesRes.data || []).map(fromSupabase));

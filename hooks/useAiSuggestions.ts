@@ -22,7 +22,7 @@ export const useAiSuggestions = (
     const tagSuggestionIdRef = useRef(0);
     const titleSuggestionIdRef = useRef(0);
     
-    const debouncedEditorState = useDebounce(editorState, 5000);
+    const debouncedEditorState = useDebounce(editorState, 2000);
 
     const suggestTagsForFullNote = useCallback((title: string, content: string) => {
         if (isDisabled) return;

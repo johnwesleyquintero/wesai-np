@@ -40,7 +40,7 @@ const NoteCard: React.FC<NoteCardProps> = ({
                 <Highlight text={title} highlight={searchTerm} />
                 {isFavorite && <StarIcon className="w-4 h-4 text-yellow-500" filled />}
             </h3>
-            <p className="text-sm text-light-text/70 dark:text-dark-text/70 note-card-preview">
+            <p className={`text-sm note-card-preview ${isActive ? 'text-light-text/90 dark:text-dark-text/90' : 'text-light-text/70 dark:text-dark-text/70'}`}>
                  <Highlight text={preview || 'No content'} highlight={searchTerm} />
             </p>
             <p className="text-xs font-semibold text-light-text/50 dark:text-dark-text/50 mt-1">{formatDate(updatedAt)}</p>

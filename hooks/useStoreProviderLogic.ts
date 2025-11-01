@@ -29,7 +29,7 @@ const buildTree = (notes: Note[], collections: Collection[]): TreeNode[] => {
             if (!aIsCollection && bIsCollection) return 1;
             const aName = aIsCollection ? (a as any).name : (a as any).title;
             const bName = bIsCollection ? (b as any).name : (b as any).title;
-            return aName.localeCompare(bName);
+            return aName.localeCompare(bName, undefined, { sensitivity: 'base' });
         });
         nodes.forEach(node => {
             if ('children' in node && node.children.length > 0) sortNodes(node.children);

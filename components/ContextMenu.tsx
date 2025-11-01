@@ -11,10 +11,13 @@ interface ContextMenuProps {
 }
 
 const MenuItem: React.FC<{ item: ContextMenuItem; onClose: () => void; }> = ({ item, onClose }) => {
-    // FIX: Add a type guard to ensure item is not a divider.
-    if (item.divider) {
-        return null;
+    // FIX: Use a more direct type guard. If the `divider` property exists, it's a divider item.
+    // This correctly narrows the type of `item` for the rest of the function, resolving
+    // errors where properties like `children`, `action`, etc., were accessed on the union type.
+    if ('divider' in item) {
+        return null; // Should not happen due to parent logic, but for type safety.
     }
+
     const itemRef = useRef<HTMLDivElement>(null);
     const [isSubMenuOpen, setIsSubMenuOpen] = useState(false);
     const [subMenuCoords, setSubMenuCoords] = useState<{ x: number, y: number } | null>(null);

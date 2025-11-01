@@ -607,8 +607,9 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
                 <div className={`relative mx-auto py-12 ${editorPaddingClass} transition-all duration-300 ${isFullAiActionLoading ? 'opacity-50 pointer-events-none' : ''} ${isFocusMode ? 'max-w-4xl' : 'max-w-3xl'}`}>
                     {hoveredParagraph && (
                         <button
+                            aria-label="AI actions for this paragraph"
                             className="editor-gutter-button"
-                            style={{ top: `${hoveredParagraph.rect.top - editorPaneRef.current!.getBoundingClientRect().top}px` }}
+                            style={{ top: `${hoveredParagraph.rect.top - editorPaneRef.current!.getBoundingClientRect().top + editorPaneRef.current!.scrollTop}px` }}
                             onClick={(e) => {
                                 const { start } = hoveredParagraph;
                                 const { end } = getLineInfoForPosition(editorState.content, start);

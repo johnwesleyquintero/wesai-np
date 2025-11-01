@@ -49,8 +49,6 @@ const areNoteStatesEqual = (a: NoteState, b: NoteState): boolean => {
 };
 
 
-const SCROLL_DISMISS_THRESHOLD = 20;
-
 const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
     const { updateNote, toggleFavorite, notes, restoreNoteVersion } = useStoreContext();
     const { isMobileView, onToggleSidebar, isAiRateLimited, isSettingsOpen, isCommandPaletteOpen, isSmartFolderModalOpen, isWelcomeModalOpen, isApiKeyMissing, isFocusMode, showConfirmation, hideConfirmation, isAiEnabled } = useUIContext();
@@ -81,6 +79,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
     const prevNoteRef = useRef(note);
     const [lastWarnedTimestamp, setLastWarnedTimestamp] = useState<string | null>(null);
     const [paragraphGutterTarget, setParagraphGutterTarget] = useState<{ start: number; rect: DOMRect } | null>(null);
+    const stateWhenLastSavedRef = useRef<NoteState | null>(null);
 
     const [uiState, dispatch] = useNoteEditorReducer();
     const {
@@ -127,7 +126,6 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
     const editorPaneRef = useRef<HTMLDivElement>(null);
     const cursorMeasureRef = useRef<HTMLPreElement>(null);
     const hasAutoTitledRef = useRef(false);
-    const scrollPosOnPopupOpenRef = useRef<number | null>(null);
     const isScrollingRef = useRef(false);
     const scrollTimeoutRef = useRef<number | null>(null);
     const desiredCursorPosRef = useRef<number | { start: number; end: number } | null>(null);
@@ -201,13 +199,14 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
     
         // Check for external updates
         if (note.updatedAt !== prevNoteRef.current.updatedAt) {
-            const isSelfUpdate = areNoteStatesEqual(latestEditorStateRef.current, {
+            const isSelfUpdate = stateWhenLastSavedRef.current !== null && areNoteStatesEqual(stateWhenLastSavedRef.current, {
                 title: note.title,
                 content: note.content,
                 tags: note.tags,
             });
-    
+
             if (isSelfUpdate) {
+                stateWhenLastSavedRef.current = null; // Consume the flag
                 setLastWarnedTimestamp(null);
                 prevNoteRef.current = note;
                 return;
@@ -294,6 +293,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
     const handleSave = useCallback(async () => {
         if (saveStatus === 'saving') return;
         dispatch({ type: 'SET_SAVE_STATUS', payload: 'saving' });
+        stateWhenLastSavedRef.current = editorState;
         try {
             await updateNote(note.id, editorState);
             dispatch({ type: 'SET_SAVE_STATUS', payload: 'saved' });
@@ -324,10 +324,8 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
     // When a popup opens, record the current scroll position.
     useEffect(() => {
         const hasPopup = !!selection || !!activeSpellingError || !!noteLinker || !!templateLinker || !!noteLinkerForSelection || !!slashCommand || !!gutterMenu;
-        if (hasPopup && scrollPosOnPopupOpenRef.current === null && editorPaneRef.current) {
-            scrollPosOnPopupOpenRef.current = editorPaneRef.current.scrollTop;
-        } else if (!hasPopup) {
-            scrollPosOnPopupOpenRef.current = null; // Reset when all popups are closed
+        if (!hasPopup) {
+             // Reset when all popups are closed
         }
     }, [selection, activeSpellingError, noteLinker, templateLinker, noteLinkerForSelection, slashCommand, gutterMenu]);
 
@@ -406,27 +404,15 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
             updateGutterState(); // Update gutter state once scrolling has stopped
         }, 150);
 
-        // Always dismiss the gutter target immediately as its position is now invalid.
+        // Always dismiss popups immediately on scroll to prevent "jitter".
         setParagraphGutterTarget(null);
         dispatch({ type: 'SET_GUTTER_MENU', payload: null });
-
-
-        // If no other popups are open, we're done.
-        if (scrollPosOnPopupOpenRef.current === null || !editorPaneRef.current) {
-            return;
-        }
-        
-        // Check threshold for other popups.
-        const delta = Math.abs(editorPaneRef.current.scrollTop - scrollPosOnPopupOpenRef.current);
-        if (delta > SCROLL_DISMISS_THRESHOLD) {
-            dispatch({ type: 'SET_SELECTION', payload: null });
-            setActiveSpellingError(null);
-            dispatch({ type: 'SET_NOTE_LINKER', payload: null });
-            dispatch({ type: 'SET_TEMPLATE_LINKER', payload: null });
-            dispatch({ type: 'SET_NOTE_LINKER_FOR_SELECTION', payload: null });
-            dispatch({ type: 'SET_SLASH_COMMAND', payload: null });
-            // The ref will be reset by the useEffect when popups close.
-        }
+        dispatch({ type: 'SET_SELECTION', payload: null });
+        setActiveSpellingError(null);
+        dispatch({ type: 'SET_NOTE_LINKER', payload: null });
+        dispatch({ type: 'SET_TEMPLATE_LINKER', payload: null });
+        dispatch({ type: 'SET_NOTE_LINKER_FOR_SELECTION', payload: null });
+        dispatch({ type: 'SET_SLASH_COMMAND', payload: null });
     }, [dispatch, setActiveSpellingError, updateGutterState]);
 
     useEffect(() => {

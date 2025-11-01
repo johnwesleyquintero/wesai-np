@@ -192,7 +192,10 @@ export const useStore = (user: User | undefined) => {
         };
         
         const { error: versionError } = await supabase.from('note_versions').insert(toSupabase(newVersion));
-        if(versionError) console.error("Failed to save note version:", versionError);
+        if (versionError) {
+            console.error("Failed to save note version:", versionError);
+            throw new Error("Failed to save note history. Aborting update to maintain consistency.");
+        }
 
         const { error } = await supabase.from('notes').update(toSupabase({ ...updatedFields, updatedAt: new Date().toISOString() })).eq('id', id).eq('user_id', user.id);
         if (error) throw error;

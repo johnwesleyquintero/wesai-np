@@ -40,6 +40,26 @@ function normalizeContents(contents: string | Part | (string | Part)[]): string 
     return contents;
 }
 
+/**
+ * Recursively sorts the keys of an object to create a canonical representation.
+ * This ensures that objects with the same keys and values produce an identical
+ * string when stringified, improving cache key stability.
+ */
+function sortObjectKeys(obj: any): any {
+    if (typeof obj !== 'object' || obj === null) {
+        return obj;
+    }
+    if (Array.isArray(obj)) {
+        return obj.map(sortObjectKeys);
+    }
+    const sortedKeys = Object.keys(obj).sort();
+    const result: { [key: string]: any } = {};
+    for (const key of sortedKeys) {
+        result[key] = sortObjectKeys(obj[key]);
+    }
+    return result;
+}
+
 
 const getGenAI = (): GoogleGenAI => {
     let apiKey: string | null = null;
@@ -84,6 +104,7 @@ const fireRateLimitEvent = (error: any) => {
 /**
  * A centralized wrapper for making Gemini API calls, now with a two-tiered caching system.
  * It handles caching, getting the genAI instance, try/catch, error logging, and rate limit events.
+ * Crucially, it now separates API call errors from response processing errors to prevent cache poisoning.
  */
 async function _callGemini<T>(
     payload: {
@@ -103,8 +124,10 @@ async function _callGemini<T>(
 
     const normalizedContents = normalizeContents(contents);
 
-    // 1. Create a stable hash for the request.
-    const promptString = JSON.stringify({ model, contents: normalizedContents, config });
+    // 1. Create a stable hash for the request by sorting keys before stringifying.
+    const requestPayload = { model, contents: normalizedContents, config };
+    const sortedPayload = sortObjectKeys(requestPayload);
+    const promptString = JSON.stringify(sortedPayload);
     const hash = await sha256(promptString);
 
     // 2. Check Level 1: Local Cache (fastest)
@@ -131,12 +154,21 @@ async function _callGemini<T>(
     }
 
     // 4. Cache Miss: Call the Gemini API
+    let response: GenerateContentResponse;
     try {
         const ai = getGenAI();
-        const response = await ai.models.generateContent({ model, contents: normalizedContents, config });
+        response = await ai.models.generateContent({ model, contents: normalizedContents, config });
+    } catch (e) {
+        console.error(`API call error: ${processingOptions.errorMessage}`, e);
+        fireRateLimitEvent(e);
+        return processingOptions.onError();
+    }
+
+    // 5. Process the response. If this fails, we DO NOT cache the result.
+    try {
         const processedData = processingOptions.processResponse(response);
 
-        // 5. Save to both caches for future requests
+        // 6. Save to both caches for future requests
         setLocalCache(hash, processedData);
         // Fire-and-forget insertion to Supabase. Don't block the UI.
         supabase.from('ai_cache').insert({
@@ -152,8 +184,8 @@ async function _callGemini<T>(
 
         return processedData;
     } catch (e) {
-        console.error(processingOptions.errorMessage, e);
-        fireRateLimitEvent(e);
+        console.error(`Processing error: ${processingOptions.errorMessage}`, e);
+        // Do not fire rate limit event; API call was successful.
         return processingOptions.onError();
     }
 }
@@ -193,10 +225,10 @@ Text: "${text}"`,
                     return JSON.parse(res.text.trim());
                 } catch (e) {
                     console.error('Failed to parse JSON for misspelled words:', e, res.text);
-                    return [];
+                    throw e; // Re-throw to prevent caching a bad result
                 }
             },
-            onError: () => [] // Fail gracefully
+            onError: () => [] // Fail gracefully in the UI
         }
     );
 };
@@ -223,7 +255,7 @@ export const getSpellingSuggestions = async (word: string): Promise<string[]> =>
                     return JSON.parse(res.text.trim());
                 } catch (e) {
                     console.error('Failed to parse JSON for spelling suggestions:', e, res.text);
-                    return [];
+                    throw e; // Re-throw to prevent caching a bad result
                 }
             },
             onError: () => []
@@ -454,7 +486,7 @@ export const createGeneralChatSession = (): Chat => {
     return ai.chats.create({
         model: MODEL_NAMES.PRO,
         config: {
-            systemInstruction: "You are a helpful assistant with access to a user's notes. You can create, find, read, update, and delete notes and folders. You can also manage templates by creating them from existing notes, finding templates, or applying them to notes. Additionally, you can perform bulk operations like finding and replacing text across multiple notes. You MUST use the provided tools to interact with the user's workspace.",
+            systemInstruction: "You are a helpful assistant with access to a user's notes. You can create, find, read, update, and delete notes and folders. You can also manage templates by creating them from existing notes, finding templates, or applying them to notes. Additionally, you can perform bulk operations like finding and replacing text across multiple notes. You MUST use the provided tools to interact with the user's workspace. If you receive a tool response with `{ success: false, error: '...' }`, you MUST NOT retry the same command. Instead, you MUST inform the user of the specific error message and ask them for clarification or a different command.",
             tools: [{ functionDeclarations }],
             safetySettings,
         },

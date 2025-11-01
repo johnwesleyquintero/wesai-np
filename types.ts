@@ -53,7 +53,7 @@ export interface ChatMessage {
     sources?: Note[];
     image?: string;
     status?: 'processing' | 'complete';
-    noteId?: string;
+    noteIds?: string[];
     feedback?: {
         rating: 'up' | 'down';
         tags?: string[];

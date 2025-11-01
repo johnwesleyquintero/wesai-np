@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useMemo, useCallback, useState } from 'react';
+import React, { useEffect, useRef, useMemo, useCallback, useState, useLayoutEffect } from 'react';
 import { Note, NoteVersion, Template } from '../types';
 import EditorHeader from './editor/EditorHeader';
 import EditorTitle from './editor/EditorTitle';
@@ -34,7 +34,7 @@ const SCROLL_DISMISS_THRESHOLD = 20;
 
 const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
     const { updateNote, toggleFavorite, notes, restoreNoteVersion } = useStoreContext();
-    const { isMobileView, onToggleSidebar, isAiRateLimited, isSettingsOpen, isCommandPaletteOpen, isSmartFolderModalOpen, isWelcomeModalOpen, isApiKeyMissing, isFocusMode, showConfirmation, isAiEnabled } = useUIContext();
+    const { isMobileView, onToggleSidebar, isAiRateLimited, isSettingsOpen, isCommandPaletteOpen, isSmartFolderModalOpen, isWelcomeModalOpen, isApiKeyMissing, isFocusMode, showConfirmation, hideConfirmation, isAiEnabled } = useUIContext();
     const { session } = useAuthContext();
     const { showToast } = useToast();
     const { registerEditorActions, unregisterEditorActions } = useEditorContext();
@@ -108,6 +108,23 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
     const cursorMeasureRef = useRef<HTMLPreElement>(null);
     const hasAutoTitledRef = useRef(false);
     const scrollPosOnPopupOpenRef = useRef<number | null>(null);
+    const isScrollingRef = useRef(false);
+    const scrollTimeoutRef = useRef<number | null>(null);
+    const desiredCursorPosRef = useRef<number | { start: number; end: number } | null>(null);
+
+    useLayoutEffect(() => {
+        if (desiredCursorPosRef.current !== null && textareaRef.current) {
+            const pos = desiredCursorPosRef.current;
+            if (typeof pos === 'number') {
+                textareaRef.current.selectionStart = pos;
+                textareaRef.current.selectionEnd = pos;
+            } else {
+                textareaRef.current.selectionStart = pos.start;
+                textareaRef.current.selectionEnd = pos.end;
+            }
+            desiredCursorPosRef.current = null;
+        }
+    }); // No dependency array, runs after every render
 
     const displayedTitle = previewVersion ? previewVersion.title : editorState.title;
     const displayedContent = previewVersion ? previewVersion.content : editorState.content;
@@ -154,7 +171,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
             prevNoteRef.current = note;
             return;
         }
-
+    
         // Check for external updates
         if (note.updatedAt !== prevNoteRef.current.updatedAt) {
             const isSelfUpdate = JSON.stringify(latestEditorStateRef.current) === JSON.stringify({
@@ -162,27 +179,32 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
                 content: note.content,
                 tags: note.tags,
             });
-
-            // If the update came from this client's own save action, do nothing.
+    
             if (isSelfUpdate) {
                 setLastWarnedTimestamp(null);
                 prevNoteRef.current = note;
                 return;
             }
-
+    
             const hasLocalChanges = JSON.stringify(latestEditorStateRef.current) !== JSON.stringify({
                 title: prevNoteRef.current.title,
                 content: prevNoteRef.current.content,
                 tags: prevNoteRef.current.tags,
             });
-
+    
             if (hasLocalChanges) {
                 // CONFLICT: External change detected while there are local unsaved changes.
-                // Show a persistent warning toast once per external update to prevent spam.
                 if (lastWarnedTimestamp !== note.updatedAt) {
-                    showToast({
-                        message: "Sync conflict: This note was updated elsewhere. Copy your local changes and reload to avoid data loss.",
-                        type: 'error',
+                    showConfirmation({
+                        title: "Sync Conflict",
+                        message: "This note was updated on another device. You can discard your local changes to load the latest version, or cancel to manually copy your work.",
+                        confirmText: "Reload & Discard",
+                        confirmClass: "bg-red-600 hover:bg-red-700",
+                        onConfirm: () => {
+                            resetEditorState({ title: note.title, content: note.content, tags: note.tags });
+                            setLastWarnedTimestamp(null); // Mark as resolved
+                            hideConfirmation();
+                        },
                     });
                     setLastWarnedTimestamp(note.updatedAt);
                 }
@@ -197,7 +219,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
             }
         }
         prevNoteRef.current = note;
-    }, [note, resetEditorState, showToast, lastWarnedTimestamp]);
+    }, [note, resetEditorState, showToast, lastWarnedTimestamp, showConfirmation, hideConfirmation]);
 
     useEffect(() => {
         if (previewVersion) return;
@@ -279,42 +301,6 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         }
     }, [selection, activeSpellingError, noteLinker, templateLinker, noteLinkerForSelection, slashCommand, gutterMenu]);
 
-    const handleScroll = useCallback(() => {
-        // Always dismiss the gutter target immediately as its position is now invalid.
-        setParagraphGutterTarget(null);
-
-        // If no other popups are open, we're done.
-        if (scrollPosOnPopupOpenRef.current === null || !editorPaneRef.current) {
-            return;
-        }
-        
-        // Check threshold for other popups.
-        const delta = Math.abs(editorPaneRef.current.scrollTop - scrollPosOnPopupOpenRef.current);
-        if (delta > SCROLL_DISMISS_THRESHOLD) {
-            dispatch({ type: 'SET_SELECTION', payload: null });
-            setActiveSpellingError(null);
-            dispatch({ type: 'SET_NOTE_LINKER', payload: null });
-            dispatch({ type: 'SET_TEMPLATE_LINKER', payload: null });
-            dispatch({ type: 'SET_NOTE_LINKER_FOR_SELECTION', payload: null });
-            dispatch({ type: 'SET_SLASH_COMMAND', payload: null });
-            dispatch({ type: 'SET_GUTTER_MENU', payload: null });
-            // The ref will be reset by the useEffect when popups close.
-        }
-    }, [dispatch, setActiveSpellingError]);
-    
-    useEffect(() => {
-        const pane = editorPaneRef.current;
-        pane?.addEventListener('scroll', handleScroll);
-        return () => pane?.removeEventListener('scroll', handleScroll);
-    }, [handleScroll]);
-
-    useEditorHotkeys({
-        undo,
-        redo,
-        isModalOpen: isSettingsOpen || isCommandPaletteOpen || isSmartFolderModalOpen || isWelcomeModalOpen || !!noteLinker || !!noteLinkerForSelection,
-        editorElements: [titleInputRef, textareaRef],
-    });
-
     const getCursorPositionRect = useCallback((textarea: HTMLTextAreaElement, position: number): DOMRect => {
         const pre = cursorMeasureRef.current;
         if (!pre) return new DOMRect();
@@ -358,6 +344,8 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
     };
 
     const updateGutterState = useCallback(() => {
+        if (isScrollingRef.current) return; // Don't update while scrolling
+        
         const textarea = textareaRef.current;
         if (!textarea || viewMode !== 'edit' || gutterMenu) {
             setParagraphGutterTarget(current => current ? null : current); // Only set to null if it has a value
@@ -380,10 +368,53 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         }
     }, [editorState.content, viewMode, gutterMenu, isEffectivelyReadOnly, isAiEnabled, isApiKeyMissing, getCursorPositionRect]);
 
+    const handleScroll = useCallback(() => {
+        isScrollingRef.current = true;
+        if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
+        scrollTimeoutRef.current = window.setTimeout(() => {
+            isScrollingRef.current = false;
+            updateGutterState(); // Update gutter state once scrolling has stopped
+        }, 150);
+
+        // Always dismiss the gutter target immediately as its position is now invalid.
+        setParagraphGutterTarget(null);
+
+        // If no other popups are open, we're done.
+        if (scrollPosOnPopupOpenRef.current === null || !editorPaneRef.current) {
+            return;
+        }
+        
+        // Check threshold for other popups.
+        const delta = Math.abs(editorPaneRef.current.scrollTop - scrollPosOnPopupOpenRef.current);
+        if (delta > SCROLL_DISMISS_THRESHOLD) {
+            dispatch({ type: 'SET_SELECTION', payload: null });
+            setActiveSpellingError(null);
+            dispatch({ type: 'SET_NOTE_LINKER', payload: null });
+            dispatch({ type: 'SET_TEMPLATE_LINKER', payload: null });
+            dispatch({ type: 'SET_NOTE_LINKER_FOR_SELECTION', payload: null });
+            dispatch({ type: 'SET_SLASH_COMMAND', payload: null });
+            dispatch({ type: 'SET_GUTTER_MENU', payload: null });
+            // The ref will be reset by the useEffect when popups close.
+        }
+    }, [dispatch, setActiveSpellingError, updateGutterState]);
+
     useEffect(() => {
         // This effect runs after content changes (typing, pasting), ensuring updateGutterState uses fresh state.
         updateGutterState();
     }, [updateGutterState]);
+    
+    useEffect(() => {
+        const pane = editorPaneRef.current;
+        pane?.addEventListener('scroll', handleScroll);
+        return () => pane?.removeEventListener('scroll', handleScroll);
+    }, [handleScroll]);
+
+    useEditorHotkeys({
+        undo,
+        redo,
+        isModalOpen: isSettingsOpen || isCommandPaletteOpen || isSmartFolderModalOpen || isWelcomeModalOpen || !!noteLinker || !!noteLinkerForSelection,
+        editorElements: [titleInputRef, textareaRef],
+    });
 
 
     const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -456,11 +487,11 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
                 const selectedText = value.substring(selectionStart, selectionEnd);
                 const newContent = `${value.substring(0, selectionStart)}${char}${selectedText}${closingChar}${value.substring(selectionEnd)}`;
                 setEditorState({ ...editorState, content: newContent });
-                setTimeout(() => { textarea.selectionStart = selectionStart + 1; textarea.selectionEnd = selectionEnd + 1; }, 0);
+                desiredCursorPosRef.current = { start: selectionStart + 1, end: selectionEnd + 1 };
             } else {
                 const newContent = `${value.substring(0, selectionStart)}${char}${closingChar}${value.substring(selectionStart)}`;
                 setEditorState({ ...editorState, content: newContent });
-                setTimeout(() => { textarea.selectionStart = textarea.selectionEnd = selectionStart + 1; }, 0);
+                desiredCursorPosRef.current = selectionStart + 1;
             }
         }
         if (e.key === 'Backspace' && selectionStart === selectionEnd) {
@@ -470,7 +501,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
                 e.preventDefault();
                 const newContent = value.substring(0, selectionStart - 1) + value.substring(selectionStart + 1);
                 setEditorState({ ...editorState, content: newContent });
-                setTimeout(() => { textarea.selectionStart = textarea.selectionEnd = selectionStart - 1; }, 0);
+                desiredCursorPosRef.current = selectionStart - 1;
             }
         }
     };

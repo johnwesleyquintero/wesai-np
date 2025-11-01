@@ -70,7 +70,18 @@ export const useChatProviderLogic = () => {
 
     useEffect(() => {
         try {
-            localStorage.setItem(CHAT_HISTORIES_STORAGE_KEY, JSON.stringify(debouncedChatHistories));
+            const historiesToSave = (Object.keys(debouncedChatHistories) as ChatMode[]).reduce((acc, mode) => {
+                const history = debouncedChatHistories[mode];
+                if (Array.isArray(history)) {
+                    // Truncate each history to the last 100 messages
+                    acc[mode] = history.slice(-100);
+                } else {
+                    acc[mode] = [];
+                }
+                return acc;
+            }, {} as Record<ChatMode, ChatMessage[]>);
+
+            localStorage.setItem(CHAT_HISTORIES_STORAGE_KEY, JSON.stringify(historiesToSave));
         } catch (error) {
             console.error("Failed to save chat history to localStorage", error);
         }
@@ -87,8 +98,17 @@ export const useChatProviderLogic = () => {
     useEffect(() => {
         const handleBeforeUnload = () => {
             try {
-                // Use synchronous save on unload to prevent data loss
-                localStorage.setItem(CHAT_HISTORIES_STORAGE_KEY, JSON.stringify(chatHistoriesRef.current));
+                // Use synchronous save on unload to prevent data loss, with truncation
+                const historiesToSave = (Object.keys(chatHistoriesRef.current) as ChatMode[]).reduce((acc, mode) => {
+                    const history = chatHistoriesRef.current[mode];
+                    if (Array.isArray(history)) {
+                        acc[mode] = history.slice(-100);
+                    } else {
+                        acc[mode] = [];
+                    }
+                    return acc;
+                }, {} as Record<ChatMode, ChatMessage[]>);
+                localStorage.setItem(CHAT_HISTORIES_STORAGE_KEY, JSON.stringify(historiesToSave));
             } catch (error) {
                 console.error("Failed to save chat history on unload", error);
             }
@@ -231,7 +251,7 @@ ${s.length > 0 ? s.map((n, i) => `--- NOTE [${i + 1}]: ${n.title} ---\n${n.conte
         setChatError(null);
         const userMessage: ChatMessage = { id: crypto.randomUUID(), role: 'user', content: query, image, status: 'processing' };
         setChatHistories(prev => ({ ...prev, [chatMode]: [...prev[chatMode], userMessage] }));
-        let lastTouchedNoteId: string | null = null;
+        const touchedNoteIds = new Set<string>();
 
         try {
             const chat = getChat();
@@ -259,7 +279,7 @@ ${s.length > 0 ? s.map((n, i) => `--- NOTE [${i + 1}]: ${n.title} ---\n${n.conte
                                 const content = String(fc.args.content || '');
                                 const newNoteId = await onAddNote(null, title, content);
                                 result = { success: true, noteId: newNoteId };
-                                lastTouchedNoteId = newNoteId;
+                                touchedNoteIds.add(newNoteId);
                                 break;
                             case 'findNotes':
                                 const queryToSearch = String(fc.args.query || '');
@@ -272,7 +292,7 @@ ${s.length > 0 ? s.map((n, i) => `--- NOTE [${i + 1}]: ${n.title} ---\n${n.conte
                                 const noteIdToRead = String(fc.args.noteId || '');
                                 const noteToRead = getNoteById(noteIdToRead);
                                 if (noteToRead) {
-                                    result = { title: noteToRead.title, content: noteToRead.content };
+                                    result = { success: true, title: noteToRead.title, content: noteToRead.content };
                                 } else {
                                     throw new Error("Note not found.");
                                 }
@@ -288,7 +308,7 @@ ${s.length > 0 ? s.map((n, i) => `--- NOTE [${i + 1}]: ${n.title} ---\n${n.conte
                                     if (Object.keys(updatedFields).length > 0) {
                                         await updateNoteInStore(noteIdToUpdate, updatedFields);
                                         result = { success: true, noteId: noteIdToUpdate };
-                                        lastTouchedNoteId = noteIdToUpdate;
+                                        touchedNoteIds.add(noteIdToUpdate);
                                     } else {
                                         throw new Error("No fields to update were provided.");
                                     }
@@ -362,7 +382,7 @@ ${s.length > 0 ? s.map((n, i) => `--- NOTE [${i + 1}]: ${n.title} ---\n${n.conte
                                         content: templateToApply.content,
                                     });
                                     result = { success: true, noteId: noteIdToApplyTo };
-                                    lastTouchedNoteId = noteIdToApplyTo;
+                                    touchedNoteIds.add(noteIdToApplyTo);
                                 } else {
                                     if (!templateToApply) throw new Error("Template not found.");
                                     if (!noteToApplyToInstance) throw new Error("Note not found.");
@@ -424,7 +444,7 @@ ${s.length > 0 ? s.map((n, i) => `--- NOTE [${i + 1}]: ${n.title} ---\n${n.conte
             }
 
             if (response.text) {
-                setChatHistories(prev => ({ ...prev, [chatMode]: [...prev[chatMode], { id: crypto.randomUUID(), role: 'ai', content: response.text, noteId: lastTouchedNoteId }] }));
+                setChatHistories(prev => ({ ...prev, [chatMode]: [...prev[chatMode], { id: crypto.randomUUID(), role: 'ai', content: response.text, noteIds: Array.from(touchedNoteIds) }] }));
             }
 
         } catch (error) {

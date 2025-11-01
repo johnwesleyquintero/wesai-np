@@ -133,7 +133,7 @@ const feedbackReasons = ['Incorrect', 'Not Helpful', 'Off-topic'];
 
 const Message: React.FC<MessageProps> = ({ message, onDelete, onToggleSources, isSourcesPinned }) => {
     const { showToast } = useToast();
-    const { onAddNote, setActiveNoteId } = useStoreContext();
+    const { onAddNote, setActiveNoteId, getNoteById } = useStoreContext();
     const { handleFeedback } = useChatContext();
     const { setView } = useUIContext();
     const [isHovered, setIsHovered] = useState(false);
@@ -208,10 +208,20 @@ const Message: React.FC<MessageProps> = ({ message, onDelete, onToggleSources, i
                     {renderContent()}
                 </div>
                 {isAi && message.sources && message.sources.length > 0 && <SourceNotes sources={message.sources} />}
-                {isAi && message.noteId && (
-                     <button onClick={() => handleNoteClick(message.noteId!)} className="text-xs font-semibold text-light-primary dark:text-dark-primary mt-2">
-                        View touched note &rarr;
-                    </button>
+                {isAi && message.noteIds && message.noteIds.length > 0 && (
+                    <div className="mt-2 space-y-1">
+                        <p className="text-xs font-semibold text-light-text/60 dark:text-dark-text/60">
+                            {message.noteIds.length > 1 ? 'Affected Notes:' : 'Affected Note:'}
+                        </p>
+                        {message.noteIds.map(noteId => {
+                            const note = getNoteById(noteId);
+                            return (
+                                <button key={noteId} onClick={() => handleNoteClick(noteId)} className="text-xs font-semibold text-light-primary dark:text-dark-primary block hover:underline">
+                                    &rarr; {note ? note.title : 'Untitled Note'}
+                                </button>
+                            );
+                        })}
+                    </div>
                 )}
                 {isAi && (
                     <div className="flex items-center gap-1 mt-2 pt-2 border-t border-light-border/50 dark:border-dark-border/50">

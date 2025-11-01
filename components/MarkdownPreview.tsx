@@ -169,13 +169,21 @@ const RecursiveRenderer: React.FC<{
                     return <div key={index} className="my-2 p-2 bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-300 dark:border-yellow-500/50 rounded-md text-sm text-yellow-700 dark:text-yellow-200">[Synced block not found: {templateId}]</div>;
                 }
 
-                // Pre-process this part for note links and sources
-                const preprocessedPart = part
-                    .replace(/\[\[([a-zA-Z0-9-]+)(?:\|(.*?))?\]\]/g, (match, noteId, noteText) => {
+                // A single regex to match both note links and source citations to prevent replacement conflicts.
+                const combinedRegex = /(\[\[([a-zA-Z0-9-]+)(?:\|(.*?))?\]\])|\[(\d+)\]/g;
+                const preprocessedPart = part.replace(combinedRegex, (match, _noteLinkMatch, noteId, noteText, sourceNum) => {
+                    // If noteId is truthy, it's a note link
+                    if (noteId) {
                         const displayText = noteText || noteId;
                         return `<a href="note://${noteId}">${displayText}</a>`;
-                    })
-                    .replace(/\[(\d+)\]/g, '<a href="source://$1">[$1]</a>');
+                    }
+                    // If sourceNum is truthy, it's a source citation
+                    if (sourceNum) {
+                        return `<a href="source://${sourceNum}">[${sourceNum}]</a>`;
+                    }
+                    // Fallback, should not be reached with this regex
+                    return match;
+                });
 
                 return (
                     <ReactMarkdown

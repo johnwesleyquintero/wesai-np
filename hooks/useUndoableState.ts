@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
+import { useDebounce } from './useDebounce';
 
 type History<T> = {
   past: T[];
@@ -40,15 +41,17 @@ export const useUndoableState = <T,>(
   
   const [history, setHistory] = useState<History<T>>(getInitialHistory);
   
+  const debouncedHistory = useDebounce(history, 500);
+
   useEffect(() => {
       if (sessionKey) {
           try {
-              sessionStorage.setItem(sessionKey, JSON.stringify(history));
+              sessionStorage.setItem(sessionKey, JSON.stringify(debouncedHistory));
           } catch (e) {
               console.error(`Failed to save editor session for key "${sessionKey}":`, e);
           }
       }
-  }, [history, sessionKey]);
+  }, [debouncedHistory, sessionKey]);
 
 
   const canUndo = history.past.length > 0;

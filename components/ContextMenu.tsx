@@ -11,6 +11,10 @@ interface ContextMenuProps {
 }
 
 const MenuItem: React.FC<{ item: ContextMenuItem; onClose: () => void; }> = ({ item, onClose }) => {
+    // FIX: Add a type guard to ensure item is not a divider.
+    if (item.divider) {
+        return null;
+    }
     const itemRef = useRef<HTMLDivElement>(null);
     const [isSubMenuOpen, setIsSubMenuOpen] = useState(false);
     const [subMenuCoords, setSubMenuCoords] = useState<{ x: number, y: number } | null>(null);

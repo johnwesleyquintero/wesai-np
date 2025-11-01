@@ -104,8 +104,7 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
             menuItems = [
                 { label: 'New Note in Folder', action: () => onAddNote(node.id), icon: <PencilSquareIcon /> },
                 { label: 'Rename Folder', action: () => setRenamingItemId(node.id), icon: <PencilSquareIcon /> },
-                // FIX: Add missing 'label' property for the divider.
-                { divider: true, label: '' },
+                { divider: true },
                 { 
                     label: 'Delete Folder', 
                     action: () => {
@@ -177,8 +176,7 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
                     }, 
                     icon: <DocumentDuplicateIcon /> 
                 },
-                // FIX: Add missing 'label' property for the divider.
-                { divider: true, label: '' },
+                { divider: true },
                 {
                     label: 'Copy Note ID',
                     action: () => {
@@ -207,8 +205,7 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
                     }, 
                     icon: <ClipboardDocumentIcon /> 
                 },
-                // FIX: Add missing 'label' property for the divider.
-                { divider: true, label: '' },
+                { divider: true },
                 { 
                     label: 'Delete Note', 
                     action: () => showConfirmation({

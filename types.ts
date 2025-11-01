@@ -124,15 +124,19 @@ export interface ConfirmationState extends ConfirmationOptions {
     isOpen: boolean;
 }
 
-export interface ContextMenuItem {
-    label: string;
-    action?: () => void;
-    icon?: React.ReactElement;
-    isDestructive?: boolean;
-    children?: ContextMenuItem[];
-    disabled?: boolean;
-    divider?: boolean;
-}
+export type ContextMenuItem =
+    | {
+        label: string;
+        action?: () => void;
+        icon?: React.ReactElement;
+        isDestructive?: boolean;
+        children?: ContextMenuItem[];
+        disabled?: boolean;
+        divider?: never;
+      }
+    | {
+        divider: true;
+      };
 
 export type SettingsTab = 'general' | 'templates' | 'data';
 

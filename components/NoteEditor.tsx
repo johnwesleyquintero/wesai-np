@@ -400,6 +400,8 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
 
         // Always dismiss the gutter target immediately as its position is now invalid.
         setParagraphGutterTarget(null);
+        dispatch({ type: 'SET_GUTTER_MENU', payload: null });
+
 
         // If no other popups are open, we're done.
         if (scrollPosOnPopupOpenRef.current === null || !editorPaneRef.current) {
@@ -415,7 +417,6 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
             dispatch({ type: 'SET_TEMPLATE_LINKER', payload: null });
             dispatch({ type: 'SET_NOTE_LINKER_FOR_SELECTION', payload: null });
             dispatch({ type: 'SET_SLASH_COMMAND', payload: null });
-            dispatch({ type: 'SET_GUTTER_MENU', payload: null });
             // The ref will be reset by the useEffect when popups close.
         }
     }, [dispatch, setActiveSpellingError, updateGutterState]);
@@ -580,10 +581,8 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
                         const newContent = editorState.content.slice(0, selectionStart) + markdownImage + editorState.content.slice(selectionEnd);
                         setEditorState({ ...editorState, content: newContent });
                         
-                        setTimeout(() => {
-                           const newCursorPos = selectionStart + markdownImage.length;
-                           textarea.setSelectionRange(newCursorPos, newCursorPos);
-                        }, 0);
+                        const newCursorPos = selectionStart + markdownImage.length;
+                        desiredCursorPosRef.current = newCursorPos;
 
                         showToast({ message: 'Image uploaded successfully!', type: 'success' });
                     }
@@ -611,13 +610,17 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
             const newContent = `${editorState.content.substring(0, start)}[[${noteId}|${text}]]${editorState.content.substring(end)}`;
             setEditorState({ ...editorState, content: newContent });
             dispatch({ type: 'SET_NOTE_LINKER_FOR_SELECTION', payload: null });
-            setTimeout(() => { textarea.focus(); const pos = start + noteId.length + text.length + 5; textarea.selectionStart = textarea.selectionEnd = pos; }, 0);
+            const pos = start + noteId.length + text.length + 5;
+            desiredCursorPosRef.current = pos;
+            textarea.focus();
         } else if (noteLinker) {
             const { selectionStart } = textarea; const startIndex = selectionStart - noteLinker.query.length - 2;
             const newContent = `${editorState.content.substring(0, startIndex)}[[${noteId}|${noteTitle}]]${editorState.content.substring(selectionStart)}`;
             setEditorState({ ...editorState, content: newContent });
             dispatch({ type: 'SET_NOTE_LINKER', payload: null });
-            setTimeout(() => { textarea.focus(); const pos = startIndex + noteId.length + noteTitle.length + 5; textarea.selectionStart = textarea.selectionEnd = pos; }, 0);
+            const pos = startIndex + noteId.length + noteTitle.length + 5;
+            desiredCursorPosRef.current = pos;
+            textarea.focus();
         }
     };
     
@@ -630,11 +633,9 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         const newContent = `${editorState.content.substring(0, startIndex)}[[sync:${templateId}]]${editorState.content.substring(selectionStart)}`;
         setEditorState({ ...editorState, content: newContent });
         dispatch({ type: 'SET_TEMPLATE_LINKER', payload: null });
-        setTimeout(() => {
-            textarea.focus();
-            const pos = startIndex + `[[sync:${templateId}]]`.length;
-            textarea.selectionStart = textarea.selectionEnd = pos;
-        }, 0);
+        const pos = startIndex + `[[sync:${templateId}]]`.length;
+        desiredCursorPosRef.current = pos;
+        textarea.focus();
     };
 
     const handleSelectCommand = (commandId: string) => {
@@ -644,10 +645,9 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         const replaceCommandText = (replacement: string, cursorOffset = replacement.length) => {
             const newContent = currentContent.substring(0, range.start) + replacement + currentContent.substring(range.end);
             setEditorState({ ...editorState, content: newContent });
-            setTimeout(() => {
-                textareaRef.current?.focus(); const pos = range.start + cursorOffset;
-                textareaRef.current?.setSelectionRange(pos, pos);
-            }, 0);
+            const pos = range.start + cursorOffset;
+            desiredCursorPosRef.current = pos;
+            textareaRef.current?.focus();
         };
         switch(commandId) {
             case 'h1': replaceCommandText('# '); break; case 'h2': replaceCommandText('## '); break;
@@ -675,10 +675,9 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         const newContent = editorState.content.substring(0, start) + prefix + text + suffix + editorState.content.substring(end);
         setEditorState({...editorState, content: newContent });
         dispatch({ type: 'SET_SELECTION', payload: null });
-        setTimeout(() => {
-            textareaRef.current?.focus(); const pos = end + prefix.length + suffix.length;
-            textareaRef.current?.setSelectionRange(pos, pos);
-        }, 0);
+        const pos = end + prefix.length + suffix.length;
+        desiredCursorPosRef.current = pos;
+        textareaRef.current?.focus();
     };
     
     const handleApplySuggestion = (suggestion: string) => {
@@ -786,7 +785,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
             {(noteLinker || noteLinkerForSelection) && <NoteLinker query={noteLinker?.query || ''} onSelect={handleInsertLink} onClose={() => { dispatch({ type: 'SET_NOTE_LINKER', payload: null }); dispatch({ type: 'SET_NOTE_LINKER_FOR_SELECTION', payload: null }); }} position={noteLinker?.position || { top: noteLinkerForSelection!.rect.bottom, left: noteLinkerForSelection!.rect.left }} />}
             {templateLinker && <TemplateLinker query={templateLinker.query} onSelect={handleInsertSyncedBlock} onClose={() => dispatch({ type: 'SET_TEMPLATE_LINKER', payload: null })} position={templateLinker.position} />}
             {slashCommand && <SlashCommandMenu query={slashCommand.query} position={slashCommand.position} onSelect={handleSelectCommand} onClose={() => dispatch({ type: 'SET_SLASH_COMMAND', payload: null })} textareaRef={textareaRef} />}
-            <InlineAiMenu selection={selection} onAction={async (action) => { if (selection) { const newPos = await handleInlineAiAction(action, selection); if (newPos !== null && textareaRef.current) { textareaRef.current.focus(); setTimeout(() => textareaRef.current?.setSelectionRange(newPos, newPos), 0); } } }} onFormat={handleFormatSelection} isLoading={isAiActionLoading} onClose={() => dispatch({ type: 'SET_SELECTION', payload: null })} isApiKeyMissing={isApiKeyMissing} isAiEnabled={isAiEnabled} />
+            <InlineAiMenu selection={selection} onAction={async (action) => { if (selection) { const newPos = await handleInlineAiAction(action, selection); if (newPos !== null && textareaRef.current) { textareaRef.current.focus(); desiredCursorPosRef.current = newPos; } } }} onFormat={handleFormatSelection} isLoading={isAiActionLoading} onClose={() => dispatch({ type: 'SET_SELECTION', payload: null })} isApiKeyMissing={isApiKeyMissing} isAiEnabled={isAiEnabled} />
             <SpellcheckMenu activeError={activeSpellingError} suggestions={spellingSuggestions} onSelect={handleApplySuggestion} isLoading={isLoadingSuggestions} error={suggestionError} onClose={() => setActiveSpellingError(null)} />
             {isHistoryOpen && <VersionHistorySidebar history={note.history || []} onClose={handleCloseHistory} onPreview={(version) => dispatch({ type: 'SET_PREVIEW_VERSION', payload: version })} onRestore={handleRestore} activeVersionTimestamp={previewVersion?.savedAt} />}
             {gutterMenu && (

@@ -225,10 +225,10 @@ Text: "${text}"`,
                     return JSON.parse(res.text.trim());
                 } catch (e) {
                     console.error('Failed to parse JSON for misspelled words:', e, res.text);
-                    throw e; // Re-throw to prevent caching a bad result
+                    throw new Error("AI returned invalid data format.");
                 }
             },
-            onError: () => [] // Fail gracefully in the UI
+            onError: () => { throw new Error("Failed to find misspelled words."); }
         }
     );
 };
@@ -255,10 +255,10 @@ export const getSpellingSuggestions = async (word: string): Promise<string[]> =>
                     return JSON.parse(res.text.trim());
                 } catch (e) {
                     console.error('Failed to parse JSON for spelling suggestions:', e, res.text);
-                    throw e; // Re-throw to prevent caching a bad result
+                    throw new Error("AI returned invalid data format.");
                 }
             },
-            onError: () => []
+            onError: () => { throw new Error("Failed to get spelling suggestions."); }
         }
     );
 };

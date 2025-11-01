@@ -24,7 +24,8 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({ children }) =
             id: Date.now(),
             ...options,
         };
-        setToasts(prevToasts => [...prevToasts, newToast]);
+        // Prepend new toasts so they appear at the top
+        setToasts(prevToasts => [newToast, ...prevToasts]);
     }, []);
 
     const removeToast = (id: number) => {
@@ -34,7 +35,7 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     return (
         <ToastContext.Provider value={{ showToast }}>
             {children}
-            <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-[100] flex flex-col items-center gap-2">
+            <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-[100] flex flex-col-reverse items-center gap-2">
                 {toasts.map(toast => (
                     <Toast
                         key={toast.id}

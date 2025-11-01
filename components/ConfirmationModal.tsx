@@ -27,8 +27,17 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
     const cancelButtonRef = useRef<HTMLButtonElement>(null);
     const confirmationInputRef = useRef<HTMLInputElement>(null);
     const modalRef = useRef<HTMLDivElement>(null);
+    const mounted = useRef(false);
 
     useModalAccessibility(isOpen, onClose, modalRef);
+
+    useEffect(() => {
+        mounted.current = true;
+        return () => {
+            mounted.current = false;
+        };
+    }, []);
+
 
     useEffect(() => {
         if (isOpen) {
@@ -53,9 +62,9 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
         } catch (e) {
             console.error("Confirmation action failed", e);
         } finally {
-            // The onClose is often handled by the caller after the async op,
-            // but we ensure state is reset if the modal remains open.
-            setIsConfirming(false);
+            if (mounted.current) {
+                setIsConfirming(false);
+            }
         }
     }
 

@@ -587,7 +587,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
             const firstLine = editorState.content.split('\n')[0].trim().replace(/^#+\s*/, '');
             if (firstLine) {
                 const newTitle = firstLine.length > 100 ? firstLine.substring(0, 100) + '...' : firstLine;
-                setPresent({ ...editorState, title: newTitle });
+                setEditorState({ ...editorState, title: newTitle });
                 hasAutoTitledRef.current = true;
             }
         }

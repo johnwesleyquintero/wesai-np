@@ -211,14 +211,28 @@ export const useStore = (user: User | undefined) => {
             tags: noteToUpdate.tags
         };
         
-        const { error: versionError } = await supabase.from('note_versions').insert(toSupabase(newVersion));
+        const { data: versionData, error: versionError } = await supabase.from('note_versions').insert(toSupabase(newVersion)).select('id').single();
+        
         if (versionError) {
             console.error("Failed to save note version:", versionError);
             throw new Error("Failed to save note history. Aborting update to maintain consistency.");
         }
 
-        const { error } = await supabase.from('notes').update(toSupabase({ ...updatedFields, updatedAt: new Date().toISOString() })).eq('id', id).eq('user_id', user.id);
-        if (error) throw error;
+        const newVersionId = versionData?.id;
+
+        try {
+            const { error: noteError } = await supabase.from('notes').update(toSupabase({ ...updatedFields, updatedAt: new Date().toISOString() })).eq('id', id).eq('user_id', user.id);
+            if (noteError) throw noteError;
+        } catch (error) {
+            // If the note update fails, attempt to roll back the version insert.
+            console.error("Note update failed. Attempting to roll back version history.", error);
+            if (newVersionId) {
+                await supabase.from('note_versions').delete().eq('id', newVersionId);
+                console.log(`Rolled back orphaned note version: ${newVersionId}`);
+            }
+            // Re-throw the original error to notify the caller
+            throw error;
+        }
     }, [notes, user]);
     
     const restoreNoteVersion = useCallback(async (noteId: string, version: NoteVersion) => {

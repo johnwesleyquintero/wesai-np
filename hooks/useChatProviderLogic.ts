@@ -461,18 +461,8 @@ ${s.length > 0 ? s.map((n, i) => `--- NOTE [${i + 1}]: ${n.title} ---\n${n.conte
     }, [chatMode, onAddNote, notes, getNoteById, updateNoteInStore, deleteNote, activeNoteId, store, collections, setActiveNoteId]);
     
     const recallLastMessage = useCallback(() => {
-        // This utility is needed because Array.prototype.findLastIndex is not supported in all environments.
-        const findLastIndex = <T>(array: T[], predicate: (value: T, index: number, obj: T[]) => unknown): number => {
-            let l = array.length;
-            while (l--) {
-                if (predicate(array[l], l, array)) return l;
-            }
-            return -1;
-        };
-
         const currentHistory = chatHistoriesRef.current[chatMode];
-        // FIX: Explicitly type 'msg' as ChatMessage to resolve a type inference issue where it was being treated as 'unknown'.
-        const lastUserMessageIndex = findLastIndex(currentHistory, (msg: ChatMessage) => msg.role === 'user' && typeof msg.content === 'string');
+        const lastUserMessageIndex = currentHistory.findLastIndex((msg: ChatMessage) => msg.role === 'user' && typeof msg.content === 'string');
 
         if (lastUserMessageIndex > -1) {
             return currentHistory[lastUserMessageIndex];

@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { CheckBadgeIcon, ExclamationTriangleIcon, InformationCircleIcon, XMarkIcon } from './Icons';
+import { useIsMounted } from '../hooks/useIsMounted';
 
 interface ToastProps {
     message: string;
@@ -25,14 +26,7 @@ const toastConfig = {
 const Toast: React.FC<ToastProps> = ({ message, type, onDismiss }) => {
     const [isVisible, setIsVisible] = useState(false);
     const timeoutRef = useRef<number | null>(null);
-    const mounted = useRef(false);
-
-    useEffect(() => {
-        mounted.current = true;
-        return () => {
-            mounted.current = false;
-        };
-    }, []);
+    const isMounted = useIsMounted();
 
 
     const handleDismiss = React.useCallback(() => {
@@ -43,11 +37,11 @@ const Toast: React.FC<ToastProps> = ({ message, type, onDismiss }) => {
         setIsVisible(false);
         // Allow time for fade-out animation before calling the parent to remove the toast
         setTimeout(() => {
-            if (mounted.current) {
+            if (isMounted()) {
                 onDismiss();
             }
         }, 300); 
-    }, [onDismiss]);
+    }, [onDismiss, isMounted]);
 
     useEffect(() => {
         setIsVisible(true);

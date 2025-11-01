@@ -96,7 +96,7 @@ const safetySettings = [
 ];
 
 const fireRateLimitEvent = (error: any) => {
-    if (error?.message?.includes('429') || error?.message?.includes('API key not valid')) {
+    if (error instanceof Error && (error.message.includes('429') || error.message.includes('API key not valid'))) {
         window.dispatchEvent(new CustomEvent('ai-rate-limit'));
     }
 };

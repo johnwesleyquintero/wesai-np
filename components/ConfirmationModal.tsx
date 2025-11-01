@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { useModalAccessibility } from '../hooks/useModalAccessibility';
+import { useIsMounted } from '../hooks/useIsMounted';
 
 interface ConfirmationModalProps {
     isOpen: boolean;
@@ -27,17 +28,9 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
     const cancelButtonRef = useRef<HTMLButtonElement>(null);
     const confirmationInputRef = useRef<HTMLInputElement>(null);
     const modalRef = useRef<HTMLDivElement>(null);
-    const mounted = useRef(false);
+    const isMounted = useIsMounted();
 
     useModalAccessibility(isOpen, onClose, modalRef);
-
-    useEffect(() => {
-        mounted.current = true;
-        return () => {
-            mounted.current = false;
-        };
-    }, []);
-
 
     useEffect(() => {
         if (isOpen) {
@@ -62,7 +55,7 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
         } catch (e) {
             console.error("Confirmation action failed", e);
         } finally {
-            if (mounted.current) {
+            if (isMounted()) {
                 setIsConfirming(false);
             }
         }

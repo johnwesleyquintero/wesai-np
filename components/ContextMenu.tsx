@@ -144,10 +144,9 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, items, onClose, isSubMe
             style={{ ...style, zIndex: 50 }}
             className="bg-light-background dark:bg-dark-background rounded-lg shadow-xl border border-light-border dark:border-dark-border w-56 animate-fade-in-down py-1"
         >
-            {/* FIX: Use 'in' operator for more robust type guarding on the ContextMenuItem union type. */}
             {items.map((item, index) => (
                 'label' in item
-                    ? <MenuItem key={item.label} item={item} onClose={onClose} />
+                    ? <MenuItem key={`${item.label}-${index}`} item={item} onClose={onClose} />
                     : <div key={`divider-${index}`} className="my-1 h-px bg-light-border dark:border-dark-border" />
             ))}
         </div>

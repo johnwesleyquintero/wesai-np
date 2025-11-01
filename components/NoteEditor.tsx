@@ -152,6 +152,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
             return;
         }
 
+        // Check for external updates
         if (note.updatedAt !== prevNoteRef.current.updatedAt) {
             const isSelfUpdate = JSON.stringify(latestEditorStateRef.current) === JSON.stringify({
                 title: note.title,
@@ -159,6 +160,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
                 tags: note.tags,
             });
 
+            // If the update came from this client's own save action, do nothing.
             if (isSelfUpdate) {
                 setLastWarnedTimestamp(null);
                 prevNoteRef.current = note;
@@ -171,7 +173,18 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
                 tags: prevNoteRef.current.tags,
             });
 
-            if (!hasLocalChanges) {
+            if (hasLocalChanges) {
+                // CONFLICT: External change detected while there are local unsaved changes.
+                // Show a persistent warning toast once per external update to prevent spam.
+                if (lastWarnedTimestamp !== note.updatedAt) {
+                    showToast({
+                        message: "Sync conflict: This note was updated elsewhere. Copy your local changes and reload to avoid data loss.",
+                        type: 'error',
+                    });
+                    setLastWarnedTimestamp(note.updatedAt);
+                }
+            } else {
+                // NO CONFLICT: No local changes, so safe to sync the external update.
                 resetEditorState({ title: note.title, content: note.content, tags: note.tags });
                 setLastWarnedTimestamp(null);
                 showToast({
@@ -308,7 +321,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
     const updateGutterState = useCallback(() => {
         const textarea = textareaRef.current;
         if (!textarea || viewMode !== 'edit' || gutterMenu) {
-            if (paragraphGutterTarget) setParagraphGutterTarget(null);
+            setParagraphGutterTarget(current => current ? null : current); // Only set to null if it has a value
             return;
         }
 
@@ -317,13 +330,21 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         
         const shouldShow = text && !isEffectivelyReadOnly && isAiEnabled && !isApiKeyMissing;
 
-        if (shouldShow && paragraphGutterTarget?.start !== start) {
+        if (shouldShow) {
             const rect = getCursorPositionRect(textarea, start);
-            setParagraphGutterTarget({ start, rect });
-        } else if (!shouldShow && paragraphGutterTarget) {
+            setParagraphGutterTarget(current => {
+                if (current?.start !== start) return { start, rect };
+                return current;
+            });
+        } else {
             setParagraphGutterTarget(null);
         }
-    }, [editorState.content, viewMode, paragraphGutterTarget, gutterMenu, isEffectivelyReadOnly, isAiEnabled, isApiKeyMissing, getCursorPositionRect]);
+    }, [editorState.content, viewMode, gutterMenu, isEffectivelyReadOnly, isAiEnabled, isApiKeyMissing, getCursorPositionRect]);
+
+    useEffect(() => {
+        // This effect runs after content changes (typing, pasting), ensuring updateGutterState uses fresh state.
+        updateGutterState();
+    }, [updateGutterState]);
 
 
     const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -349,7 +370,6 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
             if (slashCommand) dispatch({ type: 'SET_SLASH_COMMAND', payload: null });
             if (noteLinker) dispatch({ type: 'SET_NOTE_LINKER', payload: null });
         }
-        updateGutterState();
     };
     
     const handleSelect = () => {
@@ -648,8 +668,8 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
                         onSelect={handleSelect}
                         onScroll={handleScroll}
                         onKeyDown={handleKeyDown}
-                        onKeyUp={updateGutterState}
-                        onClick={updateGutterState}
+                        onKeyUp={handleSelect}
+                        onClick={handleSelect}
                         onBlur={handleContentBlur}
                         onToggleTask={handleToggleTask}
                         sharedEditorClasses={sharedEditorClasses}

@@ -1,6 +1,4 @@
-
-
-import React, { useState, useLayoutEffect } from 'react';
+import React, { useState, useLayoutEffect, useRef } from 'react';
 
 interface UseDynamicPositionOptions {
     anchorRect: DOMRect | null;
@@ -16,9 +14,10 @@ export const useDynamicPosition = ({ anchorRect, isOpen, align = 'bottom', menuR
         top: '-9999px',
         left: '-9999px',
     });
+    const frameId = useRef<number | null>(null);
 
     useLayoutEffect(() => {
-        if (!isOpen || !anchorRect || !menuRef.current) {
+        if (!isOpen || !anchorRect) {
             setStyle(prev => ({ ...prev, opacity: 0, top: '-9999px' }));
             return;
         }
@@ -34,26 +33,22 @@ export const useDynamicPosition = ({ anchorRect, isOpen, align = 'bottom', menuR
             let newTop: number;
             if (align === 'bottom') {
                 newTop = bottom + 8;
-                // If it overflows bottom, position above
                 if (newTop + menuHeight > innerHeight) {
                     newTop = top - menuHeight - 8;
                 }
             } else { // align === 'top'
                 newTop = top - menuHeight - 8;
-                // If it overflows top, position below
                 if (newTop < 0) {
                     newTop = bottom + 8;
                 }
             }
 
             let newLeft = left;
-            // Adjust if it goes off-screen horizontally
             if (newLeft + menuWidth > innerWidth) {
                 newLeft = innerWidth - menuWidth - 10;
             }
             if (newLeft < 10) newLeft = 10;
             
-            // Final check to prevent vertical overflow from the top
             if (newTop < 10) newTop = 10;
 
             setStyle({
@@ -66,15 +61,25 @@ export const useDynamicPosition = ({ anchorRect, isOpen, align = 'bottom', menuR
             });
         };
 
-        // Calculate initial position
-        calculatePosition();
+        const handlePositionUpdate = () => {
+            if (frameId.current) {
+                cancelAnimationFrame(frameId.current);
+            }
+            frameId.current = requestAnimationFrame(calculatePosition);
+        };
 
-        window.addEventListener('resize', calculatePosition);
-        window.addEventListener('scroll', calculatePosition, true); // Use capture phase for scroll
+        // Initial calculation
+        handlePositionUpdate();
+
+        window.addEventListener('resize', handlePositionUpdate);
+        window.addEventListener('scroll', handlePositionUpdate, true);
 
         return () => {
-            window.removeEventListener('resize', calculatePosition);
-            window.removeEventListener('scroll', calculatePosition, true);
+            window.removeEventListener('resize', handlePositionUpdate);
+            window.removeEventListener('scroll', handlePositionUpdate, true);
+            if (frameId.current) {
+                cancelAnimationFrame(frameId.current);
+            }
         };
 
     }, [isOpen, anchorRect, align, menuRef]);

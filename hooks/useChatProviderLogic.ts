@@ -460,7 +460,15 @@ ${s.length > 0 ? s.map((n, i) => `--- NOTE [${i + 1}]: ${n.title} ---\n${n.conte
     
     const recallLastMessage = useCallback(() => {
         const currentHistory = chatHistoriesRef.current[chatMode];
-        const lastUserMessageIndex = currentHistory.findLastIndex((msg: ChatMessage) => msg.role === 'user' && typeof msg.content === 'string');
+        // FIX: Replace findLastIndex for wider browser/environment compatibility.
+        let lastUserMessageIndex = -1;
+        for (let i = currentHistory.length - 1; i >= 0; i--) {
+            const msg = currentHistory[i];
+            if (msg.role === 'user' && typeof msg.content === 'string') {
+                lastUserMessageIndex = i;
+                break;
+            }
+        }
 
         if (lastUserMessageIndex > -1) {
             return currentHistory[lastUserMessageIndex];

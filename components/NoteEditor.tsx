@@ -236,7 +236,8 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
                 }
             } else {
                 // NO CONFLICT: No local changes, so safe to sync the external update.
-                resetEditorState({ title: note.title, content: note.content, tags: note.tags });
+                // Use setPresent to update the state without clearing undo/redo history.
+                setPresent({ title: note.title, content: note.content, tags: note.tags });
                 setLastWarnedTimestamp(null);
                 showToast({
                     message: `"${note.title}" was synced from an external change.`,
@@ -245,7 +246,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
             }
         }
         prevNoteRef.current = note;
-    }, [note, resetEditorState, showToast, lastWarnedTimestamp, showConfirmation, hideConfirmation]);
+    }, [note, resetEditorState, showToast, lastWarnedTimestamp, showConfirmation, hideConfirmation, setPresent]);
 
     useEffect(() => {
         if (previewVersion) return;

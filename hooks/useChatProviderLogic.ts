@@ -462,7 +462,6 @@ ${s.length > 0 ? s.map((n, i) => `--- NOTE [${i + 1}]: ${n.title} ---\n${n.conte
     
     const recallLastMessage = useCallback(() => {
         // This utility is needed because Array.prototype.findLastIndex is not supported in all environments.
-        // FIX: The comma in the generic type parameter <T,> was a syntax error. It should be <T>.
         const findLastIndex = <T>(array: T[], predicate: (value: T, index: number, obj: T[]) => unknown): number => {
             let l = array.length;
             while (l--) {
@@ -472,7 +471,8 @@ ${s.length > 0 ? s.map((n, i) => `--- NOTE [${i + 1}]: ${n.title} ---\n${n.conte
         };
 
         const currentHistory = chatHistoriesRef.current[chatMode];
-        const lastUserMessageIndex = findLastIndex(currentHistory, msg => msg.role === 'user' && typeof msg.content === 'string');
+        // FIX: Explicitly type 'msg' as ChatMessage to resolve a type inference issue where it was being treated as 'unknown'.
+        const lastUserMessageIndex = findLastIndex(currentHistory, (msg: ChatMessage) => msg.role === 'user' && typeof msg.content === 'string');
 
         if (lastUserMessageIndex > -1) {
             return currentHistory[lastUserMessageIndex];

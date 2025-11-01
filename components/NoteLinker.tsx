@@ -9,9 +9,10 @@ interface NoteLinkerProps {
     onSelect: (noteId: string, noteTitle: string) => void;
     onClose: () => void;
     position: { top: number; left: number };
+    editorPaneRef: React.RefObject<HTMLElement>;
 }
 
-const NoteLinker: React.FC<NoteLinkerProps> = ({ query, onSelect, onClose, position }) => {
+const NoteLinker: React.FC<NoteLinkerProps> = ({ query, onSelect, onClose, position, editorPaneRef }) => {
     const { notes } = useStoreContext();
     const [selectedIndex, setSelectedIndex] = useState(0);
     const menuRef = useRef<HTMLDivElement>(null);
@@ -29,7 +30,8 @@ const NoteLinker: React.FC<NoteLinkerProps> = ({ query, onSelect, onClose, posit
     const style = useDynamicPosition({
         anchorRect,
         isOpen: !!position,
-        menuRef
+        menuRef,
+        scrollContainerRef: editorPaneRef,
     });
 
     useEffect(() => {

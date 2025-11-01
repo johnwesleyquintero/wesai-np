@@ -9,9 +9,10 @@ interface TemplateLinkerProps {
     onSelect: (templateId: string, templateTitle: string) => void;
     onClose: () => void;
     position: { top: number; left: number };
+    editorPaneRef: React.RefObject<HTMLElement>;
 }
 
-const TemplateLinker: React.FC<TemplateLinkerProps> = ({ query, onSelect, onClose, position }) => {
+const TemplateLinker: React.FC<TemplateLinkerProps> = ({ query, onSelect, onClose, position, editorPaneRef }) => {
     const { templates } = useStoreContext();
     const [selectedIndex, setSelectedIndex] = useState(0);
     const menuRef = useRef<HTMLDivElement>(null);
@@ -29,7 +30,8 @@ const TemplateLinker: React.FC<TemplateLinkerProps> = ({ query, onSelect, onClos
     const style = useDynamicPosition({
         anchorRect,
         isOpen: !!position,
-        menuRef
+        menuRef,
+        scrollContainerRef: editorPaneRef,
     });
 
     useEffect(() => {

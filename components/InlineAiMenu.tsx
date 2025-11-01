@@ -15,6 +15,7 @@ interface InlineAiMenuProps {
     onClose: () => void;
     isApiKeyMissing: boolean;
     isAiEnabled: boolean;
+    editorPaneRef: React.RefObject<HTMLElement>;
 }
 
 const actionMap: { action: InlineAction; label: string }[] = [
@@ -33,7 +34,7 @@ const FormatButton: React.FC<{ onClick: () => void, 'aria-label': string, childr
 );
 
 
-const InlineAiMenu: React.FC<InlineAiMenuProps> = ({ selection, onAction, onFormat, isLoading, onClose, isApiKeyMissing, isAiEnabled }) => {
+const InlineAiMenu: React.FC<InlineAiMenuProps> = ({ selection, onAction, onFormat, isLoading, onClose, isApiKeyMissing, isAiEnabled, editorPaneRef }) => {
     const [isAiMenuOpen, setIsAiMenuOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
 
@@ -41,6 +42,7 @@ const InlineAiMenu: React.FC<InlineAiMenuProps> = ({ selection, onAction, onForm
         anchorRect: selection?.rect || null,
         isOpen: !!selection && !isLoading,
         menuRef,
+        scrollContainerRef: editorPaneRef,
     });
 
     if (!selection) return null;

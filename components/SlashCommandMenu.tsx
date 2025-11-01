@@ -9,9 +9,10 @@ interface SlashCommandMenuProps {
     onClose: () => void;
     position: { top: number; left: number };
     textareaRef: React.RefObject<HTMLTextAreaElement>;
+    editorPaneRef: React.RefObject<HTMLElement>;
 }
 
-const SlashCommandMenu: React.FC<SlashCommandMenuProps> = ({ query, onSelect, onClose, position, textareaRef }) => {
+const SlashCommandMenu: React.FC<SlashCommandMenuProps> = ({ query, onSelect, onClose, position, textareaRef, editorPaneRef }) => {
     const [selectedIndex, setSelectedIndex] = useState(0);
     const menuRef = useRef<HTMLDivElement>(null);
 
@@ -23,7 +24,8 @@ const SlashCommandMenu: React.FC<SlashCommandMenuProps> = ({ query, onSelect, on
     const style = useDynamicPosition({
         anchorRect,
         isOpen: !!position,
-        menuRef
+        menuRef,
+        scrollContainerRef: editorPaneRef,
     });
     
     const filteredCommands = useMemo(() => {

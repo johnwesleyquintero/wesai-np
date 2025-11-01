@@ -10,14 +10,16 @@ interface SpellcheckMenuProps {
     isLoading: boolean;
     error: string | null;
     onClose: () => void;
+    editorPaneRef: React.RefObject<HTMLElement>;
 }
 
-const SpellcheckMenu: React.FC<SpellcheckMenuProps> = ({ activeError, suggestions, onSelect, isLoading, error, onClose }) => {
+const SpellcheckMenu: React.FC<SpellcheckMenuProps> = ({ activeError, suggestions, onSelect, isLoading, error, onClose, editorPaneRef }) => {
     const menuRef = useRef<HTMLDivElement>(null);
     const style = useDynamicPosition({
         anchorRect: activeError?.rect || null,
         isOpen: !!activeError,
         menuRef,
+        scrollContainerRef: editorPaneRef,
     });
 
     if (!activeError) return null;

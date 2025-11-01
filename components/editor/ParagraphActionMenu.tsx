@@ -6,6 +6,7 @@ interface ParagraphActionMenuProps {
     anchorRect: DOMRect;
     onAction: (action: InlineAction) => void;
     onClose: () => void;
+    editorPaneRef: React.RefObject<HTMLElement>;
 }
 
 const actionMap: { action: InlineAction; label: string }[] = [
@@ -15,13 +16,14 @@ const actionMap: { action: InlineAction; label: string }[] = [
     { action: 'simplify', label: 'Simplify Language' },
 ];
 
-const ParagraphActionMenu: React.FC<ParagraphActionMenuProps> = ({ anchorRect, onAction, onClose }) => {
+const ParagraphActionMenu: React.FC<ParagraphActionMenuProps> = ({ anchorRect, onAction, onClose, editorPaneRef }) => {
     const menuRef = useRef<HTMLDivElement>(null);
     const style = useDynamicPosition({
         anchorRect,
         isOpen: true,
         menuRef,
-        align: 'bottom'
+        align: 'bottom',
+        scrollContainerRef: editorPaneRef,
     });
 
     // Close on any click outside

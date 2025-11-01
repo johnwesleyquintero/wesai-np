@@ -178,7 +178,8 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
     }, [editorState.content, viewMode]);
 
     useEffect(() => {
-        resetEditorState({ title: note.title, content: note.content, tags: note.tags });
+        // State is restored from session by useUndoableState on mount.
+        // DO NOT call resetEditorState here, as it would overwrite unsaved session data.
         dispatch({ type: 'RESET_STATE_FOR_NEW_NOTE' });
         resetAiSuggestions();
         setActiveSpellingError(null);
@@ -190,7 +191,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
             dispatch({ type: 'SET_VIEW_MODE', payload: 'edit' });
             setTimeout(() => titleInputRef.current?.focus(), 100);
         }
-    }, [note.id, note.title, note.content, resetEditorState, resetAiSuggestions, setActiveSpellingError, dispatch]);
+    }, [note.id, resetAiSuggestions, setActiveSpellingError, dispatch]);
     
     // Reset auto-title flag if content is cleared
     useEffect(() => {
@@ -411,35 +412,24 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         }
     }, [editorState.content, viewMode, gutterMenu, isEffectivelyReadOnly, isAiEnabled, isApiKeyMissing, getCursorPositionRect]);
 
-    const handleScroll = useCallback(() => {
-        isScrollingRef.current = true;
-        if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
-        scrollTimeoutRef.current = window.setTimeout(() => {
-            isScrollingRef.current = false;
-            updateGutterState(); // Update gutter state once scrolling has stopped
-        }, 150);
-
-        // Always dismiss popups immediately on scroll to prevent "jitter".
-        setParagraphGutterTarget(null);
-        dispatch({ type: 'SET_GUTTER_MENU', payload: null });
-        dispatch({ type: 'SET_SELECTION', payload: null });
-        setActiveSpellingError(null);
-        dispatch({ type: 'SET_NOTE_LINKER', payload: null });
-        dispatch({ type: 'SET_TEMPLATE_LINKER', payload: null });
-        dispatch({ type: 'SET_NOTE_LINKER_FOR_SELECTION', payload: null });
-        dispatch({ type: 'SET_SLASH_COMMAND', payload: null });
-    }, [dispatch, setActiveSpellingError, updateGutterState]);
+    useEffect(() => {
+        const pane = editorPaneRef.current;
+        const handleScroll = () => {
+            isScrollingRef.current = true;
+            if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
+            scrollTimeoutRef.current = window.setTimeout(() => {
+                isScrollingRef.current = false;
+                updateGutterState();
+            }, 150);
+        };
+        pane?.addEventListener('scroll', handleScroll);
+        return () => pane?.removeEventListener('scroll', handleScroll);
+    }, [updateGutterState]);
 
     useEffect(() => {
         // This effect runs after content changes (typing, pasting), ensuring updateGutterState uses fresh state.
         updateGutterState();
     }, [updateGutterState]);
-    
-    useEffect(() => {
-        const pane = editorPaneRef.current;
-        pane?.addEventListener('scroll', handleScroll);
-        return () => pane?.removeEventListener('scroll', handleScroll);
-    }, [handleScroll]);
 
     useEditorHotkeys({
         undo,
@@ -791,11 +781,11 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
             
             <EditorStatusBar wordCount={wordCount} charCount={charCount} readingTime={readingTime} isCheckingSpelling={isCheckingSpelling} />
 
-            {(noteLinker || noteLinkerForSelection) && <NoteLinker query={noteLinker?.query || ''} onSelect={handleInsertLink} onClose={() => { dispatch({ type: 'SET_NOTE_LINKER', payload: null }); dispatch({ type: 'SET_NOTE_LINKER_FOR_SELECTION', payload: null }); }} position={noteLinker?.position || { top: noteLinkerForSelection!.rect.bottom, left: noteLinkerForSelection!.rect.left }} />}
-            {templateLinker && <TemplateLinker query={templateLinker.query} onSelect={handleInsertSyncedBlock} onClose={() => dispatch({ type: 'SET_TEMPLATE_LINKER', payload: null })} position={templateLinker.position} />}
-            {slashCommand && <SlashCommandMenu query={slashCommand.query} position={slashCommand.position} onSelect={handleSelectCommand} onClose={() => dispatch({ type: 'SET_SLASH_COMMAND', payload: null })} textareaRef={textareaRef} />}
-            <InlineAiMenu selection={selection} onAction={async (action) => { if (selection) { const newPos = await handleInlineAiAction(action, selection); if (newPos !== null && textareaRef.current) { textareaRef.current.focus(); desiredCursorPosRef.current = newPos; } } }} onFormat={handleFormatSelection} isLoading={isAiActionLoading} onClose={() => dispatch({ type: 'SET_SELECTION', payload: null })} isApiKeyMissing={isApiKeyMissing} isAiEnabled={isAiEnabled} />
-            <SpellcheckMenu activeError={activeSpellingError} suggestions={spellingSuggestions} onSelect={handleApplySuggestion} isLoading={isLoadingSuggestions} error={suggestionError} onClose={() => setActiveSpellingError(null)} />
+            {(noteLinker || noteLinkerForSelection) && <NoteLinker editorPaneRef={editorPaneRef} query={noteLinker?.query || ''} onSelect={handleInsertLink} onClose={() => { dispatch({ type: 'SET_NOTE_LINKER', payload: null }); dispatch({ type: 'SET_NOTE_LINKER_FOR_SELECTION', payload: null }); }} position={noteLinker?.position || { top: noteLinkerForSelection!.rect.bottom, left: noteLinkerForSelection!.rect.left }} />}
+            {templateLinker && <TemplateLinker editorPaneRef={editorPaneRef} query={templateLinker.query} onSelect={handleInsertSyncedBlock} onClose={() => dispatch({ type: 'SET_TEMPLATE_LINKER', payload: null })} position={templateLinker.position} />}
+            {slashCommand && <SlashCommandMenu editorPaneRef={editorPaneRef} query={slashCommand.query} position={slashCommand.position} onSelect={handleSelectCommand} onClose={() => dispatch({ type: 'SET_SLASH_COMMAND', payload: null })} textareaRef={textareaRef} />}
+            <InlineAiMenu editorPaneRef={editorPaneRef} selection={selection} onAction={async (action) => { if (selection) { const newPos = await handleInlineAiAction(action, selection); if (newPos !== null && textareaRef.current) { textareaRef.current.focus(); desiredCursorPosRef.current = newPos; } } }} onFormat={handleFormatSelection} isLoading={isAiActionLoading} onClose={() => dispatch({ type: 'SET_SELECTION', payload: null })} isApiKeyMissing={isApiKeyMissing} isAiEnabled={isAiEnabled} />
+            <SpellcheckMenu editorPaneRef={editorPaneRef} activeError={activeSpellingError} suggestions={spellingSuggestions} onSelect={handleApplySuggestion} isLoading={isLoadingSuggestions} error={suggestionError} onClose={() => setActiveSpellingError(null)} />
             {isHistoryOpen && <VersionHistorySidebar history={note.history || []} onClose={handleCloseHistory} onPreview={(version) => dispatch({ type: 'SET_PREVIEW_VERSION', payload: version })} onRestore={handleRestore} activeVersionTimestamp={previewVersion?.savedAt} />}
             {gutterMenu && (
                 <ParagraphActionMenu
@@ -804,6 +794,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
                     onAction={(action) => {
                         handleParagraphAiAction(action, { start: gutterMenu.start, end: gutterMenu.end });
                     }}
+                    editorPaneRef={editorPaneRef}
                 />
             )}
             {isDragOver && <div className="absolute inset-0 bg-light-primary/10 dark:bg-dark-primary/10 border-4 border-dashed border-light-primary dark:border-dark-primary rounded-2xl m-4 pointer-events-none flex items-center justify-center"><p className="text-light-primary dark:text-dark-primary font-bold text-2xl">Drop file to import</p></div>}

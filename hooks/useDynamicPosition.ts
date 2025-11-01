@@ -6,9 +6,10 @@ interface UseDynamicPositionOptions {
     align?: 'bottom' | 'top';
     menuRef: React.RefObject<HTMLElement>;
     margin?: number;
+    scrollContainerRef?: React.RefObject<HTMLElement>;
 }
 
-export const useDynamicPosition = ({ anchorRect, isOpen, align = 'bottom', menuRef, margin = 8 }: UseDynamicPositionOptions) => {
+export const useDynamicPosition = ({ anchorRect, isOpen, align = 'bottom', menuRef, margin = 8, scrollContainerRef }: UseDynamicPositionOptions) => {
     const [style, setStyle] = useState<React.CSSProperties>({
         opacity: 0,
         position: 'fixed',
@@ -71,19 +72,21 @@ export const useDynamicPosition = ({ anchorRect, isOpen, align = 'bottom', menuR
 
         // Initial calculation
         handlePositionUpdate();
+        
+        const scrollTarget = scrollContainerRef?.current || window;
 
         window.addEventListener('resize', handlePositionUpdate);
-        window.addEventListener('scroll', handlePositionUpdate, true);
+        scrollTarget.addEventListener('scroll', handlePositionUpdate, true);
 
         return () => {
             window.removeEventListener('resize', handlePositionUpdate);
-            window.removeEventListener('scroll', handlePositionUpdate, true);
+            scrollTarget.removeEventListener('scroll', handlePositionUpdate, true);
             if (frameId.current) {
                 cancelAnimationFrame(frameId.current);
             }
         };
 
-    }, [isOpen, anchorRect, align, menuRef, margin]);
+    }, [isOpen, anchorRect, align, menuRef, margin, scrollContainerRef]);
 
     return style;
 };

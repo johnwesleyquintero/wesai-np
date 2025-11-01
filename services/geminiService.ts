@@ -157,7 +157,7 @@ async function _callGemini<T>(
     let response: GenerateContentResponse;
     try {
         const ai = getGenAI();
-        response = await ai.models.generateContent({ model, contents: normalizedContents, config });
+        response = await ai.models.generateContent({ model, contents: normalizedContents, config: {...config, safetySettings } });
     } catch (e) {
         console.error(`API call error: ${processingOptions.errorMessage}`, e);
         fireRateLimitEvent(e);
@@ -274,35 +274,41 @@ export const semanticSearchNotes = async (query: string, notes: Note[], limit: n
         .map(note => `ID: ${note.id}\nTITLE: ${note.title}\nCONTENT: ${note.content.substring(0, 200)}...`)
         .join('\n---\n');
 
-    try {
-        const ai = getGenAI();
-        const response = await ai.models.generateContent({
-            model: MODEL_NAMES.FLASH,
-            contents: `Based on the user's query, which of the following notes are the most relevant? List the top ${limit} most relevant note IDs.
+    const payload = {
+        model: MODEL_NAMES.FLASH,
+        contents: `Based on the user's query, which of the following notes are the most relevant? List the top ${limit} most relevant note IDs.
 QUERY: "${query}"
 
 NOTES:
 ${notesContext}`,
-            config: {
-                responseMimeType: "application/json",
-                responseSchema: {
-                    type: Type.ARRAY,
-                    description: `An array of the top ${limit} most relevant note IDs.`,
-                    items: { type: Type.STRING },
-                },
+        config: {
+            responseMimeType: "application/json",
+            responseSchema: {
+                type: Type.ARRAY,
+                description: `An array of the top ${limit} most relevant note IDs.`,
+                items: { type: Type.STRING },
             },
-        });
-        try {
-            return JSON.parse(response.text.trim());
-        } catch (parseError) {
-             console.error('Failed to parse JSON in semanticSearchNotes:', parseError, response.text);
-             throw new Error("AI search returned invalid data format.");
+        },
+    };
+
+    return _callGemini(
+        payload,
+        {
+            errorMessage: 'Error in semanticSearchNotes:',
+            processResponse: (res) => {
+                try {
+                    return JSON.parse(res.text.trim());
+                } catch (e) {
+                    console.error('Failed to parse JSON in semanticSearchNotes:', e, res.text);
+                    throw new Error("AI search returned invalid data format.");
+                }
+            },
+            onError: () => {
+                throw new Error("AI search failed. Please check your API key and try again.");
+            },
+            bypassCache: true
         }
-    } catch (e) {
-        console.error('Error in semanticSearchNotes:', e);
-        fireRateLimitEvent(e);
-        throw new Error("AI search failed. Please check your API key and try again.");
-    }
+    );
 };
 
 // --- Note Actions ---

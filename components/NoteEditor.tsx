@@ -260,6 +260,29 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         }
     }, [editorState, note.title, note.content, note.tags, previewVersion, saveStatus, dispatch]);
     
+    // Add safety net for closing the tab with unsaved changes.
+    useEffect(() => {
+        const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+            // Use ref to get latest state, as state in closure can be stale
+            const isDirty = !areNoteStatesEqual(latestEditorStateRef.current, {
+                title: note.title,
+                content: note.content,
+                tags: note.tags,
+            });
+
+            if (isDirty) {
+                e.preventDefault();
+                e.returnValue = ''; // Required for most browsers
+            }
+        };
+
+        window.addEventListener('beforeunload', handleBeforeUnload);
+
+        return () => {
+            window.removeEventListener('beforeunload', handleBeforeUnload);
+        };
+    }, [note.title, note.content, note.tags]); // Dependencies ensure the listener has access to the correct 'note' props for comparison
+
     const handleSave = useCallback(async () => {
         if (saveStatus === 'saving') return;
         dispatch({ type: 'SET_SAVE_STATUS', payload: 'saving' });
@@ -273,26 +296,6 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
             dispatch({ type: 'SET_SAVE_STATUS', payload: 'error' });
         }
     }, [note.id, editorState, updateNote, showToast, dispatch, saveStatus]);
-
-
-    useEffect(() => {
-        const noteAtMount = note;
-        return () => {
-            const latestStateForNote = latestEditorStateRef.current;
-            const isDirty = !areNoteStatesEqual(latestStateForNote, {
-                title: noteAtMount.title,
-                content: noteAtMount.content,
-                tags: noteAtMount.tags,
-            });
-
-            if (isDirty) {
-                updateNote(noteAtMount.id, latestStateForNote).catch(error => {
-                     console.error("Failed to save note on unmount/change:", error);
-                     showToast({ message: `Failed to save "${noteAtMount.title}".`, type: 'error' });
-                });
-            }
-        };
-    }, [note.id, updateNote, showToast]);
 
     const editorActions = useMemo(() => ({ 
         undo, redo, canUndo, canRedo, 

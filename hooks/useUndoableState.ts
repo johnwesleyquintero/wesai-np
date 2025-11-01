@@ -6,7 +6,10 @@ type History<T> = {
   future: T[];
 };
 
-export const useUndoableState = <T,>(initialState: T) => {
+export const useUndoableState = <T,>(
+  initialState: T,
+  isEqual: (a: T, b: T) => boolean = (a, b) => JSON.stringify(a) === JSON.stringify(b)
+) => {
   const [history, setHistory] = useState<History<T>>({
     past: [],
     present: initialState,
@@ -52,7 +55,7 @@ export const useUndoableState = <T,>(initialState: T) => {
     setHistory((currentHistory) => {
       const { past, present } = currentHistory;
       // If the new state is the same as the present, do nothing
-      if (JSON.stringify(newState) === JSON.stringify(present)) {
+      if (isEqual(newState, present)) {
         return currentHistory;
       }
       return {
@@ -61,7 +64,7 @@ export const useUndoableState = <T,>(initialState: T) => {
         future: [], // Clear future on new action
       };
     });
-  }, []);
+  }, [isEqual]);
 
   const reset = useCallback((newInitialState: T) => {
      setHistory({

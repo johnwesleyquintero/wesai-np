@@ -278,7 +278,7 @@ const ChatInput: React.FC = () => {
     const [image, setImage] = useState<string | null>(null);
     const { 
         chatMode, chatStatus, onSendMessage, onGenerateServiceResponse, onSendGeneralMessage, onGenerateAmazonCopy,
-        chatMessages, responders, addResponder, deleteResponder,
+        recallLastMessage, responders, addResponder, deleteResponder, deleteMessage,
     } = useChatContext();
     const { showToast } = useToast();
     const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -334,10 +334,10 @@ const ChatInput: React.FC = () => {
             handleSend();
         } else if (e.key === 'ArrowUp' && input === '') {
             e.preventDefault();
-            const lastUserMessage = [...chatMessages].reverse().find(m => m.role === 'user');
-            if (lastUserMessage && typeof lastUserMessage.content === 'string') {
-                // Non-destructive: just copy the content for editing
-                setInput(lastUserMessage.content);
+            const messageToRecall = recallLastMessage();
+            if (messageToRecall && typeof messageToRecall.content === 'string') {
+                setInput(messageToRecall.content);
+                deleteMessage(messageToRecall.id);
             }
         }
     };

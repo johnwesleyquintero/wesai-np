@@ -30,6 +30,25 @@ interface NoteEditorProps {
 
 type NoteState = { title: string; content: string; tags: string[] };
 
+const areNoteStatesEqual = (a: NoteState, b: NoteState): boolean => {
+    if (!a || !b) return a === b;
+    if (a.title !== b.title || a.content !== b.content) {
+        return false;
+    }
+    if (a.tags.length !== b.tags.length) {
+        return false;
+    }
+    // Create a set from one array and check if all elements of the other are present
+    const tagsSetA = new Set(a.tags);
+    for (const tag of b.tags) {
+        if (!tagsSetA.has(tag)) {
+            return false;
+        }
+    }
+    return true;
+};
+
+
 const SCROLL_DISMISS_THRESHOLD = 20;
 
 const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
@@ -51,7 +70,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         title: note.title,
         content: note.content,
         tags: note.tags,
-    });
+    }, areNoteStatesEqual);
     
     const latestEditorStateRef = useRef(editorState);
     useEffect(() => {
@@ -174,7 +193,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
     
         // Check for external updates
         if (note.updatedAt !== prevNoteRef.current.updatedAt) {
-            const isSelfUpdate = JSON.stringify(latestEditorStateRef.current) === JSON.stringify({
+            const isSelfUpdate = areNoteStatesEqual(latestEditorStateRef.current, {
                 title: note.title,
                 content: note.content,
                 tags: note.tags,
@@ -186,7 +205,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
                 return;
             }
     
-            const hasLocalChanges = JSON.stringify(latestEditorStateRef.current) !== JSON.stringify({
+            const hasLocalChanges = !areNoteStatesEqual(latestEditorStateRef.current, {
                 title: prevNoteRef.current.title,
                 content: prevNoteRef.current.content,
                 tags: prevNoteRef.current.tags,
@@ -224,7 +243,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
     useEffect(() => {
         if (previewVersion) return;
 
-        const isLiveDirty = JSON.stringify(editorState) !== JSON.stringify({
+        const isLiveDirty = !areNoteStatesEqual(editorState, {
             title: note.title,
             content: note.content,
             tags: note.tags,
@@ -260,7 +279,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         const noteAtMount = note;
         return () => {
             const latestStateForNote = latestEditorStateRef.current;
-            const isDirty = JSON.stringify(latestStateForNote) !== JSON.stringify({
+            const isDirty = !areNoteStatesEqual(latestStateForNote, {
                 title: noteAtMount.title,
                 content: noteAtMount.content,
                 tags: noteAtMount.tags,

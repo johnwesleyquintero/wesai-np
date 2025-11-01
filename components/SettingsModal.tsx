@@ -30,7 +30,7 @@ const TabButton: React.FC<{ active: boolean; onClick: () => void; children: Reac
 
 const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialTab }) => {
     const { templates, addTemplate, updateTemplate, deleteTemplate, notes, collections, smartCollections, importData } = useStoreContext();
-    const { isAiEnabled, toggleAiEnabled } = useUIContext();
+    const { isAiEnabled, toggleAiEnabled, showConfirmation } = useUIContext();
     const { showToast } = useToast();
     
     const { apiKey, saveApiKey } = useApiKey();
@@ -94,12 +94,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
             updateTemplate(templateToEdit.id, templateData);
         } else {
             addTemplate(templateData.title, templateData.content);
-        }
-    };
-
-    const handleDeleteTemplate = (id: string) => {
-        if (window.confirm('Are you sure you want to delete this template?')) {
-            deleteTemplate(id);
         }
     };
 
@@ -285,7 +279,19 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
                                             <div className="space-x-2 flex-shrink-0">
                                                 <button onClick={() => handleCopySyncId(template.id)} className="text-sm text-light-primary dark:text-dark-primary hover:underline" title="Copy Sync ID">Copy ID</button>
                                                 <button onClick={() => handleOpenTemplateEditor(template)} className="text-sm text-light-primary dark:text-dark-primary hover:underline">Edit</button>
-                                                <button onClick={() => handleDeleteTemplate(template.id)} className="text-sm text-red-500 hover:underline">Delete</button>
+                                                <button
+                                                    onClick={() => showConfirmation({
+                                                        title: "Delete Template",
+                                                        message: `Are you sure you want to permanently delete the template "${template.title}"? This cannot be undone. To confirm, type "${template.title}".`,
+                                                        onConfirm: () => deleteTemplate(template.id),
+                                                        confirmText: "Delete",
+                                                        confirmClass: "bg-red-600 hover:bg-red-700",
+                                                        confirmationRequiredText: template.title,
+                                                    })}
+                                                    className="text-sm text-red-500 hover:underline"
+                                                >
+                                                    Delete
+                                                </button>
                                             </div>
                                         </div>
                                     ))}

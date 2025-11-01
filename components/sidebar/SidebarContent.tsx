@@ -3,7 +3,7 @@ import { Note, TreeNode, Collection } from '../../types';
 import NoteCard from '../NoteCard';
 import {
     PencilSquareIcon, PlusIcon, FolderPlusIcon, BrainIcon, TrashIcon, XMarkIcon,
-    ArrowDownTrayIcon, SparklesIcon
+    ArrowDownTrayIcon, SparklesIcon, StarIcon
 } from '../Icons';
 import SidebarNode from '../SidebarNode';
 import CollapsibleSection from './CollapsibleSection';
@@ -186,7 +186,10 @@ const SidebarContent: React.FC = () => {
                     />
                 ))
             ) : (
-                 <p className="px-2 py-1 text-xs text-light-text/50 dark:text-dark-text/50">No favorite notes yet.</p>
+                <div className="px-2 py-1 text-xs text-light-text/50 dark:text-dark-text/50 flex items-center gap-2">
+                    <StarIcon className="w-4 h-4 opacity-70" />
+                    <span>No favorite notes yet.</span>
+                </div>
             )}
         </CollapsibleSection>
     );
@@ -212,8 +215,9 @@ const SidebarContent: React.FC = () => {
                                  label: 'Delete Smart Folder', 
                                  action: () => showConfirmation({
                                     title: "Delete Smart Folder",
-                                    message: `Are you sure you want to delete the smart folder "${sc.name}"? This will not delete any notes.`,
+                                    message: `Are you sure you want to delete the smart folder "${sc.name}"? This will not delete any notes. To confirm, please type "${sc.name}".`,
                                     onConfirm: () => handleDeleteSmartCollectionConfirm(sc),
+                                    confirmationRequiredText: sc.name,
                                  }), 
                                  isDestructive: true, 
                                  icon: <TrashIcon /> 

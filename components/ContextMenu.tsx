@@ -1,6 +1,7 @@
-import React, { useEffect, useRef, useLayoutEffect, useState } from 'react';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { ContextMenuItem } from '../types';
 import { ChevronRightIcon } from './Icons';
+import { useDynamicPosition } from '../hooks/useDynamicPosition';
 
 interface ContextMenuProps {
     x: number;
@@ -79,48 +80,15 @@ const MenuItem: React.FC<{ item: Exclude<ContextMenuItem, { divider: true }>; on
 
 const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, items, onClose, isSubMenu = false }) => {
     const menuRef = useRef<HTMLDivElement>(null);
-    const [style, setStyle] = useState<React.CSSProperties>({
-        opacity: 0,
-        position: 'fixed',
-        top: `${y}px`,
-        left: `${x}px`,
+    const anchorRect = useMemo(() => new DOMRect(x, y, 0, 0), [x, y]);
+
+    const style = useDynamicPosition({
+        anchorRect,
+        isOpen: true,
+        menuRef,
+        align: 'bottom',
+        margin: isSubMenu ? 0 : 2,
     });
-
-    useLayoutEffect(() => {
-        if (menuRef.current) {
-            const menuWidth = menuRef.current.offsetWidth;
-            const menuHeight = menuRef.current.offsetHeight;
-            const { innerWidth, innerHeight } = window;
-            const parentEl = menuRef.current.parentElement;
-            const parentRect = isSubMenu && parentEl ? parentEl.getBoundingClientRect() : null;
-
-            let newTop = y;
-            let newLeft = x;
-            
-            if (isSubMenu && parentRect) {
-                if (x + menuWidth > innerWidth) {
-                    newLeft = parentRect.left - menuWidth;
-                }
-            } else if (x + menuWidth > innerWidth) {
-                newLeft = innerWidth - menuWidth - 10;
-            }
-
-            if (y + menuHeight > innerHeight) {
-                newTop = innerHeight - menuHeight - 10;
-            }
-
-            if (newTop < 10) newTop = 10;
-            if (newLeft < 10) newLeft = 10;
-            
-            setStyle({
-                opacity: 1,
-                position: 'fixed',
-                top: `${newTop}px`,
-                left: `${newLeft}px`,
-                transition: 'opacity 0.1s ease-in-out',
-            });
-        }
-    }, [x, y, isSubMenu]);
 
     useEffect(() => {
         if (isSubMenu) return; // Only root menu handles this

@@ -68,25 +68,6 @@ export const useChatProviderLogic = () => {
 
     useEffect(() => {
         try {
-            const historiesToSave = (Object.keys(chatHistories) as ChatMode[]).reduce((acc, mode) => {
-                const history = chatHistories[mode];
-                if (Array.isArray(history)) {
-                    // Truncate each history to the last 100 messages
-                    acc[mode] = history.slice(-100);
-                } else {
-                    acc[mode] = [];
-                }
-                return acc;
-            }, {} as Record<ChatMode, ChatMessage[]>);
-
-            localStorage.setItem(CHAT_HISTORIES_STORAGE_KEY, JSON.stringify(historiesToSave));
-        } catch (error) {
-            console.error("Failed to save chat history to localStorage", error);
-        }
-    }, [chatHistories]);
-    
-    useEffect(() => {
-        try {
             localStorage.setItem(RESPONDERS_STORAGE_KEY, JSON.stringify(responders));
         } catch (error) {
             console.error("Failed to save responders to localStorage", error);
@@ -460,20 +441,13 @@ ${s.length > 0 ? s.map((n, i) => `--- NOTE [${i + 1}]: ${n.title} ---\n${n.conte
     
     const recallLastMessage = useCallback(() => {
         const currentHistory = chatHistoriesRef.current[chatMode];
-        // FIX: Replace findLastIndex for wider browser/environment compatibility.
-        let lastUserMessageIndex = -1;
+        // Use a reverse for-loop for broad compatibility instead of findLastIndex.
         for (let i = currentHistory.length - 1; i >= 0; i--) {
             const msg = currentHistory[i];
             if (msg.role === 'user' && typeof msg.content === 'string') {
-                lastUserMessageIndex = i;
-                break;
+                return msg;
             }
         }
-
-        if (lastUserMessageIndex > -1) {
-            return currentHistory[lastUserMessageIndex];
-        }
-
         return null;
     }, [chatMode]);
     

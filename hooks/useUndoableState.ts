@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 
 type History<T> = {
   past: T[];
@@ -6,15 +6,50 @@ type History<T> = {
   future: T[];
 };
 
+interface UndoableStateOptions<T> {
+  isEqual?: (a: T, b: T) => boolean;
+  sessionKey?: string;
+}
+
 export const useUndoableState = <T,>(
   initialState: T,
-  isEqual: (a: T, b: T) => boolean = (a, b) => JSON.stringify(a) === JSON.stringify(b)
+  options: UndoableStateOptions<T> = {}
 ) => {
-  const [history, setHistory] = useState<History<T>>({
-    past: [],
-    present: initialState,
-    future: [],
-  });
+  const { 
+    isEqual = (a, b) => JSON.stringify(a) === JSON.stringify(b), 
+    sessionKey 
+  } = options;
+
+  const getInitialHistory = useCallback((): History<T> => {
+    if (sessionKey) {
+      try {
+        const savedSession = sessionStorage.getItem(sessionKey);
+        if (savedSession) {
+          const parsed = JSON.parse(savedSession);
+          // Basic validation to ensure we're not restoring corrupted data
+          if ('past' in parsed && 'present' in parsed && 'future' in parsed) {
+            return parsed;
+          }
+        }
+      } catch (e) {
+        console.error(`Failed to restore editor session from key "${sessionKey}":`, e);
+      }
+    }
+    return { past: [], present: initialState, future: [] };
+  }, [initialState, sessionKey]);
+  
+  const [history, setHistory] = useState<History<T>>(getInitialHistory);
+  
+  useEffect(() => {
+      if (sessionKey) {
+          try {
+              sessionStorage.setItem(sessionKey, JSON.stringify(history));
+          } catch (e) {
+              console.error(`Failed to save editor session for key "${sessionKey}":`, e);
+          }
+      }
+  }, [history, sessionKey]);
+
 
   const canUndo = history.past.length > 0;
   const canRedo = history.future.length > 0;

@@ -5,9 +5,10 @@ interface UseDynamicPositionOptions {
     isOpen: boolean;
     align?: 'bottom' | 'top';
     menuRef: React.RefObject<HTMLElement>;
+    margin?: number;
 }
 
-export const useDynamicPosition = ({ anchorRect, isOpen, align = 'bottom', menuRef }: UseDynamicPositionOptions) => {
+export const useDynamicPosition = ({ anchorRect, isOpen, align = 'bottom', menuRef, margin = 8 }: UseDynamicPositionOptions) => {
     const [style, setStyle] = useState<React.CSSProperties>({
         opacity: 0,
         position: 'fixed',
@@ -32,14 +33,14 @@ export const useDynamicPosition = ({ anchorRect, isOpen, align = 'bottom', menuR
             
             let newTop: number;
             if (align === 'bottom') {
-                newTop = bottom + 8;
+                newTop = bottom + margin;
                 if (newTop + menuHeight > innerHeight) {
-                    newTop = top - menuHeight - 8;
+                    newTop = top - menuHeight - margin;
                 }
             } else { // align === 'top'
-                newTop = top - menuHeight - 8;
+                newTop = top - menuHeight - margin;
                 if (newTop < 0) {
-                    newTop = bottom + 8;
+                    newTop = bottom + margin;
                 }
             }
 
@@ -82,7 +83,7 @@ export const useDynamicPosition = ({ anchorRect, isOpen, align = 'bottom', menuR
             }
         };
 
-    }, [isOpen, anchorRect, align, menuRef]);
+    }, [isOpen, anchorRect, align, menuRef, margin]);
 
     return style;
 };

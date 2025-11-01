@@ -56,6 +56,8 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
     const { showToast } = useToast();
     const { registerEditorActions, unregisterEditorActions } = useEditorContext();
 
+    const EDITOR_SESSION_KEY = `wescore-editor-session-${note.id}`;
+
     const {
         state: editorState,
         set: setEditorState,
@@ -65,11 +67,17 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         redo,
         canUndo,
         canRedo,
-    } = useUndoableState<NoteState>({
-        title: note.title,
-        content: note.content,
-        tags: note.tags,
-    }, areNoteStatesEqual);
+    } = useUndoableState<NoteState>(
+        {
+            title: note.title,
+            content: note.content,
+            tags: note.tags,
+        },
+        {
+            isEqual: areNoteStatesEqual,
+            sessionKey: EDITOR_SESSION_KEY,
+        }
+    );
     
     const latestEditorStateRef = useRef(editorState);
     useEffect(() => {
@@ -271,6 +279,8 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
     // Auto-save on unmount/note change
     useEffect(() => {
         const noteAtMount = note;
+        const sessionKeyAtMount = `wescore-editor-session-${noteAtMount.id}`;
+
         return () => {
             const latestStateForNote = latestEditorStateRef.current;
             const isDirty = !areNoteStatesEqual(latestStateForNote, {
@@ -284,6 +294,13 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
                      console.error("Failed to save note on unmount/change:", error);
                      showToast({ message: `Failed to save "${noteAtMount.title}".`, type: 'error' });
                 });
+            }
+
+            // Clean up session storage for the note we are leaving
+            try {
+                sessionStorage.removeItem(sessionKeyAtMount);
+            } catch (e) {
+                console.warn(`Could not remove session storage for key ${sessionKeyAtMount}:`, e);
             }
         };
     }, [note.id, updateNote, showToast]);

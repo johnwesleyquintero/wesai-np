@@ -276,6 +276,7 @@ const Message: React.FC<MessageProps> = ({ message, onDelete, onToggleSources, i
 const ChatInput: React.FC = () => {
     const [input, setInput] = useState('');
     const [image, setImage] = useState<string | null>(null);
+    const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
     const { 
         chatMode, chatStatus, onSendMessage, onGenerateServiceResponse, onSendGeneralMessage, onGenerateAmazonCopy,
         recallLastMessage, responders, addResponder, deleteResponder, deleteMessage,
@@ -325,6 +326,7 @@ const ChatInput: React.FC = () => {
 
         setInput('');
         setImage(null);
+        setIsPreviewModalOpen(false);
         if (fileInputRef.current) fileInputRef.current.value = '';
     };
 
@@ -371,11 +373,21 @@ const ChatInput: React.FC = () => {
 
     return (
         <div className="flex-shrink-0 p-4 sm:p-6 border-t border-light-border dark:border-dark-border">
+            {isPreviewModalOpen && image && (
+                <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={() => setIsPreviewModalOpen(false)}>
+                    <img src={`data:image/jpeg;base64,${image}`} alt="Preview" className="max-w-[90vw] max-h-[90vh] rounded-lg shadow-2xl" onClick={e => e.stopPropagation()} />
+                     <button onClick={() => setIsPreviewModalOpen(false)} className="absolute top-4 right-4 text-white p-2 rounded-full bg-black/50 hover:bg-black/80">
+                        <XMarkIcon className="w-6 h-6"/>
+                    </button>
+                </div>
+            )}
             <div className="max-w-3xl mx-auto">
                 {image && (
                     <div className="relative w-24 h-24 mb-2">
-                        <img src={`data:image/jpeg;base64,${image}`} alt="Preview" className="w-full h-full object-cover rounded-lg" />
-                        <button onClick={() => setImage(null)} className="absolute -top-2 -right-2 bg-light-ui dark:bg-dark-ui rounded-full p-1"><XCircleIcon /></button>
+                         <button onClick={() => setIsPreviewModalOpen(true)} className="w-full h-full rounded-lg overflow-hidden focus:outline-none focus:ring-2 focus:ring-light-primary dark:focus:ring-dark-primary">
+                            <img src={`data:image/jpeg;base64,${image}`} alt="Preview" className="w-full h-full object-cover" />
+                        </button>
+                        <button onClick={() => { setImage(null); setIsPreviewModalOpen(false); }} className="absolute -top-2 -right-2 bg-light-ui dark:bg-dark-ui rounded-full p-1 shadow-md"><XCircleIcon /></button>
                     </div>
                 )}
                  <div className="relative flex items-center p-2 rounded-lg bg-light-ui dark:bg-dark-ui border border-light-border/50 dark:border-dark-border/50 focus-within:border-light-primary dark:focus-within:border-dark-primary">

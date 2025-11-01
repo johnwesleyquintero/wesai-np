@@ -314,9 +314,10 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
             {isCollection && isExpanded && (
                 <div>
                     {node.children.length === 0 && !isSearching && (
-                        <p style={{ paddingLeft: `${(level + 1) * 16 + 28}px` }} className="py-1.5 text-xs text-light-text/50 dark:text-dark-text/50">
-                           Empty folder
-                        </p>
+                        <div style={{ paddingLeft: `${(level + 1) * 16 + 8}px` }} className="flex items-center gap-2 py-1.5 text-xs text-light-text/50 dark:text-dark-text/50">
+                           <FolderIcon className="w-4 h-4 opacity-70" />
+                           <span>Empty folder</span>
+                        </div>
                     )}
                     {node.children.map(childNode => (
                         <SidebarNode

@@ -1,5 +1,6 @@
+
+
 import React, { useEffect, useRef, useMemo, useCallback, useState, useLayoutEffect } from 'react';
-// FIX: Import `InlineAction` type.
 import { Note, NoteVersion, Template, InlineAction } from '../types';
 import EditorHeader from './editor/EditorHeader';
 import EditorTitle from './editor/EditorTitle';

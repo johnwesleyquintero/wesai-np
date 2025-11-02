@@ -14,15 +14,15 @@ import SpellcheckMenu from './SpellcheckMenu';
 import { useEditorContext, useStoreContext, useUIContext, useAuthContext } from '../context/AppContext';
 import NoteLinker from './NoteLinker';
 import TemplateLinker from './TemplateLinker';
-import { useBacklinks } from '../hooks/useBacklinks';
+import { useBacklinks } from './hooks/useBacklinks';
 import SlashCommandMenu from './SlashCommandMenu';
 import { uploadImage, getPublicUrl } from '../lib/supabaseClient';
 import { useToast } from '../context/ToastContext';
-import { useSpellcheck } from '../hooks/useSpellcheck';
-import { useNoteEditorReducer } from '../hooks/useNoteEditorReducer';
-import { useAiSuggestions } from '../hooks/useAiSuggestions';
-import { useAiActions } from '../hooks/useAiActions';
-import { useEditorHotkeys } from '../hooks/useEditorHotkeys';
+import { useSpellcheck } from './hooks/useSpellcheck';
+import { useNoteEditorReducer } from './hooks/useNoteEditorReducer';
+import { useAiSuggestions } from './hooks/useAiSuggestions';
+import { useAiActions } from './hooks/useAiActions';
+import { useEditorHotkeys } from './hooks/useEditorHotkeys';
 import { SparklesIcon } from './Icons';
 import ParagraphActionMenu from './editor/ParagraphActionMenu';
 
@@ -436,7 +436,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
     useEditorHotkeys({
         undo,
         redo,
-        isModalOpen: isSettingsOpen || isCommandPaletteOpen || isSmartFolderModalOpen || isWelcomeModalOpen || !!noteLinker || !!noteLinkerForSelection,
+        isModalOpen: isSettingsOpen || isCommandPaletteOpen || isSmartFolderModalOpen || isWelcomeModalOpen || !!noteLinker || !!noteLinkerForSelection || !!selection || !!activeSpellingError,
         editorElements: [titleInputRef, textareaRef],
     });
 

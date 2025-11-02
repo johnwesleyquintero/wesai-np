@@ -89,10 +89,13 @@ export const useUndoableState = <T,>(
     });
   }, []);
 
-  const set = useCallback((newState: T) => {
+  const set = useCallback((newStateOrFn: T | ((prevState: T) => T)) => {
     setHistory((currentHistory) => {
       const { past, present } = currentHistory;
-      // If the new state is the same as the present, do nothing
+      const newState = typeof newStateOrFn === 'function' 
+        ? (newStateOrFn as (prevState: T) => T)(present) 
+        : newStateOrFn;
+
       if (isEqual(newState, present)) {
         return currentHistory;
       }

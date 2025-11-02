@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useMemo, useCallback, useState, useLayoutEffect } from 'react';
-import { Note, NoteVersion, Template } from '../types';
+// FIX: Import `InlineAction` type.
+import { Note, NoteVersion, Template, InlineAction } from '../types';
 import EditorHeader from './editor/EditorHeader';
 import EditorTitle from './editor/EditorTitle';
 import EditorContent from './editor/EditorContent';
@@ -108,7 +109,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         handleEnhanceNote,
         handleInlineAiAction,
         handleParagraphAiAction,
-    } = useAiActions(editorState, setEditorState, dispatch);
+    } = useAiActions(setEditorState, dispatch);
 
     const isEffectivelyReadOnly = !!previewVersion || viewMode === 'preview' || !!isFullAiActionLoading;
 
@@ -323,10 +324,10 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
 
     const editorActions = useMemo(() => ({ 
         undo, redo, canUndo, canRedo, 
-        applyAiActionToFullNote,
+        applyAiActionToFullNote: (action: InlineAction) => applyAiActionToFullNote(action, editorState.content),
         suggestTagsForFullNote: () => suggestTagsForFullNote(editorState.title, editorState.content),
         suggestTitleForFullNote: () => suggestTitleForFullNote(editorState.content),
-        summarizeAndFindActionForFullNote
+        summarizeAndFindActionForFullNote: () => summarizeAndFindActionForFullNote(editorState.content),
     }), [
         undo, redo, canUndo, canRedo, applyAiActionToFullNote, suggestTagsForFullNote, 
         suggestTitleForFullNote, summarizeAndFindActionForFullNote, editorState.title, editorState.content
@@ -507,12 +508,10 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
             const char = e.key; const closingChar = pairs[char];
             if (selectionStart !== selectionEnd) {
                 const selectedText = value.substring(selectionStart, selectionEnd);
-                const newContent = `${value.substring(0, selectionStart)}${char}${selectedText}${closingChar}${value.substring(selectionEnd)}`;
-                setEditorState({ ...editorState, content: newContent });
+                setEditorState(prev => ({ ...prev, content: `${prev.content.substring(0, selectionStart)}${char}${selectedText}${closingChar}${prev.content.substring(selectionEnd)}` }));
                 desiredCursorPosRef.current = { start: selectionStart + 1, end: selectionEnd + 1 };
             } else {
-                const newContent = `${value.substring(0, selectionStart)}${char}${closingChar}${value.substring(selectionStart)}`;
-                setEditorState({ ...editorState, content: newContent });
+                setEditorState(prev => ({ ...prev, content: `${prev.content.substring(0, selectionStart)}${char}${closingChar}${prev.content.substring(selectionStart)}` }));
                 desiredCursorPosRef.current = selectionStart + 1;
             }
         }
@@ -521,8 +520,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
             const charAfter = value[selectionStart];
             if (charBefore && pairs[charBefore] === charAfter) {
                 e.preventDefault();
-                const newContent = value.substring(0, selectionStart - 1) + value.substring(selectionStart + 1);
-                setEditorState({ ...editorState, content: newContent });
+                setEditorState(prev => ({ ...prev, content: prev.content.substring(0, selectionStart - 1) + prev.content.substring(selectionStart + 1) }));
                 desiredCursorPosRef.current = selectionStart - 1;
             }
         }
@@ -540,8 +538,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
                     const publicUrl = getPublicUrl(path);
                     const markdownImage = `\n![${file.name}](${publicUrl})\n`;
                     const { selectionStart } = textareaRef.current!;
-                    const newContent = editorState.content.slice(0, selectionStart) + markdownImage + editorState.content.slice(selectionStart);
-                    setEditorState({ ...editorState, content: newContent });
+                    setEditorState(prev => ({ ...prev, content: prev.content.slice(0, selectionStart) + markdownImage + prev.content.slice(selectionStart) }));
                     showToast({ message: 'Image uploaded successfully!', type: 'success' });
                 }).catch(err => showToast({ message: err.message || 'Failed to upload image.', type: 'error' }));
             } else if (file.type.startsWith('text/') || file.name.endsWith('.md')) {
@@ -550,8 +547,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
                     const textContent = loadEvent.target?.result;
                     if (typeof textContent === 'string') {
                         const { selectionStart } = textareaRef.current!;
-                        const newContent = editorState.content.slice(0, selectionStart) + `\n\n${textContent}\n\n` + editorState.content.slice(selectionStart);
-                        setEditorState({ ...editorState, content: newContent });
+                        setEditorState(prev => ({ ...prev, content: prev.content.slice(0, selectionStart) + `\n\n${textContent}\n\n` + prev.content.slice(selectionStart) }));
                     }
                 };
                 reader.readAsText(file);
@@ -577,8 +573,10 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
                     const textarea = textareaRef.current;
                     if (textarea) {
                         const { selectionStart, selectionEnd } = textarea;
-                        const newContent = editorState.content.slice(0, selectionStart) + markdownImage + editorState.content.slice(selectionEnd);
-                        setEditorState({ ...editorState, content: newContent });
+                        setEditorState(prev => {
+                           const newContent = prev.content.slice(0, selectionStart) + markdownImage + prev.content.slice(selectionEnd);
+                           return { ...prev, content: newContent };
+                        });
                         
                         const newCursorPos = selectionStart + markdownImage.length;
                         desiredCursorPosRef.current = newCursorPos;
@@ -588,7 +586,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
                 }).catch(err => showToast({ message: err.message || 'Failed to upload pasted image.', type: 'error' }));
             }
         }
-    }, [isEffectivelyReadOnly, session, note.id, showToast, editorState, setEditorState]);
+    }, [isEffectivelyReadOnly, session, note.id, showToast, setEditorState]);
     
     const handleContentBlur = () => {
         if (isAiEnabled && !hasAutoTitledRef.current && editorState.title === 'Untitled Note' && editorState.content.trim()) {
@@ -606,16 +604,14 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         if (!textarea) return;
         if (noteLinkerForSelection) {
             const { start, end, text } = noteLinkerForSelection;
-            const newContent = `${editorState.content.substring(0, start)}[[${noteId}|${text}]]${editorState.content.substring(end)}`;
-            setEditorState({ ...editorState, content: newContent });
+            setEditorState(prev => ({ ...prev, content: `${prev.content.substring(0, start)}[[${noteId}|${text}]]${prev.content.substring(end)}` }));
             dispatch({ type: 'SET_NOTE_LINKER_FOR_SELECTION', payload: null });
             const pos = start + noteId.length + text.length + 5;
             desiredCursorPosRef.current = pos;
             textarea.focus();
         } else if (noteLinker) {
             const { selectionStart } = textarea; const startIndex = selectionStart - noteLinker.query.length - 2;
-            const newContent = `${editorState.content.substring(0, startIndex)}[[${noteId}|${noteTitle}]]${editorState.content.substring(selectionStart)}`;
-            setEditorState({ ...editorState, content: newContent });
+            setEditorState(prev => ({ ...prev, content: `${prev.content.substring(0, startIndex)}[[${noteId}|${noteTitle}]]${prev.content.substring(selectionStart)}` }));
             dispatch({ type: 'SET_NOTE_LINKER', payload: null });
             const pos = startIndex + noteId.length + noteTitle.length + 5;
             desiredCursorPosRef.current = pos;
@@ -629,8 +625,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         if (!textarea) return;
         const { selectionStart } = textarea;
         const startIndex = selectionStart - templateLinker.query.length;
-        const newContent = `${editorState.content.substring(0, startIndex)}[[sync:${templateId}]]${editorState.content.substring(selectionStart)}`;
-        setEditorState({ ...editorState, content: newContent });
+        setEditorState(prev => ({ ...prev, content: `${prev.content.substring(0, startIndex)}[[sync:${templateId}]]${prev.content.substring(selectionStart)}` }));
         dispatch({ type: 'SET_TEMPLATE_LINKER', payload: null });
         const pos = startIndex + `[[sync:${templateId}]]`.length;
         desiredCursorPosRef.current = pos;
@@ -640,10 +635,12 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
     const handleSelectCommand = (commandId: string) => {
         if (!slashCommand) return;
         const { range, position } = slashCommand;
-        const currentContent = editorState.content;
+        
         const replaceCommandText = (replacement: string, cursorOffset = replacement.length) => {
-            const newContent = currentContent.substring(0, range.start) + replacement + currentContent.substring(range.end);
-            setEditorState({ ...editorState, content: newContent });
+            setEditorState(prev => {
+                const newContent = prev.content.substring(0, range.start) + replacement + prev.content.substring(range.end);
+                return { ...prev, content: newContent };
+            });
             const pos = range.start + cursorOffset;
             desiredCursorPosRef.current = pos;
             textareaRef.current?.focus();
@@ -652,11 +649,10 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
             case 'h1': replaceCommandText('# '); break; case 'h2': replaceCommandText('## '); break;
             case 'h3': replaceCommandText('### '); break; case 'list': replaceCommandText('- '); break;
             case 'todo': replaceCommandText('- [ ] '); break; case 'divider': replaceCommandText('---\n'); break;
-            case 'ai-summarize': summarizeAndFindActionForFullNote(); replaceCommandText('', 0); break;
-            case 'ai-fix': applyAiActionToFullNote('fix'); replaceCommandText('', 0); break;
+            case 'ai-summarize': summarizeAndFindActionForFullNote(editorState.content); replaceCommandText('', 0); break;
+            case 'ai-fix': applyAiActionToFullNote('fix', editorState.content); replaceCommandText('', 0); break;
             case 'synced-block':
-                const newContent = currentContent.substring(0, range.start) + currentContent.substring(range.end);
-                setEditorState({ ...editorState, content: newContent });
+                setEditorState(prev => ({...prev, content: prev.content.substring(0, range.start) + prev.content.substring(range.end)}));
                 dispatch({ type: 'SET_TEMPLATE_LINKER', payload: { query: '', position }});
                 break;
             default: break;
@@ -671,8 +667,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         switch(format) {
             case 'bold': prefix = suffix = '**'; break; case 'italic': prefix = suffix = '*'; break; case 'code': prefix = suffix = '`'; break;
         }
-        const newContent = editorState.content.substring(0, start) + prefix + text + suffix + editorState.content.substring(end);
-        setEditorState({...editorState, content: newContent });
+        setEditorState(prev => ({...prev, content: prev.content.substring(0, start) + prefix + text + suffix + prev.content.substring(end)}));
         dispatch({ type: 'SET_SELECTION', payload: null });
         const pos = end + prefix.length + suffix.length;
         desiredCursorPosRef.current = pos;
@@ -682,8 +677,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
     const handleApplySuggestion = (suggestion: string) => {
         if (!activeSpellingError) return;
         const { index, length } = activeSpellingError.error;
-        const newContent = editorState.content.substring(0, index) + suggestion + editorState.content.substring(index + length);
-        setEditorState({ ...editorState, content: newContent });
+        setEditorState(prev => ({ ...prev, content: prev.content.substring(0, index) + suggestion + prev.content.substring(index + length) }));
         setActiveSpellingError(null);
     };
 
@@ -706,7 +700,17 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
             apply();
         }
     };
-    const handleToggleTask = (lineNumber: number) => { const lines = editorState.content.split('\n'); if (lineNumber >= lines.length) return; const line = lines[lineNumber]; const toggledLine = line.includes('[ ]') ? line.replace('[ ]', '[x]') : line.replace(/\[(x|X)\]/, '[ ]'); lines[lineNumber] = toggledLine; const newContent = lines.join('\n'); setEditorState({ ...editorState, content: newContent }); };
+    const handleToggleTask = (lineNumber: number) => { 
+        setEditorState(prev => {
+            const lines = prev.content.split('\n'); 
+            if (lineNumber >= lines.length) return prev; 
+            const line = lines[lineNumber]; 
+            const toggledLine = line.includes('[ ]') ? line.replace('[ ]', '[x]') : line.replace(/\[(x|X)\]/, '[ ]'); 
+            lines[lineNumber] = toggledLine; 
+            const newContent = lines.join('\n'); 
+            return { ...prev, content: newContent };
+        });
+    };
     const handleAddTag = (tagToAdd: string) => { if (!editorState.tags.includes(tagToAdd)) { setEditorState({ ...editorState, tags: [...editorState.tags, tagToAdd] }); } setSuggestedTags(prev => prev.filter(t => t !== tagToAdd)); };
     const handleApplyTitleSuggestion = (title: string) => { setEditorState({ ...editorState, title }); setSuggestedTitle(null); };
 
@@ -716,7 +720,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
     return (
         <div className="flex-1 flex flex-col h-full relative bg-light-background dark:bg-dark-background" onDragOver={(e) => { e.preventDefault(); if (!isEffectivelyReadOnly) dispatch({ type: 'SET_DRAG_OVER', payload: true }); }} onDragLeave={() => dispatch({ type: 'SET_DRAG_OVER', payload: false })} onDrop={handleDrop} onPaste={handlePaste}>
             <pre ref={cursorMeasureRef} style={{ position: 'absolute', visibility: 'hidden', top: -9999, left: -9999, pointerEvents: 'none' }} />
-            <EditorHeader note={note} onToggleFavorite={() => toggleFavorite(note.id)} saveStatus={saveStatus} handleSave={handleSave} editorTitle={editorState.title} onEnhance={handleEnhanceNote} onSummarize={summarizeAndFindActionForFullNote} onToggleHistory={() => dispatch({type: 'SET_HISTORY_OPEN', payload: !isHistoryOpen})} isHistoryOpen={isHistoryOpen} onApplyTemplate={handleApplyTemplate} isMobileView={isMobileView} onToggleSidebar={onToggleSidebar} onUndo={undo} onRedo={redo} canUndo={canUndo} canRedo={canRedo} viewMode={viewMode} onToggleViewMode={() => dispatch({type: 'SET_VIEW_MODE', payload: viewMode === 'edit' ? 'preview' : 'edit'})} wordCount={wordCount} charCount={charCount} isFullAiActionLoading={isFullAiActionLoading} isApiKeyMissing={isApiKeyMissing} isAiEnabled={isAiEnabled} />
+            <EditorHeader note={note} onToggleFavorite={() => toggleFavorite(note.id)} saveStatus={saveStatus} handleSave={handleSave} editorTitle={editorState.title} onEnhance={(tone) => handleEnhanceNote(tone, editorState.content)} onSummarize={() => summarizeAndFindActionForFullNote(editorState.content)} onToggleHistory={() => dispatch({type: 'SET_HISTORY_OPEN', payload: !isHistoryOpen})} isHistoryOpen={isHistoryOpen} onApplyTemplate={handleApplyTemplate} isMobileView={isMobileView} onToggleSidebar={onToggleSidebar} onUndo={undo} onRedo={redo} canUndo={canUndo} canRedo={canRedo} viewMode={viewMode} onToggleViewMode={() => dispatch({type: 'SET_VIEW_MODE', payload: viewMode === 'edit' ? 'preview' : 'edit'})} wordCount={wordCount} charCount={charCount} isFullAiActionLoading={isFullAiActionLoading} isApiKeyMissing={isApiKeyMissing} isAiEnabled={isAiEnabled} />
             {isAiRateLimited && <div className="bg-yellow-100 dark:bg-yellow-900/30 border-b border-yellow-300 dark:border-yellow-700/50 py-2 px-4 text-center text-sm text-yellow-800 dark:text-yellow-200 flex-shrink-0">AI features are temporarily paused due to high usage. They will be available again shortly.</div>}
             
             <div ref={editorPaneRef} className={`flex-1 overflow-y-auto relative transition-opacity`}>
@@ -792,7 +796,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
                     anchorRect={gutterMenu.anchorRect}
                     onClose={() => dispatch({ type: 'SET_GUTTER_MENU', payload: null })}
                     onAction={(action) => {
-                        handleParagraphAiAction(action, { start: gutterMenu.start, end: gutterMenu.end });
+                        handleParagraphAiAction(action, { start: gutterMenu.start, end: gutterMenu.end }, editorState.content);
                     }}
                     editorPaneRef={editorPaneRef}
                 />

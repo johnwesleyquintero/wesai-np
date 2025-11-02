@@ -35,7 +35,7 @@ const EditorContent: React.FC<EditorContentProps> = ({
     if (viewMode === 'preview') {
         return (
             <div className="font-serif-editor">
-                 <MarkdownPreview title={displayedTitle} content={displayedContent} onToggleTask={onToggleTask} />
+                 <MarkdownPreview title="" content={displayedContent} onToggleTask={onToggleTask} />
             </div>
         );
     }

@@ -1,26 +1,27 @@
 import React, { useEffect, useRef, useMemo, useCallback, useState } from 'react';
-import { Note, NoteVersion, Template } from '../types';
+// FIX: Import `InlineAction` type.
+import { Note, NoteVersion, Template, InlineAction } from './types';
 import EditorHeader from './editor/EditorHeader';
 import EditorTitle from './editor/EditorTitle';
 import EditorContent from './editor/EditorContent';
 import EditorMeta from './editor/EditorMeta';
 import EditorStatusBar from './editor/EditorStatusBar';
 import VersionHistorySidebar from './VersionHistorySidebar';
-import { useUndoableState } from '../hooks/useUndoableState';
+import { useUndoableState } from './hooks/useUndoableState';
 import InlineAiMenu from './InlineAiMenu';
 import SpellcheckMenu from './SpellcheckMenu';
-import { useEditorContext, useStoreContext, useUIContext, useAuthContext } from '../context/AppContext';
+import { useEditorContext, useStoreContext, useUIContext, useAuthContext } from './context/AppContext';
 import NoteLinker from './NoteLinker';
 import TemplateLinker from './TemplateLinker';
-import { useBacklinks } from '../hooks/useBacklinks';
+import { useBacklinks } from './hooks/useBacklinks';
 import SlashCommandMenu from './SlashCommandMenu';
-import { uploadImage, getPublicUrl } from '../lib/supabaseClient';
-import { useToast } from '../context/ToastContext';
-import { useSpellcheck } from '../hooks/useSpellcheck';
-import { useNoteEditorReducer } from '../hooks/useNoteEditorReducer';
-import { useAiSuggestions } from '../hooks/useAiSuggestions';
-import { useAiActions } from '../hooks/useAiActions';
-import { useEditorHotkeys } from '../hooks/useEditorHotkeys';
+import { uploadImage, getPublicUrl } from './lib/supabaseClient';
+import { useToast } from './context/ToastContext';
+import { useSpellcheck } from './hooks/useSpellcheck';
+import { useNoteEditorReducer } from './hooks/useNoteEditorReducer';
+import { useAiSuggestions } from './hooks/useAiSuggestions';
+import { useAiActions } from './hooks/useAiActions';
+import { useEditorHotkeys } from './hooks/useEditorHotkeys';
 
 interface NoteEditorProps {
     note: Note;
@@ -70,12 +71,13 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         suggestTagsForFullNote, suggestTitleForFullNote, resetAiSuggestions
     } = useAiSuggestions(editorState, isAiRateLimited || !isAiEnabled);
     
+    // FIX: Removed `editorState` from arguments as it's not expected by `useAiActions`.
     const {
         applyAiActionToFullNote,
         summarizeAndFindActionForFullNote,
         handleEnhanceNote,
         handleInlineAiAction
-    } = useAiActions(editorState, setEditorState, dispatch);
+    } = useAiActions(setEditorState, dispatch);
 
     const isEffectivelyReadOnly = !!previewVersion || viewMode === 'preview' || !!isFullAiActionLoading;
     const isReadOnlyForVisuals = (!!previewVersion || viewMode === 'preview') && !isFullAiActionLoading;
@@ -236,12 +238,13 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         };
     }, [note.id, updateNote, showToast]);
 
+    // FIX: Correctly wrap functions to match the `EditorActions` type definition.
     const editorActions = useMemo(() => ({ 
         undo, redo, canUndo, canRedo, 
-        applyAiActionToFullNote,
+        applyAiActionToFullNote: (action: InlineAction) => applyAiActionToFullNote(action, editorState.content),
         suggestTagsForFullNote: () => suggestTagsForFullNote(editorState.title, editorState.content),
         suggestTitleForFullNote: () => suggestTitleForFullNote(editorState.content),
-        summarizeAndFindActionForFullNote
+        summarizeAndFindActionForFullNote: () => summarizeAndFindActionForFullNote(editorState.content),
     }), [
         undo, redo, canUndo, canRedo, applyAiActionToFullNote, suggestTagsForFullNote, 
         suggestTitleForFullNote, summarizeAndFindActionForFullNote, editorState.title, editorState.content
@@ -501,8 +504,10 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
             case 'h1': replaceCommandText('# '); break; case 'h2': replaceCommandText('## '); break;
             case 'h3': replaceCommandText('### '); break; case 'list': replaceCommandText('- '); break;
             case 'todo': replaceCommandText('- [ ] '); break; case 'divider': replaceCommandText('---\n'); break;
-            case 'ai-summarize': summarizeAndFindActionForFullNote(); replaceCommandText('', 0); break;
-            case 'ai-fix': applyAiActionToFullNote('fix'); replaceCommandText('', 0); break;
+            // FIX: Pass content to AI functions.
+            case 'ai-summarize': summarizeAndFindActionForFullNote(editorState.content); replaceCommandText('', 0); break;
+            // FIX: Pass content to AI functions.
+            case 'ai-fix': applyAiActionToFullNote('fix', editorState.content); replaceCommandText('', 0); break;
             case 'synced-block':
                 const newContent = currentContent.substring(0, range.start) + currentContent.substring(range.end);
                 setEditorState({ ...editorState, content: newContent });

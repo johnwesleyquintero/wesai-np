@@ -1,5 +1,7 @@
 
 
+
+
 import React, { useEffect, useRef, useMemo, useCallback, useState, useLayoutEffect } from 'react';
 import { Note, NoteVersion, Template, InlineAction } from '../types';
 import EditorHeader from './editor/EditorHeader';
@@ -14,15 +16,15 @@ import SpellcheckMenu from './SpellcheckMenu';
 import { useEditorContext, useStoreContext, useUIContext, useAuthContext } from '../context/AppContext';
 import NoteLinker from './NoteLinker';
 import TemplateLinker from './TemplateLinker';
-import { useBacklinks } from './hooks/useBacklinks';
+import { useBacklinks } from '../hooks/useBacklinks';
 import SlashCommandMenu from './SlashCommandMenu';
 import { uploadImage, getPublicUrl } from '../lib/supabaseClient';
 import { useToast } from '../context/ToastContext';
-import { useSpellcheck } from './hooks/useSpellcheck';
-import { useNoteEditorReducer } from './hooks/useNoteEditorReducer';
-import { useAiSuggestions } from './hooks/useAiSuggestions';
-import { useAiActions } from './hooks/useAiActions';
-import { useEditorHotkeys } from './hooks/useEditorHotkeys';
+import { useSpellcheck } from '../hooks/useSpellcheck';
+import { useNoteEditorReducer } from '../hooks/useNoteEditorReducer';
+import { useAiSuggestions } from '../hooks/useAiSuggestions';
+import { useAiActions } from '../hooks/useAiActions';
+import { useEditorHotkeys } from '../hooks/useEditorHotkeys';
 import { SparklesIcon } from './Icons';
 import ParagraphActionMenu from './editor/ParagraphActionMenu';
 
@@ -53,7 +55,7 @@ const areNoteStatesEqual = (a: NoteState, b: NoteState): boolean => {
 
 const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
     const { updateNote, toggleFavorite, notes, restoreNoteVersion } = useStoreContext();
-    const { isMobileView, onToggleSidebar, isAiRateLimited, isSettingsOpen, isCommandPaletteOpen, isSmartFolderModalOpen, isWelcomeModalOpen, isApiKeyMissing, isFocusMode, showConfirmation, hideConfirmation, isAiEnabled } = useUIContext();
+    const { isMobileView, onToggleSidebar, isAiRateLimited, isSettingsOpen, isCommandPaletteOpen, isSmartFolderModalOpen, isWelcomeModalOpen, isApiKeyMissing, isFocusMode, showConfirmation, hideConfirmation, isAiEnabled, isHelpOpen, confirmation } = useUIContext();
     const { session } = useAuthContext();
     const { showToast } = useToast();
     const { registerEditorActions, unregisterEditorActions } = useEditorContext();
@@ -436,7 +438,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
     useEditorHotkeys({
         undo,
         redo,
-        isModalOpen: isSettingsOpen || isCommandPaletteOpen || isSmartFolderModalOpen || isWelcomeModalOpen || !!noteLinker || !!noteLinkerForSelection || !!selection || !!activeSpellingError,
+        isModalOpen: isSettingsOpen || isCommandPaletteOpen || isSmartFolderModalOpen || isWelcomeModalOpen || isHelpOpen || confirmation.isOpen || !!noteLinker || !!noteLinkerForSelection || !!templateLinker || !!slashCommand || !!selection || !!activeSpellingError || !!gutterMenu,
         editorElements: [titleInputRef, textareaRef],
     });
 

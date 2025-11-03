@@ -1,9 +1,4 @@
 
-
-
-
-
-
 import React, { useEffect, useRef, useMemo, useCallback, useState, useLayoutEffect } from 'react';
 import { Note, NoteVersion, Template, InlineAction } from '../types';
 import EditorHeader from './editor/EditorHeader';
@@ -440,7 +435,20 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
     useEditorHotkeys({
         undo,
         redo,
-        isModalOpen: isSettingsOpen || isCommandPaletteOpen || isSmartFolderModalOpen || isWelcomeModalOpen || isHelpOpen || confirmation.isOpen,
+        isModalOpen: 
+            isSettingsOpen || 
+            isCommandPaletteOpen || 
+            isSmartFolderModalOpen || 
+            isWelcomeModalOpen ||
+            isHelpOpen ||
+            confirmation.isOpen ||
+            !!selection ||
+            !!activeSpellingError ||
+            !!noteLinker ||
+            !!templateLinker ||
+            !!noteLinkerForSelection ||
+            !!slashCommand ||
+            !!gutterMenu,
         editorElements: [titleInputRef, textareaRef],
     });
 

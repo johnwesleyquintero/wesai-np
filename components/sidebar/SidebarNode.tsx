@@ -314,11 +314,10 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
             </div>
             {isCollection && isExpanded && (
                 <div>
-                    {node.children.length === 0 && !isSearching && (
-                        <div style={{ paddingLeft: `${(level + 1) * 16 + 28}px` }} className="flex items-center py-1.5 text-xs text-light-text/50 dark:text-dark-text/50">
-                           <FolderIcon className="w-4 h-4 mr-2 opacity-70 -ml-6" />
-                           Empty folder
-                        </div>
+                    {node.children.length === 0 && (
+                        <p style={{ paddingLeft: `${(level + 1) * 16 + 28}px` }} className="py-1.5 text-xs text-light-text/50 dark:text-dark-text/50">
+                           {isSearching ? 'No matches' : 'Empty folder'}
+                        </p>
                     )}
                     {node.children.map(childNode => (
                         <SidebarNode

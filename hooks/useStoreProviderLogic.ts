@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Note, Collection, SmartCollection, SearchMode, TreeNode } from '../types';
 import { useStore as useSupabaseStore } from './useStore';
@@ -169,9 +170,31 @@ export const useStoreProviderLogic = () => {
         return newNoteId;
     }, [addNoteFromFile, isMobileView, showToast, setView, setIsSidebarOpen]);
 
-    const handleDeleteNoteConfirm = useCallback(async (note: Note) => { await deleteNote(note.id); if (activeNoteId === note.id) setActiveNoteId(null); hideConfirmation(); }, [deleteNote, activeNoteId, hideConfirmation]);
-    const handleDeleteCollectionConfirm = useCallback(async (collection: any) => { await deleteCollection(collection.id); hideConfirmation(); }, [deleteCollection, hideConfirmation]);
-    const handleDeleteSmartCollectionConfirm = useCallback(async (smartCollection: SmartCollection) => { await deleteSmartCollection(smartCollection.id); hideConfirmation(); }, [deleteSmartCollection, hideConfirmation]);
+    const handleDeleteNoteConfirm = useCallback(async (note: Note) => {
+        try {
+            await deleteNote(note.id);
+            if (activeNoteId === note.id) setActiveNoteId(null);
+        } finally {
+            hideConfirmation();
+        }
+    }, [deleteNote, activeNoteId, hideConfirmation]);
+
+    const handleDeleteCollectionConfirm = useCallback(async (collection: any) => {
+        try {
+            await deleteCollection(collection.id);
+        } finally {
+            hideConfirmation();
+        }
+    }, [deleteCollection, hideConfirmation]);
+    
+    const handleDeleteSmartCollectionConfirm = useCallback(async (smartCollection: SmartCollection) => {
+        try {
+            await deleteSmartCollection(smartCollection.id);
+        } finally {
+            hideConfirmation();
+        }
+    }, [deleteSmartCollection, hideConfirmation]);
+
     const handleActivateSmartCollection = useCallback((collection: SmartCollection) => {
         if (!isAiEnabled) {
             showToast({ message: "AI features are disabled in settings.", type: "error" });

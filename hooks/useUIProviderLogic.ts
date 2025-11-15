@@ -131,7 +131,12 @@ export const useUIProviderLogic = () => {
     }, []);
 
     const hideConfirmation = useCallback(() => {
-        setConfirmation(prev => ({ ...initialConfirmationState, isOpen: false }));
+        setConfirmation(prev => {
+            if (prev.isOpen && prev.onCancel) {
+                prev.onCancel();
+            }
+            return { ...initialConfirmationState, isOpen: false };
+        });
     }, []);
 
     const isApiKeyMissingValue = !apiKey && !isDemoMode && isAiEnabled;

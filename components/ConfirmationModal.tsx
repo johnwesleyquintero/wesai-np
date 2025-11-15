@@ -7,7 +7,7 @@ interface ConfirmationModalProps {
     onClose: () => void;
     onConfirm: () => void | Promise<void>;
     title: string;
-    message: string;
+    message: React.ReactNode;
     confirmText?: string;
     confirmClass?: string;
     confirmationRequiredText?: string;
@@ -64,36 +64,38 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
     const isConfirmationInvalid = confirmationRequiredText ? confirmationInput !== confirmationRequiredText : false;
 
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
             <div 
                 ref={modalRef}
                 role="dialog" 
                 aria-modal="true" 
                 aria-labelledby="confirmation-modal-title"
-                className="bg-light-background dark:bg-dark-background rounded-lg shadow-xl w-full max-w-md p-6" 
+                className="bg-light-background dark:bg-dark-background rounded-lg shadow-xl w-full max-w-md" 
                 onClick={e => e.stopPropagation()}
             >
-                <h2 id="confirmation-modal-title" className="text-xl font-bold mb-4">{title}</h2>
-                <p className="mb-6 text-light-text/80 dark:text-dark-text/80">{message}</p>
-                
-                {confirmationRequiredText && (
-                    <div className="mb-6">
-                        <p className="text-sm mb-2 text-light-text/80 dark:text-dark-text/80">
-                            To confirm, please type "<strong className="text-light-text dark:text-dark-text">{confirmationRequiredText}</strong>" below:
-                        </p>
-                        <input
-                            ref={confirmationInputRef}
-                            type="text"
-                            value={confirmationInput}
-                            onChange={(e) => setConfirmationInput(e.target.value)}
-                            className="w-full p-2 bg-light-ui dark:bg-dark-ui rounded-md border border-light-border dark:border-dark-border focus:ring-2 focus:ring-light-primary focus:outline-none"
-                            aria-label="Confirmation text input"
-                        />
-                    </div>
-                )}
+                <div className="p-6">
+                    <h2 id="confirmation-modal-title" className="text-xl font-bold mb-4">{title}</h2>
+                    <div className="mb-6 text-light-text/80 dark:text-dark-text/80">{message}</div>
+                    
+                    {confirmationRequiredText && (
+                        <div className="mb-6">
+                            <p className="text-sm mb-2 text-light-text/80 dark:text-dark-text/80">
+                                To confirm, please type "<strong className="text-light-text dark:text-dark-text">{confirmationRequiredText}</strong>" below:
+                            </p>
+                            <input
+                                ref={confirmationInputRef}
+                                type="text"
+                                value={confirmationInput}
+                                onChange={(e) => setConfirmationInput(e.target.value)}
+                                className="w-full p-2 bg-light-ui dark:bg-dark-ui rounded-md border border-light-border dark:border-dark-border focus:ring-2 focus:ring-light-primary focus:outline-none"
+                                aria-label="Confirmation text input"
+                            />
+                        </div>
+                    )}
+                </div>
 
-                <div className="flex justify-end space-x-4">
-                    <button ref={cancelButtonRef} onClick={onClose} className="px-4 py-2 rounded-md hover:bg-light-ui dark:hover:bg-dark-ui" disabled={isConfirming}>
+                <div className="flex justify-end space-x-4 bg-light-ui/50 dark:bg-dark-ui/50 p-4 rounded-b-lg">
+                    <button ref={cancelButtonRef} onClick={onClose} className="px-4 py-2 rounded-md hover:bg-light-ui-hover dark:hover:bg-dark-ui-hover" disabled={isConfirming}>
                         Cancel
                     </button>
                     <button 

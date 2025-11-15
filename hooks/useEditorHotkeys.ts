@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { useUIContext } from '../context/AppContext'; // Import context hook
 
 interface UseEditorHotkeysProps {
     undo: () => void;
@@ -17,10 +18,12 @@ export const useEditorHotkeys = ({
     isModalOpen,
     editorElements,
 }: UseEditorHotkeysProps) => {
+    const { confirmation } = useUIContext();
+
     useEffect(() => {
         const handleGlobalKeyDown = (event: KeyboardEvent) => {
             // 1. If any major modal is visibly managed by our context, bail.
-            if (isModalOpen) {
+            if (isModalOpen || confirmation.isOpen) {
                 return;
             }
             
@@ -51,5 +54,5 @@ export const useEditorHotkeys = ({
         
         document.addEventListener('keydown', handleGlobalKeyDown);
         return () => document.removeEventListener('keydown', handleGlobalKeyDown);
-    }, [undo, redo, isModalOpen, editorElements]);
+    }, [undo, redo, isModalOpen, editorElements, confirmation.isOpen]);
 };

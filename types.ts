@@ -65,7 +65,15 @@ export type SearchMode = 'KEYWORD' | 'AI';
 
 export type ChatMode = 'ASSISTANT' | 'RESPONDER' | 'WESCORE_COPILOT' | 'AMAZON';
 
-export type ChatStatus = 'idle' | 'searching' | 'replying' | 'using_tool';
+export interface ChatSession {
+  id: string;
+  name: string;
+  mode: ChatMode;
+  messages: ChatMessage[];
+  createdAt: string;
+}
+
+export type ChatStatus = 'idle' | 'searching' | 'replying' | 'using_tool' | 'awaiting_confirmation';
 
 export type ViewState = 'NOTES' | 'CHAT' | 'CTR_ANALYTICS' | 'TREND_ANALYSIS' | 'GRAPH';
 
@@ -114,8 +122,9 @@ export interface ToastMessage {
 
 export interface ConfirmationOptions {
     title: string;
-    message: string;
+    message: React.ReactNode;
     onConfirm: () => void | Promise<void>;
+    onCancel?: () => void | Promise<void>;
     confirmText?: string;
     confirmClass?: string;
     confirmationRequiredText?: string;

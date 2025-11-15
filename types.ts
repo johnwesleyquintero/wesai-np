@@ -58,6 +58,7 @@ export interface ChatMessage {
         rating: 'up' | 'down';
         tags?: string[];
     };
+    contextNoteIds?: string[];
 }
 
 export type SearchMode = 'KEYWORD' | 'AI';

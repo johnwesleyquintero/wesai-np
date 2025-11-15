@@ -46,7 +46,7 @@ export const useChatProviderLogic = () => {
             return [];
         }
     });
-
+    const [contextNoteIds, setContextNoteIds] = useState<string[]>([]);
     const [chatError, setChatError] = useState<string | null>(null);
     const [chatStatus, setChatStatus] = useState<ChatStatus>('idle');
     const [activeToolName, setActiveToolName] = useState<string | null>(null);
@@ -102,18 +102,25 @@ export const useChatProviderLogic = () => {
     const _handleStreamedChat = useCallback(async (query: string, image: string | undefined, getSystemInstruction: (sourceNotes: Note[]) => string) => {
         const currentSessionId = ++streamSessionIdRef.current;
         setChatError(null);
-        const newUserMessage: ChatMessage = { id: crypto.randomUUID(), role: 'user', content: query, image };
+        const newUserMessage: ChatMessage = { id: crypto.randomUUID(), role: 'user', content: query, image, contextNoteIds };
         setChatHistories(prev => ({ ...prev, [chatMode]: [...prev[chatMode], newUserMessage] }));
-        setChatStatus('searching');
+        
+        let sourceNotes: Note[];
+        if (contextNoteIds.length > 0) {
+            setChatStatus('replying');
+            sourceNotes = contextNoteIds.map(id => getNoteById(id)).filter((n): n is Note => !!n);
+        } else {
+            setChatStatus('searching');
+            const sourceNoteIds = await semanticSearchNotes(query, notes);
+            sourceNotes = sourceNoteIds.map(id => getNoteById(id)).filter((n): n is Note => !!n);
+        }
+
         let newAiMessage: ChatMessage | null = null;
 
         try {
-            const sourceNoteIds = await semanticSearchNotes(query, notes);
-            const sourceNotes = sourceNoteIds.map(id => getNoteById(id)).filter((n): n is Note => !!n);
-
             if (currentSessionId !== streamSessionIdRef.current) return;
             
-            setChatStatus('replying');
+            if (chatStatus !== 'replying') setChatStatus('replying');
             
             const systemInstruction = getSystemInstruction(sourceNotes);
             const stream = await generateChatStream(query, systemInstruction, image);
@@ -157,7 +164,7 @@ export const useChatProviderLogic = () => {
                 }
             }
         }
-    }, [chatMode, getNoteById, notes]);
+    }, [chatMode, getNoteById, notes, contextNoteIds, chatStatus]);
     
     const onSendMessage = useCallback((q, i) => _handleStreamedChat(q, i, (s) => `You are a helpful AI assistant integrated into a note-taking app. Use the provided "Source Notes" to answer the user's query.\n- When you use information from a source, you MUST cite it by number, like this: [1].\n- Place citations at the end of the sentence or clause they support.\n- If the sources are not relevant, ignore them and answer from your general knowledge without citing any sources.\n- Be concise and helpful.\n\nSource Notes:\n${s.length > 0 ? s.map((n, i) => `--- SOURCE [${i + 1}]: ${n.title} ---\n${n.content}\n`).join('') : 'No source notes provided.'}`), [_handleStreamedChat]);
     const onGenerateServiceResponse = useCallback((q, i) => _handleStreamedChat(q, i, (s) => `You are a professional and empathetic customer service agent. Your goal is to resolve the customer's issue using the provided knowledge base.\n- When you use information from the knowledge base, you MUST cite it by number, like this: [1].\n- Place citations at the end of the sentence or clause they support.\n- If the knowledge base doesn't have the answer, apologize and explain that you will escalate the issue, without citing any sources.\nKnowledge Base:\n${s.length > 0 ? s.map((n, i) => `--- DOC [${i + 1}]: ${n.title} ---\n${n.content}\n`).join('') : 'No knowledge provided.'}`), [_handleStreamedChat]);
@@ -464,6 +471,7 @@ ${s.length > 0 ? s.map((n, i) => `--- NOTE [${i + 1}]: ${n.title} ---\n${n.conte
         setChatError(null);
         setChatStatus('idle');
         setActiveToolName(null);
+        setContextNoteIds([]);
         if (chatMode === 'WESCORE_COPILOT') {
             generalChatRef.current = null;
         }
@@ -497,11 +505,13 @@ ${s.length > 0 ? s.map((n, i) => `--- NOTE [${i + 1}]: ${n.title} ---\n${n.conte
         onSendMessage, onGenerateServiceResponse, onSendGeneralMessage, onGenerateAmazonCopy, clearChat,
         activeToolName, deleteMessage, handleFeedback, recallLastMessage,
         responders, addResponder, deleteResponder,
+        contextNoteIds, setContextNoteIds,
     }), [
         chatHistories, chatMode, chatStatus, setChatMode,
         onSendMessage, onGenerateServiceResponse, onSendGeneralMessage, onGenerateAmazonCopy, clearChat,
         activeToolName, deleteMessage, handleFeedback, recallLastMessage,
         responders, addResponder, deleteResponder,
+        contextNoteIds, setContextNoteIds,
     ]);
 
     return chatValue;

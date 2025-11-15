@@ -22,8 +22,8 @@ WesCore is a centralized cockpit for operators to execute workflows, manage data
 
 ### AI-Powered by Google Gemini
 - **Multi-Mode AI Assistant:** A versatile AI assistant with four distinct modes for different tasks:
-    - **Knowledge Assistant:** Engage in a conversation with your notes. Ask complex questions and receive synthesized answers with direct links to the source notes.
-    - **Service Responder:** Transform your notes into an operational playbook. Paste a customer inquiry, and the AI will use your knowledge base to draft a professional, compliant response.
+    - **Knowledge Assistant:** Engage in a conversation with your notes. Ask complex questions and receive synthesized answers with direct links to the source notes. It can automatically find relevant notes via semantic search, or you can manually select a specific set of notes to use as its knowledge base for precision control.
+    - **Service Responder:** Transform your notes into an operational playbook. Paste a customer inquiry, and the AI will use your knowledge base (either automatically found or manually selected) to draft a professional, compliant response.
     - **Amazon Copywriter:** Generates compelling, SEO-optimized Amazon product listing copy based on product info and research notes.
     - **WesCore Co-pilot (with Tools):** Your operational co-pilot. This assistant uses **Function Calling** to understand natural language commands and interact with your workspace. It can create, find, read, update, delete, and organize notes; manage templates; and even perform bulk find-and-replace operations across your entire workspace.
 - **Proactive Related Notes (AI Co-Pilot):** As you write, the AI analyzes your content in real-time to proactively surface semantically related notes from your knowledge base, helping you discover hidden connections without breaking your flow.

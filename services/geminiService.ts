@@ -1,12 +1,11 @@
 
 
+
 import { GoogleGenAI, HarmCategory, HarmBlockThreshold, Type, FunctionDeclaration, Content, GenerateContentResponse, Chat, Part, GenerationConfig } from "@google/genai";
 import { Note, ChatMessage, InlineAction, SpellingError } from '../types';
-import { MODEL_NAMES } from '../lib/config';
+import { MODEL_NAMES, API_KEY_STORAGE_KEY } from '../lib/config';
 import { sha256, getLocalCache, setLocalCache } from '../lib/cache';
 import { supabase } from '../lib/supabaseClient';
-
-const API_KEY_STORAGE_KEY = 'wesai-api-key';
 
 // Cache for the GenAI instance to avoid re-creating it on every call.
 let genAI: GoogleGenAI | null = null;

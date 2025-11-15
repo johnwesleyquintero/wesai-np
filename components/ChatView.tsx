@@ -5,6 +5,7 @@ import MarkdownPreview from './MarkdownPreview';
 import { PaperAirplaneIcon, SparklesIcon, XCircleIcon, DocumentPlusIcon, PaperClipIcon, ClipboardDocumentIcon, EllipsisHorizontalIcon, TrashIcon, ThumbsUpIcon, ThumbsDownIcon, DocumentTextIcon, XMarkIcon, ChevronDownIcon, BookmarkIcon, Cog6ToothIcon } from './Icons';
 import { useToast } from '../context/ToastContext';
 import ChatViewSkeleton from './ChatViewSkeleton';
+import NoteSelectorModal from './NoteSelectorModal';
 
 const ChatHeader: React.FC = () => {
     const { chatMode, setChatMode, chatStatus, clearChat } = useChatContext();
@@ -204,6 +205,22 @@ const Message: React.FC<MessageProps> = ({ message, onDelete, onToggleSources, i
 
             <div className={`p-3 rounded-lg max-w-full md:max-w-2xl w-fit ${isUser ? 'bg-light-ui dark:bg-dark-ui' : 'bg-light-background dark:bg-dark-background'}`}>
                 {message.image && <img src={`data:image/jpeg;base64,${message.image}`} alt="User upload" className="max-w-xs rounded-lg mb-2" />}
+                {isUser && message.contextNoteIds && message.contextNoteIds.length > 0 && (
+                    <div className="mb-2 pb-2 border-b border-light-border/50 dark:border-dark-border/50">
+                        <p className="text-xs font-semibold text-light-text/60 dark:text-dark-text/60 mb-1">Provided Context:</p>
+                        <div className="flex flex-wrap gap-1">
+                            {message.contextNoteIds.map(id => {
+                                const note = getNoteById(id);
+                                return (
+                                    <span key={id} className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-light-background dark:bg-dark-background">
+                                        <DocumentTextIcon className="w-3 h-3"/>
+                                        {note ? note.title : 'Deleted Note'}
+                                    </span>
+                                );
+                            })}
+                        </div>
+                    </div>
+                )}
                 <div className="chat-markdown">
                     {renderContent()}
                 </div>
@@ -279,13 +296,15 @@ const ChatInput: React.FC = () => {
     const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
     const { 
         chatMode, chatStatus, onSendMessage, onGenerateServiceResponse, onSendGeneralMessage, onGenerateAmazonCopy,
-        recallLastMessage, responders, addResponder, deleteResponder, deleteMessage,
+        recallLastMessage, responders, addResponder, deleteResponder, deleteMessage, contextNoteIds, setContextNoteIds,
     } = useChatContext();
     const { showToast } = useToast();
+    const { notes, getNoteById } = useStoreContext();
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [showResponders, setShowResponders] = useState(false);
     const responderMenuRef = useRef<HTMLDivElement>(null);
+    const [isNoteSelectorOpen, setIsNoteSelectorOpen] = useState(false);
 
     useEffect(() => {
         const textarea = textareaRef.current;
@@ -364,6 +383,10 @@ const ChatInput: React.FC = () => {
         }
     };
 
+    const handleRemoveContextNote = (idToRemove: string) => {
+        setContextNoteIds(prev => prev.filter(id => id !== idToRemove));
+    };
+
     const placeholderText = {
         ASSISTANT: 'Ask a question about your notes...',
         RESPONDER: 'Paste customer query or select a responder...',
@@ -382,6 +405,25 @@ const ChatInput: React.FC = () => {
                 </div>
             )}
             <div className="max-w-3xl mx-auto">
+                {contextNoteIds.length > 0 && (
+                    <div className="mb-3">
+                        <div className="flex items-center justify-between mb-1">
+                            <h4 className="text-xs font-semibold text-light-text/70 dark:text-dark-text/70">AI Context ({contextNoteIds.length})</h4>
+                            <button onClick={() => setContextNoteIds([])} className="text-xs font-semibold text-light-primary dark:text-dark-primary hover:underline">Clear</button>
+                        </div>
+                        <div className="flex flex-wrap gap-2 p-2 rounded-md bg-light-ui dark:bg-dark-ui border border-light-border/50 dark:border-dark-border/50">
+                            {contextNoteIds.map(id => {
+                                const note = getNoteById(id);
+                                return (
+                                    <div key={id} className="flex items-center gap-1.5 text-sm px-2 py-1 rounded-full bg-light-background dark:bg-dark-background">
+                                        <span className="truncate max-w-48">{note ? note.title : "Deleted Note"}</span>
+                                        <button onClick={() => handleRemoveContextNote(id)} className="p-0.5 rounded-full hover:bg-light-ui-hover dark:hover:bg-dark-ui-hover"><XMarkIcon className="w-3 h-3"/></button>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                )}
                 {image && (
                     <div className="relative w-24 h-24 mb-2">
                          <button onClick={() => setIsPreviewModalOpen(true)} className="w-full h-full rounded-lg overflow-hidden focus:outline-none focus:ring-2 focus:ring-light-primary dark:focus:ring-dark-primary">
@@ -434,12 +476,20 @@ const ChatInput: React.FC = () => {
                                 <BookmarkIcon className="w-4 h-4"/> Save
                             </button>
                         )}
+                        <button onClick={() => setIsNoteSelectorOpen(true)} className="p-2 rounded-md hover:bg-light-background dark:hover:bg-dark-background disabled:opacity-50" disabled={chatStatus !== 'idle'} aria-label="Add Note Context"><DocumentPlusIcon /></button>
                         <button onClick={() => fileInputRef.current?.click()} className="p-2 rounded-md hover:bg-light-background dark:hover:bg-dark-background disabled:opacity-50" disabled={chatStatus !== 'idle'}><PaperClipIcon /></button>
                         <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/jpeg,image/png" className="hidden" />
                         <button onClick={handleSend} className="p-2 rounded-md bg-light-primary text-white dark:bg-dark-primary dark:text-zinc-900 disabled:opacity-50" disabled={chatStatus !== 'idle'}><PaperAirplaneIcon /></button>
                     </div>
                 </div>
             </div>
+            <NoteSelectorModal
+                isOpen={isNoteSelectorOpen}
+                onClose={() => setIsNoteSelectorOpen(false)}
+                onSave={setContextNoteIds}
+                allNotes={notes}
+                initialSelectedIds={contextNoteIds}
+            />
         </div>
     );
 };

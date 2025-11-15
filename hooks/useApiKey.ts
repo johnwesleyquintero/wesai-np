@@ -1,6 +1,5 @@
 import { useState, useCallback } from 'react';
-
-const API_KEY_STORAGE_KEY = 'wesai-api-key';
+import { API_KEY_STORAGE_KEY } from '../lib/config';
 
 export const useApiKey = () => {
     const [apiKey, setApiKey] = useState<string | null>(() => {

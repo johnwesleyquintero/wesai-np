@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Collection, Note, TreeNode } from '../../types';
 import { ChevronDownIcon, ChevronRightIcon, DocumentTextIcon, FolderIcon, TrashIcon, PencilSquareIcon, DocumentDuplicateIcon, ClipboardDocumentIcon, GripVerticalIcon, LinkIcon, HashtagIcon } from '../Icons';
@@ -314,9 +313,14 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
             </div>
             {isCollection && isExpanded && (
                 <div>
-                    {node.children.length === 0 && (
+                    {isSearching && node.children.length > 0 && node.children.every(c => !searchData.visibleIds?.has(c.id)) && (
                         <p style={{ paddingLeft: `${(level + 1) * 16 + 28}px` }} className="py-1.5 text-xs text-light-text/50 dark:text-dark-text/50">
-                           {isSearching ? 'No matches' : 'Empty folder'}
+                           No matches
+                        </p>
+                    )}
+                    {!isSearching && node.children.length === 0 && (
+                        <p style={{ paddingLeft: `${(level + 1) * 16 + 28}px` }} className="py-1.5 text-xs text-light-text/50 dark:text-dark-text/50">
+                           Empty folder
                         </p>
                     )}
                     {node.children.map(childNode => (

@@ -1,6 +1,8 @@
 
 
 
+
+
 import { GoogleGenAI, HarmCategory, HarmBlockThreshold, Type, FunctionDeclaration, Content, GenerateContentResponse, Chat, Part, GenerationConfig } from "@google/genai";
 import { Note, ChatMessage, InlineAction, SpellingError } from '../types';
 import { MODEL_NAMES, API_KEY_STORAGE_KEY } from '../lib/config';
@@ -560,12 +562,12 @@ export const performInlineEdit = async (text: string, action: InlineAction): Pro
         case 'makeCasual': instruction = 'Rewrite the following text in a casual tone:'; break;
     }
     
+    // FIX: Removed `config` property. The `safetySettings` are automatically
+    // applied within the `_callGemini` wrapper function. Passing a config with only
+    // `safetySettings` causes a type error as it's not a valid `GenerationConfig`.
     const payload = {
         model: MODEL_NAMES.FLASH,
         contents: `${instruction}\n\n"${text}"`,
-        config: {
-            safetySettings,
-        },
     };
 
     return _callGemini(
@@ -616,12 +618,12 @@ ${content}`,
 
 
 export const enhanceText = async (text: string, tone: string): Promise<string> => {
+    // FIX: Removed `config` property. The `safetySettings` are automatically
+    // applied within the `_callGemini` wrapper function. Passing a config with only
+    // `safetySettings` causes a type error as it's not a valid `GenerationConfig`.
     const payload = {
         model: MODEL_NAMES.FLASH,
         contents: `Rewrite the following text to have a ${tone} tone:\n\n"${text}"`,
-        config: {
-            safetySettings,
-        },
     };
     
     return _callGemini(

@@ -9,7 +9,7 @@ WesCore is a centralized cockpit for operators to execute workflows, manage data
 ### Core System & Organization
 - **Secure & Private Cloud Sync:** All data is stored securely in your own Supabase backend and protected by granular security policies. Real-time, authenticated subscriptions keep all your devices perfectly in sync.
 - **Flexible Authentication:** Sign up quickly with an email and password or use the convenient one-click Google Sign-In option.
-- **Immersive Onboarding Experience:** Instead of a static checklist, new users can explore a pre-populated demo workspace. These curated notes immersively guide them through core features, teaching the app with its own functionality.
+- **Interactive Onboarding Experience:** New users are guided by an interactive checklist and contextual coach marks that highlight key features. This is paired with a pre-populated demo workspace, allowing users to learn the app by using it from the very first moment.
 - **Drag & Drop Organization:** Intuitively organize your workspace by dragging notes and folders to reorder them or nest them within each other. Drop files directly onto folders to import them.
 - **Rich Markdown Editor:** A full-featured Markdown editor with syntax highlighting, a live preview mode, and support for tables, images, embedded YouTube/Vimeo videos, callout blocks, and auto-pairing of brackets and quotes for a smoother writing flow.
 - **Automatic Titling:** If you leave a note untitled, its title will be automatically generated from the first line of content when you move on.
@@ -29,11 +29,13 @@ WesCore is a centralized cockpit for operators to execute workflows, manage data
 - **Proactive Related Notes (AI Co-Pilot):** As you write, the AI analyzes your content in real-time to proactively surface semantically related notes from your knowledge base, helping you discover hidden connections without breaking your flow.
 - **Knowledge Graph Visualization:** A dynamic, interactive force-directed graph that visually represents the connections between your notes. Preview notes on hover, zoom and pan, and even create new links by holding `Alt` and dragging between nodes.
 - **Self-Improving Intelligence & Analytics:**
+    - **Direct AI Feedback Loop:** Users can give thumbs up/down feedback on chat responses. A downvote prompts for specific reasons (e.g., 'Incorrect', 'Not Helpful'), providing granular data to fine-tune AI performance beyond just CTR.
     - **CTR Analytics:** A foundational feedback loop makes the AI smarter. The system logs every suggestion "impression" and user "click," providing a dashboard to measure relevance and continuously refine the AI's performance.
     - **Trend Analysis Dashboard:** Visualize conceptual clusters, "hot topics," and the most frequent connections between your ideas, giving you a strategic overview of your knowledge base.
     - **AI-Powered Consolidation:** From the Trend Analysis dashboard, generate an AI-powered consolidated note from any frequently linked pair of notes, helping you synthesize ideas and reduce redundancy.
 - **Semantic Search:** Go beyond keyword matching to find notes based on their conceptual meaning.
 - **Inline AI Assistant:** Select any text to fix spelling, adjust tone (professional, casual), expand or shorten content, and simplify language.
+- **Paragraph-Level AI Actions:** A contextual AI menu appears in the editor's margin, allowing you to run actions like 'fix grammar' on individual paragraphs without needing to select any text.
 - **Real-time AI Spell Check:** Highlights potential spelling errors as you type and offers AI-powered suggestions for corrections, without interrupting your flow.
 - **Content Generation & Summarization:**
     - Automatically suggest descriptive titles and relevant tags based on your note's content.

@@ -3,6 +3,7 @@ import { ChatMessage, Note, ChatMode, ChatStatus } from '../types';
 import { generateChatStream, semanticSearchNotes, createGeneralChatSession } from '../services/geminiService';
 import { useStoreContext } from '../context/AppContext';
 import { Chat } from '@google/genai';
+import { useDebounce } from './useDebounce';
 
 const CHAT_HISTORIES_STORAGE_KEY = 'wesai-chat-histories';
 const RESPONDERS_STORAGE_KEY = 'wesai-chat-responders';
@@ -38,6 +39,7 @@ export const useChatProviderLogic = () => {
             return { ASSISTANT: [], RESPONDER: [], WESCORE_COPILOT: [], AMAZON: [] };
         }
     });
+    const debouncedChatHistories = useDebounce(chatHistories, 1000);
     const [responders, setResponders] = useState<string[]>(() => {
         try {
             const saved = localStorage.getItem(RESPONDERS_STORAGE_KEY);
@@ -74,6 +76,26 @@ export const useChatProviderLogic = () => {
         }
     }, [responders]);
 
+    // Proactive debounced save to localStorage during the session.
+    useEffect(() => {
+        try {
+            const historiesToSave = (Object.keys(debouncedChatHistories) as ChatMode[]).reduce((acc, mode) => {
+                const history = debouncedChatHistories[mode];
+                if (Array.isArray(history)) {
+                    // Truncate to the last 100 messages to prevent localStorage from blowing up.
+                    acc[mode] = history.slice(-100); 
+                } else {
+                    acc[mode] = [];
+                }
+                return acc;
+            }, {} as Record<ChatMode, ChatMessage[]>);
+            localStorage.setItem(CHAT_HISTORIES_STORAGE_KEY, JSON.stringify(historiesToSave));
+        } catch (error) {
+            console.error("Failed to save chat history to localStorage", error);
+        }
+    }, [debouncedChatHistories]);
+
+    // Final save attempt on page unload as a safety net.
     useEffect(() => {
         const handleBeforeUnload = () => {
             try {

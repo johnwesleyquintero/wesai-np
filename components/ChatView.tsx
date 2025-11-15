@@ -6,6 +6,7 @@ import { PaperAirplaneIcon, SparklesIcon, XCircleIcon, DocumentPlusIcon, PaperCl
 import { useToast } from '../context/ToastContext';
 import ChatViewSkeleton from './ChatViewSkeleton';
 import NoteSelectorModal from './NoteSelectorModal';
+import ToolCallDisplay from './ToolCallDisplay';
 
 const ChatHeader: React.FC = () => {
     const { chatMode, setChatMode, chatStatus, clearChat } = useChatContext();
@@ -177,22 +178,24 @@ const Message: React.FC<MessageProps> = ({ message, onDelete, onToggleSources, i
         if (typeof message.content === 'string') {
             return <MarkdownPreview title="" content={message.content} onToggleTask={() => {}} isStreaming={message.role === 'ai' && message.status === 'processing'} />;
         }
-        if (typeof message.content === 'object' && message.content.name) {
-            const { name, args, result, status } = message.content;
-            return (
-                 <div className="text-xs p-2 bg-light-ui dark:bg-dark-ui rounded-md">
-                     <p><strong>Tool Call:</strong> {name}</p>
-                     <p><strong>Args:</strong> {JSON.stringify(args)}</p>
-                     {status !== 'pending' && <p><strong>Status:</strong> {status}</p>}
-                     {result && <p><strong>Result:</strong> {JSON.stringify(result)}</p>}
-                </div>
-            );
-        }
         return 'Invalid message content';
     };
 
     const isUser = message.role === 'user';
     const isAi = message.role === 'ai';
+    const isTool = message.role === 'tool';
+    
+    if (isTool) {
+        const toolContent = message.content;
+        if (typeof toolContent === 'object' && toolContent !== null && 'name' in toolContent) {
+            return (
+                <div className="my-2 max-w-full md:max-w-2xl mx-auto">
+                     <ToolCallDisplay content={toolContent as any} />
+                </div>
+            );
+        }
+        return null; // Don't render invalid tool messages
+    }
     
     return (
         <div 
@@ -200,7 +203,7 @@ const Message: React.FC<MessageProps> = ({ message, onDelete, onToggleSources, i
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
         >
-             {!isUser && <div className="w-8 h-8 rounded-full bg-light-primary dark:bg-dark-primary flex items-center justify-center text-white flex-shrink-0 mt-1"><SparklesIcon className="w-5 h-5"/></div>}
+             {isAi && <div className="w-8 h-8 rounded-full bg-light-primary dark:bg-dark-primary flex items-center justify-center text-white flex-shrink-0 mt-1"><SparklesIcon className="w-5 h-5"/></div>}
              {isUser && isHovered && <div className="flex-shrink-0 self-center"><MessageActions onDelete={onDelete} /></div>}
 
             <div className={`p-3 rounded-lg max-w-full md:max-w-2xl w-fit ${isUser ? 'bg-light-ui dark:bg-dark-ui' : 'bg-light-background dark:bg-dark-background'}`}>
@@ -240,7 +243,7 @@ const Message: React.FC<MessageProps> = ({ message, onDelete, onToggleSources, i
                         })}
                     </div>
                 )}
-                {isAi && (
+                {isAi && message.status !== 'processing' && (
                     <div className="flex items-center gap-1 mt-2 pt-2 border-t border-light-border/50 dark:border-dark-border/50">
                         {isProvidingFeedback ? (
                             <div className="flex items-center gap-2">
@@ -285,7 +288,7 @@ const Message: React.FC<MessageProps> = ({ message, onDelete, onToggleSources, i
                     </div>
                 )}
             </div>
-            {!isUser && isHovered && <div className="flex-shrink-0 self-center"><MessageActions onDelete={onDelete} /></div>}
+            {isAi && isHovered && <div className="flex-shrink-0 self-center"><MessageActions onDelete={onDelete} /></div>}
         </div>
     );
 };

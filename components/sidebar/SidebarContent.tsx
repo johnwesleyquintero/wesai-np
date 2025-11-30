@@ -12,6 +12,7 @@ import { useStoreContext, useUIContext } from '../../context/AppContext';
 import { useDragAndDrop } from '../../hooks/useDragAndDrop';
 import { useToast } from '../../context/ToastContext';
 import { getVisibleNodes } from '../../lib/treeUtils';
+import { useSidebarNavigation } from '../../hooks/useSidebarNavigation';
 
 const EXPANDED_FOLDERS_KEY = 'wesai-sidebar-expanded-folders';
 
@@ -68,7 +69,6 @@ const SidebarContent: React.FC = () => {
             return {};
         }
     });
-    const [focusedNodeId, setFocusedNodeId] = useState<string | null>(null);
 
     useEffect(() => {
         try {
@@ -94,51 +94,14 @@ const SidebarContent: React.FC = () => {
         getVisibleNodes(fileTree, searchData, expandedFolders), 
     [fileTree, searchData, expandedFolders]);
 
-    useEffect(() => {
-        if (focusedNodeId && !visibleNodeIds.includes(focusedNodeId)) {
-            setFocusedNodeId(null);
-        }
-        if (!activeNoteId && !focusedNodeId && visibleNodeIds.length > 0) {
-            setFocusedNodeId(visibleNodeIds[0]);
-        }
-        if (activeNoteId && focusedNodeId !== activeNoteId) {
-            setFocusedNodeId(activeNoteId);
-        }
-    }, [visibleNodeIds, activeNoteId, focusedNodeId]);
-
-    const handleKeyDown = (e: React.KeyboardEvent) => {
-        if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-            e.preventDefault();
-            const currentIndex = focusedNodeId ? visibleNodeIds.indexOf(focusedNodeId) : -1;
-            const nextIndex = e.key === 'ArrowDown'
-                ? (currentIndex + 1) % visibleNodeIds.length
-                : (currentIndex - 1 + visibleNodeIds.length) % visibleNodeIds.length;
-            setFocusedNodeId(visibleNodeIds[nextIndex]);
-        } else if (e.key === 'Enter') {
-            e.preventDefault();
-            if (focusedNodeId) {
-                const node = collections.find(c => c.id === focusedNodeId);
-                if (node) {
-                    toggleFolder(focusedNodeId);
-                } else {
-                    onSelectNote(focusedNodeId);
-                }
-            }
-        } else if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
-            e.preventDefault();
-            if (focusedNodeId) {
-                const isCollection = collections.some(c => c.id === focusedNodeId);
-                if (isCollection) {
-                    const isExpanded = expandedFolders[focusedNodeId] ?? true;
-                    if (e.key === 'ArrowRight' && !isExpanded) {
-                        setExpandedFolders(prev => ({ ...prev, [focusedNodeId]: true }));
-                    } else if (e.key === 'ArrowLeft' && isExpanded) {
-                        setExpandedFolders(prev => ({ ...prev, [focusedNodeId]: false }));
-                    }
-                }
-            }
-        }
-    };
+    const { focusedNodeId, handleKeyDown } = useSidebarNavigation({
+        visibleNodeIds,
+        collections,
+        expandedFolders,
+        setExpandedFolders,
+        onSelectNote,
+        activeNoteId
+    });
     
     const handleNoteCardContextMenu = (e: React.MouseEvent, note: Note) => {
         onOpenContextMenu(e, [

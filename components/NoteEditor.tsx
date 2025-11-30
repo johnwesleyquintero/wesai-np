@@ -17,8 +17,8 @@ import { useAiSuggestions } from '../hooks/useAiSuggestions';
 import { useAiActions } from '../hooks/useAiActions';
 import { useEditorHotkeys } from '../hooks/useEditorHotkeys';
 import { useNoteInputHandlers } from '../hooks/useNoteInputHandlers';
+import { useEditorGutter } from '../hooks/useEditorGutter';
 import { SparklesIcon } from './Icons';
-import { getCursorPositionRect, getLineInfoForPosition } from '../lib/editorDOMUtils';
 import EditorPopups from './editor/EditorPopups';
 import NoteLinker from '../components/NoteLinker';
 import TemplateLinker from '../components/TemplateLinker';
@@ -26,6 +26,7 @@ import SlashCommandMenu from '../components/SlashCommandMenu';
 import InlineAiMenu from '../components/InlineAiMenu';
 import SpellcheckMenu from '../components/SpellcheckMenu';
 import ParagraphActionMenu from './editor/ParagraphActionMenu';
+import { getCursorPositionRect, getLineInfoForPosition } from '../lib/editorDOMUtils';
 
 interface NoteEditorProps {
     note: Note;
@@ -88,7 +89,6 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
     
     const prevNoteRef = useRef(note);
     const [lastWarnedTimestamp, setLastWarnedTimestamp] = useState<string | null>(null);
-    const [paragraphGutterTarget, setParagraphGutterTarget] = useState<{ start: number; rect: DOMRect } | null>(null);
     const stateWhenLastSavedRef = useRef<NoteState | null>(null);
 
     const [uiState, dispatch] = useNoteEditorReducer();
@@ -136,8 +136,6 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
     const editorPaneRef = useRef<HTMLDivElement>(null);
     const cursorMeasureRef = useRef<HTMLPreElement>(null);
     const hasAutoTitledRef = useRef(false);
-    const isScrollingRef = useRef(false);
-    const scrollTimeoutRef = useRef<number | null>(null);
     
     const { 
         handleKeyDown, 
@@ -152,6 +150,18 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         noteId: note.id,
         session,
         isEffectivelyReadOnly
+    });
+
+    const { paragraphGutterTarget, setParagraphGutterTarget } = useEditorGutter({
+        textareaRef,
+        editorPaneRef,
+        cursorMeasureRef,
+        content: editorState.content,
+        viewMode,
+        gutterMenu,
+        isEffectivelyReadOnly,
+        isAiEnabled,
+        isApiKeyMissing
     });
 
     useLayoutEffect(() => {
@@ -205,7 +215,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
             dispatch({ type: 'SET_VIEW_MODE', payload: 'edit' });
             setTimeout(() => titleInputRef.current?.focus(), 100);
         }
-    }, [note.id, resetAiSuggestions, setActiveSpellingError, dispatch]);
+    }, [note.id, resetAiSuggestions, setActiveSpellingError, dispatch, setParagraphGutterTarget]);
     
     useEffect(() => {
         if (editorState.content.trim() === '') {
@@ -344,52 +354,6 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         return () => unregisterEditorActions();
     }, [registerEditorActions, unregisterEditorActions, editorActions]);
     
-    const updateGutterState = useCallback(() => {
-        if (isScrollingRef.current) return;
-        
-        const textarea = textareaRef.current;
-        if (!textarea || viewMode !== 'edit' || gutterMenu) {
-            setParagraphGutterTarget(current => current ? null : current);
-            return;
-        }
-
-        const { selectionStart } = textarea;
-        const { text, start } = getLineInfoForPosition(editorState.content, selectionStart);
-        
-        const shouldShow = text && !isEffectivelyReadOnly && isAiEnabled && !isApiKeyMissing;
-
-        if (shouldShow) {
-            const measureRef = cursorMeasureRef.current;
-            if (measureRef) {
-                const rect = getCursorPositionRect(textarea, start, measureRef, editorState.content);
-                setParagraphGutterTarget(current => {
-                    if (current?.start !== start) return { start, rect };
-                    return current;
-                });
-            }
-        } else {
-            setParagraphGutterTarget(null);
-        }
-    }, [editorState.content, viewMode, gutterMenu, isEffectivelyReadOnly, isAiEnabled, isApiKeyMissing]);
-
-    useEffect(() => {
-        const pane = editorPaneRef.current;
-        const handleScroll = () => {
-            isScrollingRef.current = true;
-            if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
-            scrollTimeoutRef.current = window.setTimeout(() => {
-                isScrollingRef.current = false;
-                updateGutterState();
-            }, 150);
-        };
-        pane?.addEventListener('scroll', handleScroll);
-        return () => pane?.removeEventListener('scroll', handleScroll);
-    }, [updateGutterState]);
-
-    useEffect(() => {
-        updateGutterState();
-    }, [updateGutterState]);
-
     const isAnyPopupOpen = useMemo(() => 
         isSettingsOpen || 
         isCommandPaletteOpen || 
@@ -474,7 +438,6 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
                 setActiveSpellingError(null);
             }
         }
-        updateGutterState();
     };
     
     const handleContentBlur = () => {

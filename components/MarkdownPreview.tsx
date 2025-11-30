@@ -1,17 +1,18 @@
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
 import { PrismLight as SyntaxHighlighter } from 'react-syntax-highlighter';
-import okaidia from 'react-syntax-highlighter/dist/esm/styles/prism/okaidia';
 import jsx from 'react-syntax-highlighter/dist/esm/languages/prism/jsx';
 import typescript from 'react-syntax-highlighter/dist/esm/languages/prism/typescript';
 import json from 'react-syntax-highlighter/dist/esm/languages/prism/json';
 import bash from 'react-syntax-highlighter/dist/esm/languages/prism/bash';
 import markdown from 'react-syntax-highlighter/dist/esm/languages/prism/markdown';
 import { useStoreContext, useUIContext } from '../context/AppContext';
-import { InformationCircleIcon, LightBulbIcon, ExclamationTriangleIcon, ExclamationCircleIcon, ClipboardDocumentIcon, CheckIcon, PhotoIcon } from './Icons';
+import { InformationCircleIcon, LightBulbIcon, ExclamationTriangleIcon, ExclamationCircleIcon } from './Icons';
+import CodeBlockWithCopy from './markdown/CodeBlockWithCopy';
+import ImageRenderer from './markdown/ImageRenderer';
 
 SyntaxHighlighter.registerLanguage('jsx', jsx);
 SyntaxHighlighter.registerLanguage('tsx', typescript);
@@ -23,39 +24,6 @@ SyntaxHighlighter.registerLanguage('sh', bash);
 SyntaxHighlighter.registerLanguage('markdown', markdown);
 SyntaxHighlighter.registerLanguage('md', markdown);
 
-
-const CodeBlockWithCopy: React.FC<{ children: React.ReactNode, className?: string }> = ({ children, className }) => {
-    const [copied, setCopied] = useState(false);
-
-    const handleCopy = () => {
-        const codeString = String(children).replace(/\n$/, '');
-        navigator.clipboard.writeText(codeString).then(() => {
-            setCopied(true);
-            setTimeout(() => setCopied(false), 2000);
-        }, (err) => {
-            console.error('Failed to copy code to clipboard:', err);
-        });
-    };
-    
-    const match = /language-(\w+)/.exec(className || '');
-    if (!match) return null;
-
-    return (
-        <div className="code-block-wrapper markdown-preview">
-            <button onClick={handleCopy} className="copy-code-btn" aria-label="Copy code">
-                {copied ? (
-                    <span className="flex items-center gap-1 text-green-500 dark:text-green-400"><CheckIcon className="w-4 h-4" /> Copied</span>
-                ) : (
-                    <span className="flex items-center gap-1"><ClipboardDocumentIcon className="w-4 h-4" /> Copy</span>
-                )}
-            </button>
-            <SyntaxHighlighter style={okaidia} language={match[1]} PreTag="div">
-                {String(children).replace(/\n$/, '')}
-            </SyntaxHighlighter>
-        </div>
-    );
-};
-
 const getYoutubeVideoId = (url: string) => {
     const regex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
     const match = url.match(regex);
@@ -66,55 +34,6 @@ const getVimeoVideoId = (url: string) => {
     const regex = /(?:https?:\/\/)?(?:www\.)?vimeo\.com\/(?:channels\/(?:\w+\/)?|groups\/(?:[^\/]*)\/videos\/|album\/(?:\d+)\/video\/|)(\d+)/;
     const match = url.match(regex);
     return match ? match[1] : null;
-};
-
-const ImageRenderer = ({ src, alt, ...props }: { src?: string, alt?: string, [key: string]: any }) => {
-    const [isLoading, setIsLoading] = useState(true);
-    const [hasError, setHasError] = useState(false);
-
-    useEffect(() => {
-        setIsLoading(true);
-        setHasError(false);
-        if (!src) {
-            setHasError(true);
-            setIsLoading(false);
-        }
-    }, [src]);
-
-    const handleLoad = () => setIsLoading(false);
-    const handleError = () => {
-        setIsLoading(false);
-        setHasError(true);
-    };
-
-    if (hasError || !src) {
-        return (
-            <div className="my-4 p-4 bg-light-ui dark:bg-dark-ui rounded-lg flex flex-col items-center justify-center text-center text-sm text-light-text/60 dark:text-dark-text/60 border border-light-border dark:border-dark-border">
-                <PhotoIcon className="h-8 w-8 mb-2" />
-                <span>{!src ? "Image source missing." : "Could not load image."}</span>
-                <span className="text-xs truncate max-w-full">{alt || src}</span>
-            </div>
-        );
-    }
-    
-    return (
-        <div className="relative my-4 min-h-[5rem] flex items-center justify-center bg-light-ui/50 dark:bg-dark-ui/50 rounded-lg border border-dashed border-light-border dark:border-dark-border overflow-hidden">
-            {isLoading && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center p-4 text-center text-light-text/60 dark:text-dark-text/60 animate-pulse">
-                    <PhotoIcon className="h-8 w-8 mb-2" />
-                    {alt && <span className="text-xs truncate max-w-full">{alt}</span>}
-                </div>
-            )}
-            <img 
-                src={src} 
-                alt={alt || ''}
-                onLoad={handleLoad}
-                onError={handleError}
-                className={`rounded-lg transition-opacity duration-500 w-full relative z-10 ${isLoading ? 'opacity-0' : 'opacity-100'}`}
-                {...props} 
-            />
-        </div>
-    );
 };
 
 interface MarkdownPreviewProps {

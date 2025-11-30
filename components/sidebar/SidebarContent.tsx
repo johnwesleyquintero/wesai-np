@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { Note, TreeNode, Collection } from '../../types';
 import NoteCard from '../NoteCard';
@@ -10,6 +11,7 @@ import CollapsibleSection from './CollapsibleSection';
 import { useStoreContext, useUIContext } from '../../context/AppContext';
 import { useDragAndDrop } from '../../hooks/useDragAndDrop';
 import { useToast } from '../../context/ToastContext';
+import { getVisibleNodes } from '../../lib/treeUtils';
 
 const EXPANDED_FOLDERS_KEY = 'wesai-sidebar-expanded-folders';
 
@@ -88,23 +90,9 @@ const SidebarContent: React.FC = () => {
         setExpandedFolders(prev => ({ ...prev, [folderId]: !(prev[folderId] ?? true) }));
     }, []);
 
-    const getVisibleNodes = useCallback((nodes: TreeNode[]): string[] => {
-        let ids: string[] = [];
-        for (const node of nodes) {
-            if (searchData.isSearching && searchData.visibleIds && !searchData.visibleIds.has(node.id)) {
-                continue;
-            }
-            ids.push(node.id);
-            const isCollection = 'name' in node;
-            const isExpanded = searchData.isSearching || (expandedFolders[node.id] ?? true);
-            if (isCollection && isExpanded) {
-                ids = ids.concat(getVisibleNodes(node.children));
-            }
-        }
-        return ids;
-    }, [expandedFolders, searchData]);
-
-    const visibleNodeIds = React.useMemo(() => getVisibleNodes(fileTree), [fileTree, getVisibleNodes]);
+    const visibleNodeIds = useMemo(() => 
+        getVisibleNodes(fileTree, searchData, expandedFolders), 
+    [fileTree, searchData, expandedFolders]);
 
     useEffect(() => {
         if (focusedNodeId && !visibleNodeIds.includes(focusedNodeId)) {

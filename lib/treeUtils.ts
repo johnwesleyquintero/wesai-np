@@ -34,3 +34,27 @@ export const buildTree = (notes: Note[], collections: Collection[]): TreeNode[] 
     sortNodes(tree);
     return tree;
 };
+
+/**
+ * Recursively determines which nodes should be visible in the sidebar based on 
+ * search state and expansion state.
+ */
+export const getVisibleNodes = (
+    nodes: TreeNode[], 
+    searchData: { isSearching: boolean; visibleIds: Set<string> | null },
+    expandedFolders: Record<string, boolean>
+): string[] => {
+    let ids: string[] = [];
+    for (const node of nodes) {
+        if (searchData.isSearching && searchData.visibleIds && !searchData.visibleIds.has(node.id)) {
+            continue;
+        }
+        ids.push(node.id);
+        const isCollection = 'name' in node;
+        const isExpanded = searchData.isSearching || (expandedFolders[node.id] ?? true);
+        if (isCollection && isExpanded) {
+            ids = ids.concat(getVisibleNodes(node.children, searchData, expandedFolders));
+        }
+    }
+    return ids;
+};

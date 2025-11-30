@@ -1,11 +1,11 @@
+
 import React, { useMemo, useCallback, useRef, useEffect, useState } from 'react';
 import ForceGraph2D, { ForceGraphMethods, LinkObject as Link, NodeObject } from 'react-force-graph-2d';
 import { useStoreContext, useUIContext } from '../context/AppContext';
 import { GraphIcon } from './Icons';
 import { useToast } from '../context/ToastContext';
 import { Note } from '../types';
-import MarkdownPreview from './MarkdownPreview';
-import { generatePreviewFromMarkdown } from '../lib/markdownUtils';
+import NotePreviewPopover from './graph/NotePreviewPopover';
 
 const noteLinkRegex = /\[\[([a-zA-Z0-9-]+)(?:\|.*?)?\]\]/g;
 
@@ -13,31 +13,6 @@ type GraphNode = NodeObject & {
     id: string;
     name: string;
     val: number;
-};
-
-const NotePreviewPopover: React.FC<{ note: Note; position: { x: number; y: number } }> = ({ note, position }) => {
-    const previewContent = generatePreviewFromMarkdown(note.content, 250);
-
-    const style: React.CSSProperties = {
-        position: 'fixed',
-        top: position.y,
-        left: position.x,
-        transform: 'translate(15px, 15px)', // Offset from cursor/node
-        zIndex: 100,
-        pointerEvents: 'none',
-    };
-
-    return (
-        <div
-            style={style}
-            className="w-80 max-h-60 overflow-hidden p-4 bg-light-background dark:bg-dark-background rounded-lg shadow-2xl border border-light-border dark:border-dark-border text-sm text-light-text dark:text-dark-text animate-fade-in"
-        >
-            <h3 className="font-bold mb-2 truncate">{note.title}</h3>
-            <div className="text-light-text/80 dark:text-dark-text/80 chat-markdown">
-                 <MarkdownPreview title="" content={previewContent} onToggleTask={() => {}} />
-            </div>
-        </div>
-    );
 };
 
 const GraphView: React.FC = () => {

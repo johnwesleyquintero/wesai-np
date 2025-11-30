@@ -1,34 +1,24 @@
 import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Sidebar from './components/Sidebar';
 import { useStoreContext } from './context/AppContext';
-import { Note, NoteVersion, Collection, SmartCollection } from './types';
+import { SmartCollection } from './types';
 import ConfirmationModal from './components/ConfirmationModal';
 import { AppProvider, useUIContext, useAuthContext } from './context/AppContext';
 import ContextMenu from './components/ContextMenu';
-import { ToastProvider, useToast } from './context/ToastContext';
+import { ToastProvider } from './context/ToastContext';
 import SidebarResizer from './components/SidebarResizer';
 import SuspenseLoader from './components/SuspenseLoader';
 import Auth from './components/Auth';
 import { setupStorageBucket } from './lib/supabaseClient';
-import NoteEditorSkeleton from './components/NoteEditorSkeleton';
-import ChatViewSkeleton from './components/ChatViewSkeleton';
 import ApiKeyIndicator from './components/ApiKeyIndicator';
-import AnalyticsDashboardSkeleton from './components/AnalyticsDashboardSkeleton';
-import TrendAnalysisDashboardSkeleton from './components/TrendAnalysisDashboardSkeleton';
-import GraphViewSkeleton from './components/GraphViewSkeleton';
 import LandingPage from './components/LandingPage';
-import WelcomeScreen from './components/WelcomeScreen';
 import { useOnboarding } from './hooks/useOnboarding';
+import MainView from './components/MainView';
 
-const NoteEditor = React.lazy(() => import('./components/NoteEditor'));
-const ChatView = React.lazy(() => import('./components/ChatView'));
 const CommandPalette = React.lazy(() => import('./components/CommandPalette'));
 const SettingsModal = React.lazy(() => import('./components/SettingsModal'));
 const SmartFolderModal = React.lazy(() => import('./components/SmartFolderModal'));
 const WelcomeModal = React.lazy(() => import('./components/WelcomeModal'));
-const AnalyticsDashboard = React.lazy(() => import('./components/AnalyticsDashboard'));
-const TrendAnalysisDashboard = React.lazy(() => import('./components/TrendAnalysisDashboard'));
-const GraphView = React.lazy(() => import('./components/GraphView'));
 const CoachMark = React.lazy(() => import('./components/CoachMark'));
 const HelpModal = React.lazy(() => import('./components/HelpModal'));
 
@@ -44,7 +34,7 @@ function AppContent() {
     } = useStoreContext();
 
     const {
-        isMobileView, setIsSidebarOpen, view, setView,
+        isMobileView, setIsSidebarOpen, view,
         isSettingsOpen, setIsSettingsOpen, initialSettingsTab,
         isCommandPaletteOpen, setIsCommandPaletteOpen,
         isSmartFolderModalOpen, setIsSmartFolderModalOpen, smartFolderToEdit, initialSmartFolderQuery,
@@ -124,53 +114,6 @@ function AppContent() {
         setIsSmartFolderModalOpen(false);
     };
 
-
-    const renderMainView = () => {
-        switch (view) {
-            case 'CHAT':
-                return <ChatView />;
-            case 'CTR_ANALYTICS':
-                return <AnalyticsDashboard />;
-            case 'TREND_ANALYSIS':
-                return <TrendAnalysisDashboard />;
-            case 'GRAPH':
-                return <GraphView />;
-            case 'NOTES':
-            default:
-                if (activeNote) {
-                    return (
-                        <NoteEditor
-                            key={activeNote.id}
-                            note={activeNote}
-                        />
-                    );
-                }
-                return <WelcomeScreen
-                    isMobileView={isMobileView}
-                    onToggleSidebar={() => setIsSidebarOpen(true)}
-                    onAddNote={() => onAddNote()}
-                    isSidebarCollapsed={isSidebarCollapsed}
-                    onToggleSidebarCollapsed={toggleSidebarCollapsed}
-                />;
-        }
-    };
-    
-    const suspenseFallback = useMemo(() => {
-        switch (view) {
-            case 'CHAT':
-                return <ChatViewSkeleton />;
-            case 'CTR_ANALYTICS':
-                return <AnalyticsDashboardSkeleton />;
-            case 'TREND_ANALYSIS':
-                return <TrendAnalysisDashboardSkeleton />;
-            case 'GRAPH':
-                return <GraphViewSkeleton />;
-            case 'NOTES':
-            default:
-                return <NoteEditorSkeleton />;
-        }
-    }, [view]);
-
     return (
         <div className="flex h-screen w-screen font-sans text-light-text dark:text-dark-text bg-light-background dark:bg-dark-background overflow-hidden">
             <Sidebar
@@ -181,9 +124,15 @@ function AppContent() {
             {!isMobileView && <SidebarResizer onResizeStart={handleResizeStart} />}
             <main className="flex-1 flex flex-col h-full min-w-0">
                 {isApiKeyMissing && <ApiKeyIndicator />}
-                <Suspense fallback={suspenseFallback}>
-                    {renderMainView()}
-                </Suspense>
+                <MainView 
+                    view={view}
+                    activeNote={activeNote}
+                    isMobileView={isMobileView}
+                    setIsSidebarOpen={setIsSidebarOpen}
+                    onAddNote={onAddNote}
+                    isSidebarCollapsed={isSidebarCollapsed}
+                    toggleSidebarCollapsed={toggleSidebarCollapsed}
+                />
             </main>
 
             {contextMenu && <ContextMenu {...contextMenu} onClose={() => setContextMenu(null)} />}

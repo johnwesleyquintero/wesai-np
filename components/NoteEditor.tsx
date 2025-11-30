@@ -1,5 +1,4 @@
-
-import React, { useEffect, useRef, useMemo, useCallback, useState, useLayoutEffect } from 'react';
+import React, { useEffect, useRef, useMemo, useCallback, useLayoutEffect } from 'react';
 import { Note, NoteVersion, Template, InlineAction } from '../types';
 import EditorHeader from './editor/EditorHeader';
 import EditorTitle from './editor/EditorTitle';
@@ -8,8 +7,13 @@ import EditorMeta from './editor/EditorMeta';
 import EditorStatusBar from './editor/EditorStatusBar';
 import VersionHistorySidebar from './VersionHistorySidebar';
 import { useUndoableState } from '../hooks/useUndoableState';
+import InlineAiMenu from './InlineAiMenu';
+import SpellcheckMenu from './SpellcheckMenu';
 import { useEditorContext, useStoreContext, useUIContext, useAuthContext } from '../context/AppContext';
+import NoteLinker from './NoteLinker';
+import TemplateLinker from './TemplateLinker';
 import { useBacklinks } from '../hooks/useBacklinks';
+import SlashCommandMenu from './SlashCommandMenu';
 import { useToast } from '../context/ToastContext';
 import { useSpellcheck } from '../hooks/useSpellcheck';
 import { useNoteEditorReducer } from '../hooks/useNoteEditorReducer';
@@ -17,16 +21,12 @@ import { useAiSuggestions } from '../hooks/useAiSuggestions';
 import { useAiActions } from '../hooks/useAiActions';
 import { useEditorHotkeys } from '../hooks/useEditorHotkeys';
 import { useNoteInputHandlers } from '../hooks/useNoteInputHandlers';
-import { useEditorGutter } from '../hooks/useEditorGutter';
 import { SparklesIcon } from './Icons';
-import EditorPopups from './editor/EditorPopups';
-import NoteLinker from '../components/NoteLinker';
-import TemplateLinker from '../components/TemplateLinker';
-import SlashCommandMenu from '../components/SlashCommandMenu';
-import InlineAiMenu from '../components/InlineAiMenu';
-import SpellcheckMenu from '../components/SpellcheckMenu';
 import ParagraphActionMenu from './editor/ParagraphActionMenu';
 import { getCursorPositionRect, getLineInfoForPosition } from '../lib/editorDOMUtils';
+import { useNoteSync } from '../hooks/useNoteSync';
+import { useEditorGutter } from '../hooks/useEditorGutter';
+import EditorPopups from './editor/EditorPopups';
 
 interface NoteEditorProps {
     note: Note;
@@ -87,9 +87,21 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         latestEditorStateRef.current = editorState;
     }, [editorState]);
     
-    const prevNoteRef = useRef(note);
-    const [lastWarnedTimestamp, setLastWarnedTimestamp] = useState<string | null>(null);
     const stateWhenLastSavedRef = useRef<NoteState | null>(null);
+
+    // Use the extracted Sync Logic Hook
+    useNoteSync({
+        note,
+        editorState,
+        latestEditorStateRef,
+        setPresent,
+        resetEditorState,
+        areStatesEqual: areNoteStatesEqual,
+        showConfirmation,
+        hideConfirmation,
+        showToast,
+        stateWhenLastSavedRef
+    });
 
     const [uiState, dispatch] = useNoteEditorReducer();
     const {
@@ -208,7 +220,6 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         resetAiSuggestions();
         setActiveSpellingError(null);
         hasAutoTitledRef.current = false;
-        setLastWarnedTimestamp(null);
         setParagraphGutterTarget(null);
         
         if (note.title === 'Untitled Note' && note.content === '') {
@@ -222,59 +233,6 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
             hasAutoTitledRef.current = false;
         }
     }, [editorState.content]);
-
-    useEffect(() => {
-        if (note.id !== prevNoteRef.current.id) {
-            prevNoteRef.current = note;
-            return;
-        }
-    
-        if (note.updatedAt !== prevNoteRef.current.updatedAt) {
-            const isSelfUpdate = stateWhenLastSavedRef.current !== null && areNoteStatesEqual(stateWhenLastSavedRef.current, {
-                title: note.title,
-                content: note.content,
-                tags: note.tags,
-            });
-
-            if (isSelfUpdate) {
-                stateWhenLastSavedRef.current = null;
-                setLastWarnedTimestamp(null);
-                prevNoteRef.current = note;
-                return;
-            }
-    
-            const hasLocalChanges = !areNoteStatesEqual(latestEditorStateRef.current, {
-                title: prevNoteRef.current.title,
-                content: prevNoteRef.current.content,
-                tags: prevNoteRef.current.tags,
-            });
-    
-            if (hasLocalChanges) {
-                if (lastWarnedTimestamp !== note.updatedAt) {
-                    showConfirmation({
-                        title: "Sync Conflict",
-                        message: "This note was updated on another device. You can discard your local changes to load the latest version, or cancel to manually copy your work.",
-                        confirmText: "Reload & Discard",
-                        confirmClass: "bg-red-600 hover:bg-red-700",
-                        onConfirm: () => {
-                            resetEditorState({ title: note.title, content: note.content, tags: note.tags });
-                            setLastWarnedTimestamp(null);
-                            hideConfirmation();
-                        },
-                    });
-                    setLastWarnedTimestamp(note.updatedAt);
-                }
-            } else {
-                setPresent({ title: note.title, content: note.content, tags: note.tags });
-                setLastWarnedTimestamp(null);
-                showToast({
-                    message: `"${note.title}" was synced from an external change.`,
-                    type: 'info',
-                });
-            }
-        }
-        prevNoteRef.current = note;
-    }, [note, resetEditorState, showToast, lastWarnedTimestamp, showConfirmation, hideConfirmation, setPresent]);
 
     useEffect(() => {
         if (previewVersion) return;
@@ -641,24 +599,6 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
             
             <EditorStatusBar wordCount={wordCount} charCount={charCount} readingTime={readingTime} isCheckingSpelling={isCheckingSpelling} />
 
-            {(noteLinker || noteLinkerForSelection) && <NoteLinker editorPaneRef={editorPaneRef} query={noteLinker?.query || ''} onSelect={handleInsertLink} onClose={() => { dispatch({ type: 'SET_NOTE_LINKER', payload: null }); dispatch({ type: 'SET_NOTE_LINKER_FOR_SELECTION', payload: null }); }} position={noteLinker?.position || { top: noteLinkerForSelection!.rect.bottom, left: noteLinkerForSelection!.rect.left }} />}
-            {templateLinker && <TemplateLinker editorPaneRef={editorPaneRef} query={templateLinker.query} onSelect={handleInsertSyncedBlock} onClose={() => dispatch({ type: 'SET_TEMPLATE_LINKER', payload: null })} position={templateLinker.position} />}
-            {slashCommand && <SlashCommandMenu editorPaneRef={editorPaneRef} query={slashCommand.query} position={slashCommand.position} onSelect={handleSelectCommand} onClose={() => dispatch({ type: 'SET_SLASH_COMMAND', payload: null })} textareaRef={textareaRef} />}
-            <InlineAiMenu editorPaneRef={editorPaneRef} selection={selection} onAction={async (action) => { if (selection) { const newPos = await handleInlineAiAction(action, selection); if (newPos !== null && textareaRef.current) { textareaRef.current.focus(); desiredCursorPosRef.current = newPos; } } }} onFormat={handleFormatSelection} isLoading={isAiActionLoading} onClose={() => dispatch({ type: 'SET_SELECTION', payload: null })} isApiKeyMissing={isApiKeyMissing} isAiEnabled={isAiEnabled} />
-            <SpellcheckMenu editorPaneRef={editorPaneRef} activeError={activeSpellingError} suggestions={spellingSuggestions} onSelect={handleApplySuggestion} isLoading={isLoadingSuggestions} error={suggestionError} onClose={() => setActiveSpellingError(null)} />
-            {isHistoryOpen && <VersionHistorySidebar history={note.history || []} onClose={handleCloseHistory} onPreview={(version) => dispatch({ type: 'SET_PREVIEW_VERSION', payload: version })} onRestore={handleRestore} activeVersionTimestamp={previewVersion?.savedAt} />}
-            {gutterMenu && (
-                <ParagraphActionMenu
-                    anchorRect={gutterMenu.anchorRect}
-                    onClose={() => dispatch({ type: 'SET_GUTTER_MENU', payload: null })}
-                    onAction={(action) => {
-                        performParagraphAiAction(action, { start: gutterMenu.start, end: gutterMenu.end }, editorState.content);
-                    }}
-                    editorPaneRef={editorPaneRef}
-                />
-            )}
-            {isDragOver && <div className="absolute inset-0 bg-light-primary/10 dark:bg-dark-primary/10 border-4 border-dashed border-light-primary dark:border-dark-primary rounded-2xl m-4 pointer-events-none flex items-center justify-center"><p className="text-light-primary dark:text-dark-primary font-bold text-2xl">Drop file to import</p></div>}
-            
             <EditorPopups
                 noteLinker={noteLinker}
                 templateLinker={templateLinker}
@@ -690,6 +630,8 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
                 textareaRef={textareaRef}
                 desiredCursorPosRef={desiredCursorPosRef}
             />
+            {isHistoryOpen && <VersionHistorySidebar history={note.history || []} onClose={handleCloseHistory} onPreview={(version) => dispatch({ type: 'SET_PREVIEW_VERSION', payload: version })} onRestore={handleRestore} activeVersionTimestamp={previewVersion?.savedAt} />}
+            {isDragOver && <div className="absolute inset-0 bg-light-primary/10 dark:bg-dark-primary/10 border-4 border-dashed border-light-primary dark:border-dark-primary rounded-2xl m-4 pointer-events-none flex items-center justify-center"><p className="text-light-primary dark:text-dark-primary font-bold text-2xl">Drop file to import</p></div>}
         </div>
     );
 };

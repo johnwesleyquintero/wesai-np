@@ -1,11 +1,5 @@
-
 import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { Note, TreeNode, Collection } from '../../types';
-import NoteCard from '../NoteCard';
-import {
-    PencilSquareIcon, PlusIcon, FolderPlusIcon, BrainIcon, TrashIcon, XMarkIcon,
-    ArrowDownTrayIcon, SparklesIcon, StarIcon
-} from '../Icons';
 import SidebarNode from '../SidebarNode';
 import CollapsibleSection from './CollapsibleSection';
 import { useStoreContext, useUIContext } from '../../context/AppContext';
@@ -13,6 +7,8 @@ import { useDragAndDrop } from '../../hooks/useDragAndDrop';
 import { useToast } from '../../context/ToastContext';
 import { getVisibleNodes } from '../../lib/treeUtils';
 import { useSidebarNavigation } from '../../hooks/useSidebarNavigation';
+import { SparklesIcon, ArrowDownTrayIcon, FolderPlusIcon, TrashIcon, BrainIcon, XMarkIcon } from '../Icons';
+import { FavoritesList, SmartFolderList } from './SidebarLists';
 
 const EXPANDED_FOLDERS_KEY = 'wesai-sidebar-expanded-folders';
 
@@ -94,7 +90,7 @@ const SidebarContent: React.FC = () => {
         getVisibleNodes(fileTree, searchData, expandedFolders), 
     [fileTree, searchData, expandedFolders]);
 
-    const { focusedNodeId, handleKeyDown } = useSidebarNavigation({
+    const { handleKeyDown } = useSidebarNavigation({
         visibleNodeIds,
         collections,
         expandedFolders,
@@ -118,76 +114,6 @@ const SidebarContent: React.FC = () => {
             },
         ]);
     };
-
-    const renderFavorites = () => (
-        <CollapsibleSection title="Favorites" count={favoriteNotes.length}>
-             {favoriteNotes.length > 0 ? (
-                favoriteNotes.map(note => (
-                    <NoteCard
-                        key={note.id}
-                        id={note.id}
-                        title={note.title}
-                        content={note.content}
-                        updatedAt={note.updatedAt}
-                        isFavorite={note.isFavorite}
-                        isActive={note.id === activeNoteId}
-                        onClick={() => onSelectNote(note.id)}
-                        searchTerm={searchTerm}
-                        onContextMenu={(e) => handleNoteCardContextMenu(e, note)}
-                    />
-                ))
-            ) : (
-                <div className="px-2 py-1 text-xs text-light-text/50 dark:text-dark-text/50 flex items-center gap-2">
-                    <StarIcon className="w-4 h-4 opacity-70" />
-                    <span>No favorite notes yet.</span>
-                </div>
-            )}
-        </CollapsibleSection>
-    );
-    
-    const renderSmartCollections = () => (
-         <CollapsibleSection
-            title="Smart Folders"
-            count={smartCollections.length}
-            actions={(
-                <button onClick={() => openSmartFolderModal(null)} className="p-1 rounded text-light-text/60 dark:text-dark-text/60 hover:text-light-text dark:hover:text-dark-text hover:bg-light-background dark:hover:bg-dark-background" aria-label="Add new smart folder">
-                    <PlusIcon className="w-4 h-4" />
-                </button>
-            )}
-        >
-            {smartCollections.length > 0 ? (
-                smartCollections.map(sc => (
-                    <div key={sc.id} 
-                        className={`group flex items-center justify-between w-full text-left rounded-md px-2 py-1.5 my-0.5 text-sm cursor-pointer hover:bg-light-background dark:hover:bg-dark-background`}
-                         onClick={() => onActivateSmartCollection(sc)}
-                         onContextMenu={(e) => onOpenContextMenu(e, [
-                             { label: 'Edit Smart Folder', action: () => openSmartFolderModal(sc), icon: <PencilSquareIcon /> },
-                             { 
-                                 label: 'Delete Smart Folder', 
-                                 action: () => showConfirmation({
-                                    title: "Delete Smart Folder",
-                                    message: `Are you sure you want to delete the smart folder "${sc.name}"? This will not delete any notes. To confirm, please type "${sc.name}".`,
-                                    onConfirm: () => handleDeleteSmartCollectionConfirm(sc),
-                                    confirmationRequiredText: sc.name,
-                                 }), 
-                                 isDestructive: true, 
-                                 icon: <TrashIcon /> 
-                            },
-                         ])}
-                    >
-                         <div className="flex items-center truncate">
-                            <BrainIcon className="w-4 h-4 mr-2 flex-shrink-0 text-light-primary dark:text-dark-primary" />
-                            <span className="truncate">{sc.name}</span>
-                        </div>
-                    </div>
-                ))
-            ) : (
-                <p className="px-2 py-1 text-xs text-light-text/50 dark:text-dark-text/50">
-                    No smart folders. Click the '+' icon to create one.
-                </p>
-            )}
-        </CollapsibleSection>
-    );
     
     const { isSearching, visibleIds } = searchData;
 
@@ -207,6 +133,15 @@ const SidebarContent: React.FC = () => {
                 <p className="mt-1">Try a different keyword or use AI Search for conceptual matches.</p>
             </div>
         );
+    }
+
+    const handleDeleteSmartCollection = (sc: any) => {
+        showConfirmation({
+            title: "Delete Smart Folder",
+            message: `Are you sure you want to delete the smart folder "${sc.name}"? This will not delete any notes. To confirm, please type "${sc.name}".`,
+            onConfirm: () => handleDeleteSmartCollectionConfirm(sc),
+            confirmationRequiredText: sc.name,
+        });
     }
 
     return (
@@ -241,8 +176,25 @@ const SidebarContent: React.FC = () => {
                             Drop to Import
                         </div>
                     )}
-                    {renderFavorites()}
-                    {isAiEnabled && renderSmartCollections()}
+                    
+                    <FavoritesList
+                        favoriteNotes={favoriteNotes}
+                        activeNoteId={activeNoteId}
+                        searchTerm={searchTerm}
+                        onSelectNote={onSelectNote}
+                        onContextMenu={handleNoteCardContextMenu}
+                    />
+
+                    {isAiEnabled && (
+                        <SmartFolderList
+                            smartCollections={smartCollections}
+                            onOpenModal={openSmartFolderModal}
+                            onActivate={onActivateSmartCollection}
+                            onDelete={handleDeleteSmartCollection}
+                            onContextMenu={onOpenContextMenu}
+                        />
+                    )}
+
                     <CollapsibleSection
                         title="Folders"
                         count={notes.length}
@@ -264,10 +216,10 @@ const SidebarContent: React.FC = () => {
                                     onSelectNote={onSelectNote}
                                     expandedFolders={expandedFolders}
                                     onToggleFolder={toggleFolder}
-                                    isFocused={focusedNodeId === node.id}
+                                    isFocused={false} 
                                     isActivePath={activeNotePath.has(node.id)}
                                     activeNotePath={activeNotePath}
-                                    focusedNodeId={focusedNodeId}
+                                    focusedNodeId={null} 
                                 />
                             ))
                         ) : (

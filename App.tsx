@@ -1,5 +1,5 @@
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import Sidebar from './components/Sidebar';
 import { useStoreContext } from './context/AppContext';
 import ConfirmationModal from './components/ConfirmationModal';
@@ -15,6 +15,7 @@ import LandingPage from './components/LandingPage';
 import { useOnboarding } from './hooks/useOnboarding';
 import MainView from './components/MainView';
 import ModalManager from './components/ModalManager';
+import { useSidebarResizer } from './hooks/useSidebarResizer';
 
 const WELCOME_SCREEN_SIDEBAR_WIDTH_KEY = 'wesai-sidebar-width';
 const MIN_SIDEBAR_WIDTH = 280;
@@ -36,20 +37,17 @@ function AppContent() {
     } = useUIContext();
     
     const { onboardingSteps, isOnboardingComplete } = useOnboarding();
-    const isResizing = useRef(false);
 
-    const [sidebarWidth, setSidebarWidth] = useState<number>(() => {
-        const savedWidth = localStorage.getItem(WELCOME_SCREEN_SIDEBAR_WIDTH_KEY);
-        return savedWidth ? parseInt(savedWidth, 10) : 320;
+    const { sidebarWidth, handleResizeStart } = useSidebarResizer({
+        minWidth: MIN_SIDEBAR_WIDTH,
+        maxWidth: MAX_SIDEBAR_WIDTH,
+        storageKey: WELCOME_SCREEN_SIDEBAR_WIDTH_KEY,
+        defaultWidth: 320
     });
 
     useEffect(() => {
         setIsSidebarOpen(!isMobileView);
     }, [isMobileView, setIsSidebarOpen]);
-
-    useEffect(() => {
-        localStorage.setItem(WELCOME_SCREEN_SIDEBAR_WIDTH_KEY, String(sidebarWidth));
-    }, [sidebarWidth]);
     
     useEffect(() => {
         if (isFocusMode && !isSidebarCollapsed) {
@@ -67,30 +65,6 @@ function AppContent() {
             setActiveNoteId(null);
         }
     }, [notes, activeNoteId, setActiveNoteId]);
-
-    const handleResizeStart = useCallback((e: React.MouseEvent) => {
-        isResizing.current = true;
-
-        const handleMouseMove = (e: MouseEvent) => {
-            if (isResizing.current) {
-                let newWidth = e.clientX;
-                if (newWidth < MIN_SIDEBAR_WIDTH) newWidth = MIN_SIDEBAR_WIDTH;
-                if (newWidth > MAX_SIDEBAR_WIDTH) newWidth = MAX_SIDEBAR_WIDTH;
-                setSidebarWidth(newWidth);
-            }
-        };
-
-        const handleMouseUp = () => {
-            isResizing.current = false;
-            window.removeEventListener('mousemove', handleMouseMove);
-            window.removeEventListener('mouseup', handleMouseUp);
-            document.body.style.cursor = 'default';
-        };
-
-        document.body.style.cursor = 'col-resize';
-        window.addEventListener('mousemove', handleMouseMove);
-        window.addEventListener('mouseup', handleMouseUp);
-    }, []);
     
     return (
         <div className="flex h-screen w-screen font-sans text-light-text dark:text-dark-text bg-light-background dark:bg-dark-background overflow-hidden">

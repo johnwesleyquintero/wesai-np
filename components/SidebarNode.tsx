@@ -1,11 +1,12 @@
+
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Collection, Note, TreeNode } from '../types';
-import { ChevronDownIcon, ChevronRightIcon, DocumentTextIcon, FolderIcon, TrashIcon, PencilSquareIcon, DocumentDuplicateIcon, ClipboardDocumentIcon, GripVerticalIcon, LinkIcon, HashtagIcon } from './Icons';
-import { ContextMenuItem } from '../types';
+import { TreeNode } from '../types';
+import { ChevronDownIcon, ChevronRightIcon, DocumentTextIcon, FolderIcon, GripVerticalIcon } from './Icons';
 import { useStoreContext, useUIContext } from '../context/AppContext';
 import { useToast } from '../context/ToastContext';
 import Highlight from './Highlight';
 import { useDragAndDrop } from '../hooks/useDragAndDrop';
+import { useSidebarMenu } from '../hooks/useSidebarMenu';
 
 interface SidebarNodeProps {
     node: TreeNode;
@@ -27,10 +28,10 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
     focusedNodeId, activeNotePath
 }) => {
     const { 
-        collections, onAddNote, onAddNoteFromFile, updateCollection, renameNoteTitle, moveItem,
-        copyNote, handleDeleteNoteConfirm, handleDeleteCollectionConfirm, notes
+        collections, onAddNoteFromFile, updateCollection, renameNoteTitle, moveItem,
     } = useStoreContext();
-    const { onOpenContextMenu, renamingItemId, setRenamingItemId, draggingItemId, setDraggingItemId, showConfirmation } = useUIContext();
+    const { renamingItemId, setRenamingItemId, draggingItemId, setDraggingItemId } = useUIContext();
+    const { handleContextMenu } = useSidebarMenu();
 
     const isCollection = 'name' in node;
     const [renameValue, setRenameValue] = useState('');
@@ -97,129 +98,8 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
         }
     };
     
-    const handleContextMenu = (e: React.MouseEvent) => {
-        let menuItems: ContextMenuItem[] = [];
-        if (isCollection) {
-            const collectionAsCollection = node as Collection;
-            menuItems = [
-                { label: 'New Note in Folder', action: () => onAddNote(node.id), icon: <PencilSquareIcon /> },
-                { label: 'Rename Folder', action: () => setRenamingItemId(node.id), icon: <PencilSquareIcon /> },
-                { divider: true },
-                { 
-                    label: 'Delete Folder', 
-                    action: () => {
-                        const hasChildren = notes.some(n => n.parentId === collectionAsCollection.id) || collections.some(c => c.parentId === collectionAsCollection.id);
-                        showConfirmation({
-                            title: 'Delete Folder',
-                            message: hasChildren
-                                ? `Are you sure you want to delete the folder "${collectionAsCollection.name}"? All notes and folders inside it will also be permanently deleted. This action cannot be undone.`
-                                : `Are you sure you want to delete the empty folder "${collectionAsCollection.name}"? This action cannot be undone.`,
-                            confirmationRequiredText: hasChildren ? collectionAsCollection.name : undefined,
-                            onConfirm: () => handleDeleteCollectionConfirm(collectionAsCollection),
-                        });
-                    }, 
-                    icon: <TrashIcon />, 
-                    isDestructive: true 
-                },
-            ];
-        } else {
-            const noteAsNote = node as Note;
-            
-            const generateMoveToMenuItems = (
-                targetNote: Note,
-                allCollections: Collection[],
-                moveItemAction: (draggedItemId: string, targetItemId: string | null, position: 'inside') => void
-            ): ContextMenuItem[] => {
-                const childrenMap = new Map<string | null, Collection[]>();
-                allCollections.forEach(c => {
-                    const parent = c.parentId ?? null;
-                    if (!childrenMap.has(parent)) childrenMap.set(parent, []);
-                    childrenMap.get(parent)!.push(c);
-                });
-            
-                const buildMenu = (parentId: string | null): ContextMenuItem[] => {
-                    const children = childrenMap.get(parentId) || [];
-                    return children.sort((a, b) => a.name.localeCompare(b.name)).map(collection => ({
-                        label: collection.name,
-                        action: () => moveItemAction(targetNote.id, collection.id, 'inside'),
-                        disabled: targetNote.parentId === collection.id,
-                        children: (childrenMap.get(collection.id) || []).length > 0 ? buildMenu(collection.id) : undefined
-                    }));
-                };
-                
-                const menu: ContextMenuItem[] = [{
-                    label: "Root",
-                    icon: <FolderIcon />,
-                    action: () => moveItemAction(targetNote.id, null, 'inside'),
-                    disabled: targetNote.parentId === null
-                }, ...buildMenu(null)];
-                
-                return menu;
-            };
-
-            menuItems = [
-                { label: 'Rename Note', action: () => setRenamingItemId(node.id), icon: <PencilSquareIcon /> },
-                {
-                    label: 'Move to...',
-                    icon: <FolderIcon />,
-                    children: generateMoveToMenuItems(noteAsNote, collections, handleMoveItem),
-                },
-                { 
-                    label: 'Duplicate Note', 
-                    action: () => {
-                        copyNote(node.id)
-                            .then((newNoteId) => {
-                                onSelectNote(newNoteId);
-                                showToast({ message: 'Note duplicated successfully!', type: 'success'});
-                            })
-                            .catch((err) => showToast({ message: `Failed to duplicate note: ${err.message}`, type: 'error'}));
-                    }, 
-                    icon: <DocumentDuplicateIcon /> 
-                },
-                { divider: true },
-                {
-                    label: 'Copy Note ID',
-                    action: () => {
-                        navigator.clipboard.writeText(noteAsNote.id)
-                            .then(() => showToast({ message: 'Note ID copied!', type: 'success' }))
-                            .catch(() => showToast({ message: 'Failed to copy ID.', type: 'error' }));
-                    },
-                    icon: <HashtagIcon />
-                },
-                { 
-                    label: 'Copy Note Link', 
-                    action: () => {
-                        const linkText = `[[${noteAsNote.id}|${noteAsNote.title}]]`;
-                        navigator.clipboard.writeText(linkText)
-                            .then(() => showToast({ message: 'Note link copied!', type: 'success' }))
-                            .catch(() => showToast({ message: 'Failed to copy link.', type: 'error' }));
-                    }, 
-                    icon: <LinkIcon /> 
-                },
-                { 
-                    label: 'Copy as Markdown', 
-                    action: () => {
-                        navigator.clipboard.writeText(`# ${noteAsNote.title}\n\n${noteAsNote.content}`)
-                          .then(() => showToast({ message: 'Copied as Markdown', type: 'success' }))
-                          .catch(() => showToast({ message: 'Failed to copy', type: 'error' }));
-                    }, 
-                    icon: <ClipboardDocumentIcon /> 
-                },
-                { divider: true },
-                { 
-                    label: 'Delete Note', 
-                    action: () => showConfirmation({
-                        title: 'Delete Note',
-                        message: `Are you sure you want to permanently delete "${noteAsNote.title}"? This action cannot be undone.`,
-                        onConfirm: () => handleDeleteNoteConfirm(noteAsNote),
-                        confirmText: 'Delete',
-                    }), 
-                    icon: <TrashIcon />, 
-                    isDestructive: true 
-                },
-            ];
-        }
-        onOpenContextMenu(e, menuItems);
+    const onContextMenu = (e: React.MouseEvent) => {
+        handleContextMenu(e, node, onSelectNote);
     };
 
     const handleDoubleClick = () => {
@@ -266,7 +146,7 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
                 }}
                 onClick={handleNodeClick}
                 onDoubleClick={handleDoubleClick}
-                onContextMenu={handleContextMenu}
+                onContextMenu={onContextMenu}
                 className={`group flex items-center justify-between w-full text-left rounded-md pr-2 my-0.5 text-sm cursor-grab transition-all duration-150 relative ${
                     isActive
                         ? 'bg-light-primary/30 dark:bg-dark-primary/30 text-light-text dark:text-dark-text font-semibold'
@@ -313,7 +193,12 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
             </div>
             {isCollection && isExpanded && (
                 <div>
-                    {node.children.length === 0 && !isSearching && (
+                    {isSearching && node.children.length > 0 && node.children.every(c => !searchData.visibleIds?.has(c.id)) && (
+                        <p style={{ paddingLeft: `${(level + 1) * 16 + 28}px` }} className="py-1.5 text-xs text-light-text/50 dark:text-dark-text/50">
+                           No matches
+                        </p>
+                    )}
+                    {!isSearching && node.children.length === 0 && (
                         <p style={{ paddingLeft: `${(level + 1) * 16 + 28}px` }} className="py-1.5 text-xs text-light-text/50 dark:text-dark-text/50">
                            Empty folder
                         </p>

@@ -1,19 +1,12 @@
 
-import React, { useMemo, useCallback, useRef, useEffect, useState } from 'react';
-import ForceGraph2D, { ForceGraphMethods, LinkObject as Link, NodeObject } from 'react-force-graph-2d';
+import React, { useCallback, useRef, useEffect, useState } from 'react';
+import ForceGraph2D, { ForceGraphMethods, LinkObject as Link } from 'react-force-graph-2d';
 import { useStoreContext, useUIContext } from '../context/AppContext';
 import { GraphIcon } from './Icons';
 import { useToast } from '../context/ToastContext';
 import { Note } from '../types';
 import NotePreviewPopover from './graph/NotePreviewPopover';
-
-const noteLinkRegex = /\[\[([a-zA-Z0-9-]+)(?:\|.*?)?\]\]/g;
-
-type GraphNode = NodeObject & {
-    id: string;
-    name: string;
-    val: number;
-};
+import { useGraphData, GraphNode } from '../hooks/useGraphData';
 
 const GraphView: React.FC = () => {
     const { notes, setActiveNoteId, updateNote } = useStoreContext();
@@ -33,6 +26,8 @@ const GraphView: React.FC = () => {
     const hoverTimeoutRef = useRef<number | null>(null);
     const clickTimeoutRef = useRef<number | null>(null);
     const lastClickedNodeRef = useRef<GraphNode | null>(null);
+
+    const { graphData, neighborsMap, hotNodeId } = useGraphData(notes);
 
     useEffect(() => {
         const handleResize = () => {
@@ -72,51 +67,6 @@ const GraphView: React.FC = () => {
             containerRef.current.style.cursor = isLinkingMode ? 'crosshair' : 'grab';
         }
     }, [isLinkingMode]);
-
-    const { graphData, neighborsMap, hotNodeId } = useMemo(() => {
-        const links: Link<GraphNode>[] = [];
-        const noteIds = new Set(notes.map(n => n.id));
-        const degrees = new Map<string, number>();
-        const neighborsMap = new Map<string, Set<string>>();
-
-        notes.forEach(note => {
-            degrees.set(note.id, 0);
-            neighborsMap.set(note.id, new Set());
-            const matches = [...note.content.matchAll(noteLinkRegex)];
-            matches.forEach(match => {
-                const targetId = match[1];
-                if (note.id !== targetId && noteIds.has(targetId)) {
-                    links.push({ source: note.id, target: targetId });
-                    degrees.set(note.id, (degrees.get(note.id) || 0) + 1);
-                    degrees.set(targetId, (degrees.get(targetId) || 0) + 1);
-                }
-            });
-        });
-
-        links.forEach(({ source, target }) => {
-            const sourceId = typeof source === 'object' ? (source as GraphNode).id as string : source as string;
-            const targetId = typeof target === 'object' ? (target as GraphNode).id as string : target as string;
-            neighborsMap.get(sourceId)?.add(targetId);
-            neighborsMap.get(targetId)?.add(sourceId);
-        });
-        
-        const nodes: GraphNode[] = notes.map(note => ({
-            id: note.id,
-            name: note.title || 'Untitled Note',
-            val: (degrees.get(note.id) || 0) + 1,
-        }));
-        
-        let hotNodeId: string | null = null;
-        let maxDegree = 0;
-        degrees.forEach((degree, nodeId) => {
-            if (degree > maxDegree) {
-                maxDegree = degree;
-                hotNodeId = nodeId;
-            }
-        });
-
-        return { graphData: { nodes, links }, neighborsMap, hotNodeId };
-    }, [notes]);
 
     const clearPreview = useCallback(() => {
         if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);

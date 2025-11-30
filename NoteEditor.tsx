@@ -18,6 +18,7 @@ import { useNoteInputHandlers } from './hooks/useNoteInputHandlers';
 import { useNoteSync } from './hooks/useNoteSync';
 import { useEditorGutter } from './hooks/useEditorGutter';
 import { useEditorInsertionLogic } from './hooks/useEditorInsertionLogic';
+import { useNoteEditorHandlers } from './hooks/useNoteEditorHandlers';
 import EditorPopups from './components/editor/EditorPopups';
 import { getCursorPositionRect, getLineInfoForPosition } from './lib/editorDOMUtils';
 import { useToast } from './context/ToastContext';
@@ -276,20 +277,30 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         };
     }, [note.id, updateNote, showToast]);
 
-    const handleSave = useCallback(async () => {
-        if (saveStatus === 'saving') return;
-        dispatch({ type: 'SET_SAVE_STATUS', payload: 'saving' });
-        stateWhenLastSavedRef.current = editorState;
-        try {
-            await updateNote(note.id, editorState);
-            dispatch({ type: 'SET_SAVE_STATUS', payload: 'saved' });
-            showToast({ message: 'Note saved!', type: 'success' });
-        } catch (error) {
-            console.error("Manual save failed:", error);
-            showToast({ message: `Save failed. Your changes are safe here.`, type: 'error' });
-            dispatch({ type: 'SET_SAVE_STATUS', payload: 'error' });
-        }
-    }, [note.id, editorState, updateNote, showToast, dispatch, saveStatus]);
+    // Use the custom hook for all editor handlers
+    const { 
+        handleSave, 
+        handleRestore, 
+        handleCloseHistory, 
+        handleApplyTemplate, 
+        handleSaveAsTemplate,
+        handleToggleTask, 
+        handleAddTag, 
+        handleApplyTitleSuggestion, 
+        handleContentBlur 
+    } = useNoteEditorHandlers({
+        note,
+        editorState,
+        setEditorState,
+        dispatch,
+        saveStatus,
+        stateWhenLastSavedRef,
+        setSuggestedTags,
+        setSuggestedTitle,
+        hasAutoTitledRef,
+        titleInputRef,
+        isAiEnabled
+    });
 
     const editorActions = useMemo(() => ({ 
         undo, redo, canUndo, canRedo, 
@@ -393,17 +404,6 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         }
     };
     
-    const handleContentBlur = () => {
-        if (isAiEnabled && !hasAutoTitledRef.current && editorState.title === 'Untitled Note' && editorState.content.trim()) {
-            const firstLine = editorState.content.split('\n')[0].trim().replace(/^#+\s*/, '');
-            if (firstLine) {
-                const newTitle = firstLine.length > 100 ? firstLine.substring(0, 100) + '...' : firstLine;
-                setEditorState({ ...editorState, title: newTitle });
-                hasAutoTitledRef.current = true;
-            }
-        }
-    };
-
     const {
         handleInsertLink,
         handleInsertSyncedBlock,
@@ -420,39 +420,6 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         summarizeAndFindActionForFullNote,
         applyAiActionToFullNote
     });
-
-    const handleRestore = (version: NoteVersion) => { restoreNoteVersion(note.id, version); dispatch({ type: 'SET_PREVIEW_VERSION', payload: null }); dispatch({ type: 'SET_HISTORY_OPEN', payload: false }); };
-    const handleCloseHistory = () => { dispatch({ type: 'SET_PREVIEW_VERSION', payload: null }); dispatch({ type: 'SET_HISTORY_OPEN', payload: false }); };
-    const handleApplyTemplate = (template: Template) => {
-        const apply = () => {
-            setEditorState({ title: template.title, content: template.content, tags: []}); 
-            dispatch({ type: 'SET_VIEW_MODE', payload: 'edit' });
-        };
-
-        if (editorState.content.trim() !== '') {
-            showConfirmation({
-                title: 'Apply Template',
-                message: 'Applying a template will replace the current note content. Are you sure?',
-                confirmText: 'Apply',
-                onConfirm: apply,
-            });
-        } else {
-            apply();
-        }
-    };
-    const handleToggleTask = (lineNumber: number) => { 
-        setEditorState(prev => {
-            const lines = prev.content.split('\n'); 
-            if (lineNumber >= lines.length) return prev; 
-            const line = lines[lineNumber]; 
-            const toggledLine = line.includes('[ ]') ? line.replace('[ ]', '[x]') : line.replace(/\[(x|X)\]/, '[ ]'); 
-            lines[lineNumber] = toggledLine; 
-            const newContent = lines.join('\n'); 
-            return { ...prev, content: newContent };
-        });
-    };
-    const handleAddTag = (tagToAdd: string) => { if (!editorState.tags.includes(tagToAdd)) { setEditorState({ ...editorState, tags: [...editorState.tags, tagToAdd] }); } setSuggestedTags(prev => prev.filter(t => t !== tagToAdd)); };
-    const handleApplyTitleSuggestion = (title: string) => { setEditorState({ ...editorState, title }); setSuggestedTitle(null); };
 
     const editorPaddingClass = 'px-4 sm:px-8';
     const sharedEditorClasses = 'w-full p-0 border-0 text-base sm:text-lg resize-none focus:outline-none leading-relaxed whitespace-pre-wrap break-words';

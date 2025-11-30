@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect, useState } from 'react';
 import { useChatContext, useUIContext } from '../context/AppContext';
 import { Note } from '../types';

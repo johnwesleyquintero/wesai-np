@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState, useEffect, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
@@ -205,7 +206,8 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({ title, content, onTog
     const { getNoteById, setActiveNoteId } = useStoreContext();
     const { setView } = useUIContext();
 
-    const components: any = {
+    // Memoize components to prevent unnecessary re-renders of the markdown tree
+    const components = useMemo(() => ({
         code({ node, className, children, ...props }: any) {
             const match = /language-(\w+)/.exec(className || '');
             return match ? (
@@ -268,7 +270,7 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({ title, content, onTog
 
             return <a href={url} target="_blank" rel="noopener noreferrer" className="text-light-primary dark:text-dark-primary underline" {...props}>{children}</a>;
         },
-        img: ({node, ...props}) => <ImageRenderer {...props} />,
+        img: ({node, ...props}: any) => <ImageRenderer {...props} />,
         input({ node, className, ...props }: any) {
             const { type, checked } = props;
             if (type === 'checkbox') {
@@ -330,23 +332,23 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({ title, content, onTog
             
             return <blockquote className="border-l-4 border-light-border dark:border-dark-border pl-4 italic text-light-text/80 dark:text-dark-text/80 my-4" {...props}>{children}</blockquote>;
         },
-        h1: ({node, ...props}) => <h1 className="text-4xl font-bold mt-8 mb-4 border-b border-light-border dark:border-dark-border pb-2" {...props} />,
-        h2: ({node, ...props}) => <h2 className="text-3xl font-bold mt-6 mb-3 border-b border-light-border dark:border-dark-border pb-2" {...props} />,
-        h3: ({node, ...props}) => <h3 className="text-2xl font-bold mt-5 mb-2" {...props} />,
-        h4: ({node, ...props}) => <h4 className="text-xl font-semibold mt-4 mb-2" {...props} />,
-        h5: ({node, ...props}) => <h5 className="text-lg font-semibold mt-3 mb-1" {...props} />,
-        h6: ({node, ...props}) => <h6 className="text-base font-semibold mt-2 mb-1" {...props} />,
-        p: ({node, ...props}) => <p className="my-4 leading-relaxed" {...props} />,
-        ul: ({node, ...props}) => <ul className="list-disc pl-6 my-4 space-y-2" {...props} />,
-        ol: ({node, ...props}) => <ol className="list-decimal pl-6 my-4 space-y-2" {...props} />,
-        hr: ({node, ...props}) => <hr className="my-6 border-light-border dark:border-dark-border" {...props} />,
-        table: ({node, ...props}) => <div className="overflow-x-auto my-4"><table className="min-w-full my-0 border-collapse border border-light-border dark:border-dark-border" {...props} /></div>,
-        thead: ({node, ...props}) => <thead className="bg-light-ui dark:bg-dark-ui" {...props} />,
-        tbody: ({node, ...props}) => <tbody {...props} />,
-        tr: ({node, ...props}) => <tr className="even:bg-light-ui/50 dark:even:bg-dark-ui/50" {...props} />,
-        th: ({node, ...props}) => <th className="border border-light-border dark:border-dark-border px-4 py-2 font-semibold text-left" {...props} />,
-        td: ({node, ...props}) => <td className="border border-light-border dark:border-dark-border px-4 py-2 text-left" {...props} />,
-    };
+        h1: ({node, ...props}: any) => <h1 className="text-4xl font-bold mt-8 mb-4 border-b border-light-border dark:border-dark-border pb-2" {...props} />,
+        h2: ({node, ...props}: any) => <h2 className="text-3xl font-bold mt-6 mb-3 border-b border-light-border dark:border-dark-border pb-2" {...props} />,
+        h3: ({node, ...props}: any) => <h3 className="text-2xl font-bold mt-5 mb-2" {...props} />,
+        h4: ({node, ...props}: any) => <h4 className="text-xl font-semibold mt-4 mb-2" {...props} />,
+        h5: ({node, ...props}: any) => <h5 className="text-lg font-semibold mt-3 mb-1" {...props} />,
+        h6: ({node, ...props}: any) => <h6 className="text-base font-semibold mt-2 mb-1" {...props} />,
+        p: ({node, ...props}: any) => <p className="my-4 leading-relaxed" {...props} />,
+        ul: ({node, ...props}: any) => <ul className="list-disc pl-6 my-4 space-y-2" {...props} />,
+        ol: ({node, ...props}: any) => <ol className="list-decimal pl-6 my-4 space-y-2" {...props} />,
+        hr: ({node, ...props}: any) => <hr className="my-6 border-light-border dark:border-dark-border" {...props} />,
+        table: ({node, ...props}: any) => <div className="overflow-x-auto my-4"><table className="min-w-full my-0 border-collapse border border-light-border dark:border-dark-border" {...props} /></div>,
+        thead: ({node, ...props}: any) => <thead className="bg-light-ui dark:bg-dark-ui" {...props} />,
+        tbody: ({node, ...props}: any) => <tbody {...props} />,
+        tr: ({node, ...props}: any) => <tr className="even:bg-light-ui/50 dark:even:bg-dark-ui/50" {...props} />,
+        th: ({node, ...props}: any) => <th className="border border-light-border dark:border-dark-border px-4 py-2 font-semibold text-left" {...props} />,
+        td: ({node, ...props}: any) => <td className="border border-light-border dark:border-dark-border px-4 py-2 text-left" {...props} />,
+    }), [getNoteById, onToggleTask, setActiveNoteId, setView]); // Re-create only when dependencies change
 
     return (
         <div className="max-w-none markdown-preview">
@@ -359,4 +361,4 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({ title, content, onTog
     );
 };
 
-export default MarkdownPreview;
+export default React.memo(MarkdownPreview);

@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef, useMemo, useCallback, useState, useLayoutEffect } from 'react';
 import { Note, NoteVersion, Template, InlineAction } from '../types';
 import EditorHeader from './editor/EditorHeader';
@@ -7,13 +8,8 @@ import EditorMeta from './editor/EditorMeta';
 import EditorStatusBar from './editor/EditorStatusBar';
 import VersionHistorySidebar from './VersionHistorySidebar';
 import { useUndoableState } from '../hooks/useUndoableState';
-import InlineAiMenu from './InlineAiMenu';
-import SpellcheckMenu from './SpellcheckMenu';
 import { useEditorContext, useStoreContext, useUIContext, useAuthContext } from '../context/AppContext';
-import NoteLinker from './NoteLinker';
-import TemplateLinker from './TemplateLinker';
 import { useBacklinks } from '../hooks/useBacklinks';
-import SlashCommandMenu from './SlashCommandMenu';
 import { useToast } from '../context/ToastContext';
 import { useSpellcheck } from '../hooks/useSpellcheck';
 import { useNoteEditorReducer } from '../hooks/useNoteEditorReducer';
@@ -22,6 +18,13 @@ import { useAiActions } from '../hooks/useAiActions';
 import { useEditorHotkeys } from '../hooks/useEditorHotkeys';
 import { useNoteInputHandlers } from '../hooks/useNoteInputHandlers';
 import { SparklesIcon } from './Icons';
+import { getCursorPositionRect, getLineInfoForPosition } from '../lib/editorDOMUtils';
+import EditorPopups from './editor/EditorPopups';
+import NoteLinker from '../components/NoteLinker';
+import TemplateLinker from '../components/TemplateLinker';
+import SlashCommandMenu from '../components/SlashCommandMenu';
+import InlineAiMenu from '../components/InlineAiMenu';
+import SpellcheckMenu from '../components/SpellcheckMenu';
 import ParagraphActionMenu from './editor/ParagraphActionMenu';
 
 interface NoteEditorProps {
@@ -38,7 +41,6 @@ const areNoteStatesEqual = (a: NoteState, b: NoteState): boolean => {
     if (a.tags.length !== b.tags.length) {
         return false;
     }
-    // Create a set from one array and check if all elements of the other are present
     const tagsSetA = new Set(a.tags);
     for (const tag of b.tags) {
         if (!tagsSetA.has(tag)) {
@@ -107,7 +109,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         summarizeAndFindActionForFullNote,
         handleEnhanceNote,
         handleInlineAiAction,
-        handleParagraphAiAction,
+        handleParagraphAiAction: performParagraphAiAction,
     } = useAiActions(setEditorState, dispatch);
 
     const isEffectivelyReadOnly = !!previewVersion || viewMode === 'preview' || !!isFullAiActionLoading;
@@ -164,7 +166,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
             }
             desiredCursorPosRef.current = null;
         }
-    }); // No dependency array, runs after every render
+    });
 
     const displayedTitle = previewVersion ? previewVersion.title : editorState.title;
     const displayedContent = previewVersion ? previewVersion.content : editorState.content;
@@ -192,8 +194,6 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
     }, [editorState.content, viewMode]);
 
     useEffect(() => {
-        // State is restored from session by useUndoableState on mount.
-        // DO NOT call resetEditorState here, as it would overwrite unsaved session data.
         dispatch({ type: 'RESET_STATE_FOR_NEW_NOTE' });
         resetAiSuggestions();
         setActiveSpellingError(null);
@@ -207,7 +207,6 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         }
     }, [note.id, resetAiSuggestions, setActiveSpellingError, dispatch]);
     
-    // Reset auto-title flag if content is cleared
     useEffect(() => {
         if (editorState.content.trim() === '') {
             hasAutoTitledRef.current = false;
@@ -220,7 +219,6 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
             return;
         }
     
-        // Check for external updates
         if (note.updatedAt !== prevNoteRef.current.updatedAt) {
             const isSelfUpdate = stateWhenLastSavedRef.current !== null && areNoteStatesEqual(stateWhenLastSavedRef.current, {
                 title: note.title,
@@ -229,7 +227,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
             });
 
             if (isSelfUpdate) {
-                stateWhenLastSavedRef.current = null; // Consume the flag
+                stateWhenLastSavedRef.current = null;
                 setLastWarnedTimestamp(null);
                 prevNoteRef.current = note;
                 return;
@@ -242,7 +240,6 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
             });
     
             if (hasLocalChanges) {
-                // CONFLICT: External change detected while there are local unsaved changes.
                 if (lastWarnedTimestamp !== note.updatedAt) {
                     showConfirmation({
                         title: "Sync Conflict",
@@ -251,15 +248,13 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
                         confirmClass: "bg-red-600 hover:bg-red-700",
                         onConfirm: () => {
                             resetEditorState({ title: note.title, content: note.content, tags: note.tags });
-                            setLastWarnedTimestamp(null); // Mark as resolved
+                            setLastWarnedTimestamp(null);
                             hideConfirmation();
                         },
                     });
                     setLastWarnedTimestamp(note.updatedAt);
                 }
             } else {
-                // NO CONFLICT: No local changes, so safe to sync the external update.
-                // Use setPresent to update the state without clearing undo/redo history.
                 setPresent({ title: note.title, content: note.content, tags: note.tags });
                 setLastWarnedTimestamp(null);
                 showToast({
@@ -291,7 +286,6 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         }
     }, [editorState, note.title, note.content, note.tags, previewVersion, saveStatus, dispatch]);
     
-    // Auto-save on unmount/note change
     useEffect(() => {
         const noteAtMount = note;
         const sessionKeyAtMount = `wescore-editor-session-${noteAtMount.id}`;
@@ -311,7 +305,6 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
                 });
             }
 
-            // Clean up session storage for the note we are leaving
             try {
                 sessionStorage.removeItem(sessionKeyAtMount);
             } catch (e) {
@@ -351,62 +344,12 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         return () => unregisterEditorActions();
     }, [registerEditorActions, unregisterEditorActions, editorActions]);
     
-    // When a popup opens, record the current scroll position.
-    useEffect(() => {
-        const hasPopup = !!selection || !!activeSpellingError || !!noteLinker || !!templateLinker || !!noteLinkerForSelection || !!slashCommand || !!gutterMenu;
-        if (!hasPopup) {
-             // Reset when all popups are closed
-        }
-    }, [selection, activeSpellingError, noteLinker, templateLinker, noteLinkerForSelection, slashCommand, gutterMenu]);
-
-    const getCursorPositionRect = useCallback((textarea: HTMLTextAreaElement, position: number): DOMRect => {
-        const pre = cursorMeasureRef.current;
-        if (!pre) return new DOMRect();
-
-        const styles = window.getComputedStyle(textarea);
-        const essentialStyles = [
-            'font-family', 'font-size', 'font-style', 'font-weight', 'line-height',
-            'letter-spacing', 'text-transform', 'padding-top', 'padding-right',
-            'padding-bottom', 'padding-left', 'border-top-width', 'border-right-width',
-            'border-bottom-width', 'border-left-width', 'box-sizing', 'width', 'text-indent'
-        ];
-        
-        // Reset styles to ensure a clean slate for measurement
-        pre.style.cssText = '';
-        
-        essentialStyles.forEach(key => {
-            pre.style.setProperty(key, styles.getPropertyValue(key));
-        });
-
-        pre.style.whiteSpace = 'pre-wrap';
-        pre.style.wordWrap = 'break-word';
-
-        const before = editorState.content.substring(0, position);
-        const span = document.createElement('span');
-        span.textContent = '.'; // Use a non-whitespace character for measurement
-        pre.textContent = before;
-        pre.appendChild(span);
-
-        const rect = span.getBoundingClientRect();
-        pre.textContent = ''; // Clear content to prevent memory leaks
-
-        return rect;
-    }, [editorState.content]);
-    
-    const getLineInfoForPosition = (content: string, position: number) => {
-        const start = content.lastIndexOf('\n', position - 1) + 1;
-        let end = content.indexOf('\n', position);
-        if (end === -1) end = content.length;
-        const text = content.substring(start, end).trim();
-        return { text, start, end };
-    };
-
     const updateGutterState = useCallback(() => {
-        if (isScrollingRef.current) return; // Don't update while scrolling
+        if (isScrollingRef.current) return;
         
         const textarea = textareaRef.current;
         if (!textarea || viewMode !== 'edit' || gutterMenu) {
-            setParagraphGutterTarget(current => current ? null : current); // Only set to null if it has a value
+            setParagraphGutterTarget(current => current ? null : current);
             return;
         }
 
@@ -416,15 +359,18 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         const shouldShow = text && !isEffectivelyReadOnly && isAiEnabled && !isApiKeyMissing;
 
         if (shouldShow) {
-            const rect = getCursorPositionRect(textarea, start);
-            setParagraphGutterTarget(current => {
-                if (current?.start !== start) return { start, rect };
-                return current;
-            });
+            const measureRef = cursorMeasureRef.current;
+            if (measureRef) {
+                const rect = getCursorPositionRect(textarea, start, measureRef, editorState.content);
+                setParagraphGutterTarget(current => {
+                    if (current?.start !== start) return { start, rect };
+                    return current;
+                });
+            }
         } else {
             setParagraphGutterTarget(null);
         }
-    }, [editorState.content, viewMode, gutterMenu, isEffectivelyReadOnly, isAiEnabled, isApiKeyMissing, getCursorPositionRect]);
+    }, [editorState.content, viewMode, gutterMenu, isEffectivelyReadOnly, isAiEnabled, isApiKeyMissing]);
 
     useEffect(() => {
         const pane = editorPaneRef.current;
@@ -441,7 +387,6 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
     }, [updateGutterState]);
 
     useEffect(() => {
-        // This effect runs after content changes (typing, pasting), ensuring updateGutterState uses fresh state.
         updateGutterState();
     }, [updateGutterState]);
 
@@ -480,13 +425,15 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         const slashMatch = textBeforeCursor.match(/(?:\s|^)\/([\w-]*)$/);
         const linkerMatch = textBeforeCursor.match(/\[\[([^\[\]]*)$/);
 
-        if (slashMatch) {
+        const measureRef = cursorMeasureRef.current;
+
+        if (slashMatch && measureRef) {
             const query = slashMatch[1];
-            const rect = getCursorPositionRect(e.target, selectionStart);
+            const rect = getCursorPositionRect(e.target, selectionStart, measureRef, value);
             const range = { start: selectionStart - query.length - 1, end: selectionStart };
             dispatch({ type: 'SET_SLASH_COMMAND', payload: { query, position: { top: rect.bottom, left: rect.left }, range } });
-        } else if (linkerMatch) {
-            const rect = getCursorPositionRect(e.target, selectionStart);
+        } else if (linkerMatch && measureRef) {
+            const rect = getCursorPositionRect(e.target, selectionStart, measureRef, value);
             dispatch({ type: 'SET_NOTE_LINKER', payload: { query: linkerMatch[1], position: { top: rect.bottom + window.scrollY, left: rect.left + window.scrollX } } });
         } else {
             if (slashCommand) dispatch({ type: 'SET_SLASH_COMMAND', payload: null });
@@ -508,18 +455,20 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         }
 
         const selectedText = value.substring(selectionStart, selectionEnd);
-        if (selectedText.trim().length > 0 && (!slashMatch || selectionStart !== selectionEnd)) {
+        const measureRef = cursorMeasureRef.current;
+
+        if (selectedText.trim().length > 0 && (!slashMatch || selectionStart !== selectionEnd) && measureRef) {
             setActiveSpellingError(null);
-            const rect = getCursorPositionRect(textarea, selectionEnd);
+            const rect = getCursorPositionRect(textarea, selectionEnd, measureRef, value);
             dispatch({ type: 'SET_SELECTION', payload: { start: selectionStart, end: selectionEnd, text: selectedText, rect } });
         } else if (selection) {
             dispatch({ type: 'SET_SELECTION', payload: null });
         }
 
-        if (selectionStart === selectionEnd) {
+        if (selectionStart === selectionEnd && measureRef) {
             const clickedError = spellingErrors.find(err => selectionStart >= err.index && selectionStart <= err.index + err.length);
             if (clickedError) {
-                const rect = getCursorPositionRect(textarea, selectionStart);
+                const rect = getCursorPositionRect(textarea, selectionStart, measureRef, value);
                 setActiveSpellingError({ error: clickedError, rect });
             } else if (activeSpellingError) {
                 setActiveSpellingError(null);
@@ -657,6 +606,10 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
     const editorPaddingClass = 'px-4 sm:px-8';
     const sharedEditorClasses = 'w-full p-0 border-0 text-base sm:text-lg resize-none focus:outline-none leading-relaxed whitespace-pre-wrap break-words';
 
+    const handleParagraphAiAction = useCallback((action: InlineAction, selection: { start: number; end: number }) => {
+        performParagraphAiAction(action, selection, editorState.content);
+    }, [performParagraphAiAction, editorState.content]);
+
     return (
         <div className="flex-1 flex flex-col h-full relative bg-light-background dark:bg-dark-background" onDragOver={(e) => { e.preventDefault(); if (!isEffectivelyReadOnly) dispatch({ type: 'SET_DRAG_OVER', payload: true }); }} onDragLeave={() => dispatch({ type: 'SET_DRAG_OVER', payload: false })} onDrop={handleDrop} onPaste={handlePaste}>
             <pre ref={cursorMeasureRef} style={{ position: 'absolute', visibility: 'hidden', top: -9999, left: -9999, pointerEvents: 'none' }} />
@@ -736,12 +689,44 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
                     anchorRect={gutterMenu.anchorRect}
                     onClose={() => dispatch({ type: 'SET_GUTTER_MENU', payload: null })}
                     onAction={(action) => {
-                        handleParagraphAiAction(action, { start: gutterMenu.start, end: gutterMenu.end }, editorState.content);
+                        performParagraphAiAction(action, { start: gutterMenu.start, end: gutterMenu.end }, editorState.content);
                     }}
                     editorPaneRef={editorPaneRef}
                 />
             )}
             {isDragOver && <div className="absolute inset-0 bg-light-primary/10 dark:bg-dark-primary/10 border-4 border-dashed border-light-primary dark:border-dark-primary rounded-2xl m-4 pointer-events-none flex items-center justify-center"><p className="text-light-primary dark:text-dark-primary font-bold text-2xl">Drop file to import</p></div>}
+            
+            <EditorPopups
+                noteLinker={noteLinker}
+                templateLinker={templateLinker}
+                slashCommand={slashCommand}
+                selection={selection}
+                noteLinkerForSelection={noteLinkerForSelection}
+                gutterMenu={gutterMenu}
+                activeSpellingError={activeSpellingError}
+                spellingSuggestions={spellingSuggestions}
+                isLoadingSuggestions={isLoadingSuggestions}
+                suggestionError={suggestionError}
+                isAiActionLoading={isAiActionLoading}
+                isApiKeyMissing={isApiKeyMissing}
+                isAiEnabled={isAiEnabled}
+                onInsertLink={handleInsertLink}
+                onInsertSyncedBlock={handleInsertSyncedBlock}
+                onSelectCommand={handleSelectCommand}
+                onInlineAiAction={(action) => handleInlineAiAction(action, selection!)}
+                onFormatSelection={handleFormatSelection}
+                onApplySpellingSuggestion={handleApplySuggestion}
+                onParagraphAiAction={handleParagraphAiAction}
+                closeNoteLinker={() => dispatch({ type: 'SET_NOTE_LINKER', payload: null })}
+                closeTemplateLinker={() => dispatch({ type: 'SET_TEMPLATE_LINKER', payload: null })}
+                closeSlashCommand={() => dispatch({ type: 'SET_SLASH_COMMAND', payload: null })}
+                closeSelection={() => dispatch({ type: 'SET_SELECTION', payload: null })}
+                closeSpelling={() => setActiveSpellingError(null)}
+                closeGutterMenu={() => dispatch({ type: 'SET_GUTTER_MENU', payload: null })}
+                editorPaneRef={editorPaneRef}
+                textareaRef={textareaRef}
+                desiredCursorPosRef={desiredCursorPosRef}
+            />
         </div>
     );
 };

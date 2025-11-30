@@ -8,21 +8,22 @@ interface ThinkingIndicatorProps {
 
 const ThinkingIndicator: React.FC<ThinkingIndicatorProps> = ({ status }) => {
     return (
-        <div className="flex items-center gap-4 animate-fade-in-up my-6 pl-1">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-light-primary to-purple-600 dark:from-dark-primary dark:to-purple-500 flex items-center justify-center text-white flex-shrink-0 shadow-md ring-2 ring-white dark:ring-dark-background z-10">
-                <SparklesIcon className="w-5 h-5 animate-pulse" />
+        <div className="flex items-center gap-3 animate-fade-in-up my-4 pl-2">
+            <div className="relative">
+                <div className="absolute inset-0 bg-light-primary dark:bg-dark-primary opacity-20 rounded-full animate-ping"></div>
+                <div className="w-7 h-7 rounded-full bg-gradient-to-br from-light-primary to-cyan-600 dark:from-dark-primary dark:to-cyan-400 flex items-center justify-center text-white shadow-sm relative z-10">
+                    <SparklesIcon className="w-4 h-4 animate-pulse" />
+                </div>
             </div>
-            <div className="relative group">
-                <div className="absolute -inset-0.5 bg-gradient-to-r from-light-primary to-purple-600 dark:from-dark-primary dark:to-purple-600 rounded-full opacity-30 blur group-hover:opacity-50 transition duration-1000 group-hover:duration-200 animate-pulse"></div>
-                <div className="relative flex items-center gap-3 px-5 py-2.5 rounded-full bg-light-background dark:bg-zinc-900 border border-light-border dark:border-dark-border shadow-sm">
-                    <div className="flex space-x-1" role="status" aria-label="Loading">
-                        <div className="w-1.5 h-1.5 bg-light-primary dark:bg-dark-primary rounded-full animate-[bounce_1s_infinite_-0.3s]"></div>
-                        <div className="w-1.5 h-1.5 bg-light-primary dark:bg-dark-primary rounded-full animate-[bounce_1s_infinite_-0.15s]"></div>
-                        <div className="w-1.5 h-1.5 bg-light-primary dark:bg-dark-primary rounded-full animate-[bounce_1s_infinite]"></div>
-                    </div>
-                    <span className="text-xs font-semibold bg-gradient-to-r from-light-text to-light-primary dark:from-dark-text dark:to-dark-primary bg-clip-text text-transparent">
-                        {status}
-                    </span>
+            
+            <div className="flex items-center gap-3 px-4 py-2 rounded-2xl bg-light-ui/50 dark:bg-dark-ui/50 border border-light-border/50 dark:border-dark-border/50 backdrop-blur-sm">
+                <span className="text-xs font-semibold bg-gradient-to-r from-light-text to-light-primary dark:from-dark-text dark:to-dark-primary bg-clip-text text-transparent animate-pulse">
+                    {status}
+                </span>
+                <div className="flex space-x-1 opacity-70">
+                    <div className="w-1 h-1 bg-current rounded-full animate-[bounce_1.4s_infinite_-0.3s]"></div>
+                    <div className="w-1 h-1 bg-current rounded-full animate-[bounce_1.4s_infinite_-0.15s]"></div>
+                    <div className="w-1 h-1 bg-current rounded-full animate-[bounce_1.4s_infinite]"></div>
                 </div>
             </div>
         </div>

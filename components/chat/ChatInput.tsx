@@ -57,7 +57,7 @@ const ChatInput: React.FC = () => {
     };
 
     return (
-        <div className="flex-shrink-0 p-4 sm:p-6 border-t border-light-border dark:border-dark-border bg-light-background dark:bg-dark-background">
+        <div className="flex-shrink-0 p-4 sm:px-8 sm:pb-8 bg-light-background dark:bg-dark-background">
             {isPreviewModalOpen && image && (
                 <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4 animate-fade-in" onClick={() => setIsPreviewModalOpen(false)}>
                     <img src={`data:image/jpeg;base64,${image}`} alt="Preview" className="max-w-[90vw] max-h-[90vh] rounded-lg shadow-2xl" onClick={e => e.stopPropagation()} />
@@ -67,58 +67,68 @@ const ChatInput: React.FC = () => {
                 </div>
             )}
             
-            <div className="max-w-3xl mx-auto space-y-2">
-                {/* Horizontal Scrolling Context Pills */}
-                {contextNoteIds.length > 0 && (
-                    <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-thin animate-fade-in-up">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-light-text/40 dark:text-dark-text/40 flex-shrink-0">
-                            Context ({contextNoteIds.length})
-                        </span>
-                        {contextNoteIds.map(id => {
-                            const note = getNoteById(id);
-                            return (
-                                <div key={id} className="flex items-center gap-1.5 text-xs px-2 py-1 rounded-md bg-light-ui dark:bg-dark-ui border border-light-border dark:border-dark-border shadow-sm text-light-text dark:text-dark-text flex-shrink-0 group">
-                                    <DocumentTextIcon className="w-3 h-3 text-light-primary dark:text-dark-primary opacity-70"/>
-                                    <span className="truncate max-w-[120px]">{note ? note.title : "Deleted Note"}</span>
-                                    <button onClick={() => handleRemoveContextNote(id)} className="text-light-text/30 dark:text-dark-text/30 hover:text-red-500 dark:hover:text-red-400 transition-colors">
-                                        <XMarkIcon className="w-3 h-3"/>
+            <div className="max-w-3xl mx-auto">
+                <div className={`relative flex flex-col rounded-2xl bg-light-ui dark:bg-dark-ui border transition-all duration-200 ${
+                    chatStatus === 'idle' 
+                        ? 'border-light-border dark:border-dark-border focus-within:border-light-primary dark:focus-within:border-dark-primary focus-within:ring-1 focus-within:ring-light-primary dark:focus-within:ring-dark-primary shadow-sm' 
+                        : 'border-light-border/50 dark:border-dark-border/50 opacity-80'
+                }`}>
+                    
+                    {/* Integrated Context/Attachment Area */}
+                    {(contextNoteIds.length > 0 || image) && (
+                        <div className="flex items-center gap-2 p-3 pb-0 overflow-x-auto scrollbar-thin animate-fade-in">
+                            {contextNoteIds.map(id => {
+                                const note = getNoteById(id);
+                                return (
+                                    <div key={id} className="flex items-center gap-1.5 text-xs px-2 py-1 rounded bg-white dark:bg-zinc-800 border border-light-border dark:border-zinc-700 text-light-text dark:text-dark-text flex-shrink-0 shadow-sm group">
+                                        <DocumentTextIcon className="w-3 h-3 text-light-primary dark:text-dark-primary"/>
+                                        <span className="truncate max-w-[120px] font-medium">{note ? note.title : "Deleted Note"}</span>
+                                        <button onClick={() => handleRemoveContextNote(id)} className="ml-1 text-light-text/40 dark:text-dark-text/40 hover:text-red-500 dark:hover:text-red-400">
+                                            <XMarkIcon className="w-3 h-3"/>
+                                        </button>
+                                    </div>
+                                );
+                            })}
+                            {image && (
+                                <div className="relative group flex-shrink-0">
+                                    <button onClick={() => setIsPreviewModalOpen(true)} className="relative w-10 h-10 rounded overflow-hidden ring-1 ring-light-border dark:ring-dark-border">
+                                        <img src={`data:image/jpeg;base64,${image}`} alt="Preview" className="w-full h-full object-cover" />
+                                    </button>
+                                    <button onClick={clearAttachment} className="absolute -top-1.5 -right-1.5 bg-zinc-800 text-white rounded-full p-0.5 shadow-md opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <XMarkIcon className="w-2.5 h-2.5" />
                                     </button>
                                 </div>
-                            );
-                        })}
-                        <button onClick={() => setContextNoteIds([])} className="text-[10px] font-semibold text-red-500 hover:underline flex-shrink-0 ml-1">Clear</button>
-                    </div>
-                )}
+                            )}
+                        </div>
+                    )}
 
-                {image && (
-                    <div className="relative w-16 h-16 animate-fade-in-up inline-block">
-                         <button onClick={() => setIsPreviewModalOpen(true)} className="w-full h-full rounded-lg overflow-hidden ring-2 ring-light-primary dark:ring-dark-primary transition-all">
-                            <img src={`data:image/jpeg;base64,${image}`} alt="Preview" className="w-full h-full object-cover" />
-                        </button>
-                        <button onClick={clearAttachment} className="absolute -top-2 -right-2 bg-light-background dark:bg-dark-background border border-light-border dark:border-dark-border rounded-full p-0.5 shadow-md hover:bg-light-ui dark:hover:bg-dark-ui text-light-text dark:text-dark-text transition-colors">
-                            <XMarkIcon className="w-3 h-3" />
-                        </button>
-                    </div>
-                )}
-
-                 <div className={`relative flex flex-col rounded-xl bg-light-ui/30 dark:bg-dark-ui/30 border transition-all duration-200 ${chatStatus === 'idle' ? 'border-light-border dark:border-dark-border focus-within:border-light-primary/50 dark:focus-within:border-dark-primary/50 focus-within:ring-2 focus-within:ring-light-primary/10 dark:focus-within:ring-dark-primary/10 focus-within:shadow-md' : 'border-light-border/50 dark:border-dark-border/50 opacity-80'}`}>
                     <textarea
                         ref={textareaRef}
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
                         onKeyDown={handleKeyDown}
-                        placeholder="Type a command or ask a question..."
+                        placeholder="Ask WesCore..."
                         rows={1}
-                        className="w-full bg-transparent focus:outline-none resize-none max-h-48 py-3 px-4 text-base rounded-xl"
+                        className="w-full bg-transparent focus:outline-none resize-none max-h-48 py-3 px-4 text-base min-h-[52px]"
                         disabled={chatStatus !== 'idle'}
                     />
                     
                     <div className="flex items-center justify-between px-2 pb-2">
-                        <div className="flex items-center gap-1">
-                            <button onClick={() => setIsNoteSelectorOpen(true)} className="p-2 rounded-lg hover:bg-light-ui dark:hover:bg-dark-ui text-light-text/60 dark:text-dark-text/60 hover:text-light-primary dark:hover:text-dark-primary transition-colors disabled:opacity-50" disabled={chatStatus !== 'idle'} title="Add Context Note">
+                        <div className="flex items-center">
+                            <button 
+                                onClick={() => setIsNoteSelectorOpen(true)} 
+                                className="p-2 rounded-lg text-light-text/50 dark:text-dark-text/50 hover:text-light-primary dark:hover:text-dark-primary hover:bg-light-background/50 dark:hover:bg-dark-background/50 transition-colors disabled:opacity-50" 
+                                disabled={chatStatus !== 'idle'} 
+                                title="Add Context"
+                            >
                                 <DocumentPlusIcon className="w-5 h-5"/>
                             </button>
-                            <button onClick={triggerFileInput} className="p-2 rounded-lg hover:bg-light-ui dark:hover:bg-dark-ui text-light-text/60 dark:text-dark-text/60 hover:text-light-primary dark:hover:text-dark-primary transition-colors disabled:opacity-50" disabled={chatStatus !== 'idle'} title="Attach Image">
+                            <button 
+                                onClick={triggerFileInput} 
+                                className="p-2 rounded-lg text-light-text/50 dark:text-dark-text/50 hover:text-light-primary dark:hover:text-dark-primary hover:bg-light-background/50 dark:hover:bg-dark-background/50 transition-colors disabled:opacity-50" 
+                                disabled={chatStatus !== 'idle'} 
+                                title="Attach Image"
+                            >
                                 <PaperClipIcon className="w-5 h-5"/>
                             </button>
                             <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/jpeg,image/png" className="hidden" />
@@ -129,8 +139,8 @@ const ChatInput: React.FC = () => {
                             disabled={chatStatus !== 'idle' || (!input.trim() && !image)}
                             className={`p-2 rounded-lg transition-all duration-200 ${
                                 (input.trim() || image) && chatStatus === 'idle'
-                                    ? 'bg-light-primary text-white dark:bg-dark-primary dark:text-zinc-900 shadow-md hover:translate-y-[-1px]' 
-                                    : 'bg-light-ui dark:bg-dark-ui text-light-text/30 dark:text-dark-text/30 cursor-not-allowed'
+                                    ? 'bg-light-primary text-white dark:bg-dark-primary dark:text-zinc-900 shadow-md hover:scale-105 active:scale-95' 
+                                    : 'bg-light-background/50 dark:bg-dark-background/50 text-light-text/20 dark:text-dark-text/20 cursor-not-allowed'
                             }`}
                             aria-label="Send Message"
                         >
@@ -139,7 +149,7 @@ const ChatInput: React.FC = () => {
                     </div>
                 </div>
                 
-                <div className="text-center">
+                <div className="text-center mt-2">
                     <p className="text-[10px] text-light-text/40 dark:text-dark-text/40">
                         WesCore Co-Pilot can make mistakes. Verify important info.
                     </p>

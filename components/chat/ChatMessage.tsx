@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { ChatMessage, Note } from '../../types';
 import MarkdownPreview from '../MarkdownPreview';
@@ -122,8 +121,12 @@ const ChatMessageComponent: React.FC<MessageProps> = ({ message, onDelete, onTog
         const toolContent = message.content;
         if (typeof toolContent === 'object' && toolContent !== null && 'name' in toolContent) {
             return (
-                <div className="w-full max-w-3xl mx-auto px-1">
-                     <ToolCallDisplay content={toolContent as any} />
+                <div className="flex justify-start w-full mb-3 pl-12 sm:pl-14 animate-fade-in-up">
+                     <div className="w-full max-w-2xl relative">
+                        {/* Connecting Line Visual - subtle suggestion of a thread */}
+                        <div className="absolute -left-6 top-0 bottom-0 w-px bg-light-border/50 dark:bg-dark-border/50 hidden sm:block"></div>
+                        <ToolCallDisplay content={toolContent as any} />
+                     </div>
                 </div>
             );
         }
@@ -135,7 +138,7 @@ const ChatMessageComponent: React.FC<MessageProps> = ({ message, onDelete, onTog
         <div className={`group flex items-start gap-4 mb-6 ${isUser ? 'justify-end' : ''}`}>
              
              {isAi && (
-                 <div className="w-8 h-8 rounded-full bg-gradient-to-br from-light-primary to-purple-600 dark:from-dark-primary dark:to-purple-500 flex items-center justify-center text-white flex-shrink-0 mt-1 shadow-sm">
+                 <div className="w-8 h-8 rounded-full bg-gradient-to-br from-light-primary to-purple-600 dark:from-dark-primary dark:to-purple-500 flex items-center justify-center text-white flex-shrink-0 mt-1 shadow-md ring-2 ring-white dark:ring-dark-background z-10">
                      <SparklesIcon className="w-5 h-5"/>
                  </div>
              )}
@@ -146,7 +149,7 @@ const ChatMessageComponent: React.FC<MessageProps> = ({ message, onDelete, onTog
                  </div>
              )}
 
-            <div className={`p-4 rounded-2xl max-w-[90%] md:max-w-2xl shadow-sm ${
+            <div className={`p-4 rounded-2xl max-w-[90%] md:max-w-2xl shadow-sm relative ${
                 isUser 
                     ? 'bg-light-ui dark:bg-dark-ui rounded-tr-none' 
                     : 'bg-light-background dark:bg-dark-background border border-light-border dark:border-dark-border rounded-tl-none'

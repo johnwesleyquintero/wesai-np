@@ -4,6 +4,7 @@ import { MODEL_NAMES, API_KEY_STORAGE_KEY } from '../lib/config';
 import { sha256, getLocalCache, setLocalCache } from '../lib/cache';
 import { supabase } from '../lib/supabaseClient';
 import { wesCoreToolDefinitions } from '../lib/toolDefinitions';
+import { SYSTEM_INSTRUCTIONS } from '../lib/prompts';
 
 // Cache for the GenAI instance to avoid re-creating it on every call.
 let genAI: GoogleGenAI | null = null;
@@ -194,8 +195,7 @@ export const findMisspelledWords = async (text: string): Promise<SpellingError[]
     
     const payload = {
         model: MODEL_NAMES.FLASH,
-        contents: `Analyze the following text and identify all misspelled words. For each misspelled word, provide its exact text, its starting index in the original text, and its length.
-Text: "${text}"`,
+        contents: SYSTEM_INSTRUCTIONS.SPELLCHECK(text),
         config: {
             responseMimeType: "application/json",
             responseSchema: {
@@ -233,7 +233,7 @@ Text: "${text}"`,
 export const getSpellingSuggestions = async (word: string): Promise<string[]> => {
     const payload = {
         model: MODEL_NAMES.FLASH,
-        contents: `Provide up to 5 spelling suggestions for the word "${word}".`,
+        contents: SYSTEM_INSTRUCTIONS.SPELLING_SUGGESTIONS(word),
         config: {
             responseMimeType: "application/json",
             responseSchema: {
@@ -271,13 +271,11 @@ export const semanticSearchNotes = async (query: string, notes: Note[], limit: n
         .map(note => `ID: ${note.id}\nTITLE: ${note.title}\nCONTENT: ${note.content.substring(0, 200)}...`)
         .join('\n---\n');
 
+    const prompt = SYSTEM_INSTRUCTIONS.SEMANTIC_SEARCH(limit, notesContext).replace('{{query}}', query);
+
     const payload = {
         model: MODEL_NAMES.FLASH,
-        contents: `Based on the user's query, which of the following notes are the most relevant? List the top ${limit} most relevant note IDs.
-QUERY: "${query}"
-
-NOTES:
-${notesContext}`,
+        contents: prompt,
         config: {
             responseMimeType: "application/json",
             responseSchema: {
@@ -312,15 +310,7 @@ ${notesContext}`,
 export const suggestNoteConsolidation = async (note1: Note, note2: Note): Promise<{ title: string, content: string }> => {
     const payload = {
         model: MODEL_NAMES.FLASH,
-        contents: `Consolidate the following two notes into a single, coherent note. Create a new title that synthesizes the topics, and merge the content, removing redundancy and improving flow.
-
-Note 1 Title: "${note1.title}"
-Note 1 Content:
-${note1.content}
-
-Note 2 Title: "${note2.title}"
-Note 2 Content:
-${note2.content}`,
+        contents: SYSTEM_INSTRUCTIONS.NOTE_CONSOLIDATION(note1, note2),
         config: {
             responseMimeType: "application/json",
             responseSchema: {
@@ -354,8 +344,7 @@ ${note2.content}`,
 export const suggestTitleAndTags = async (content: string): Promise<{ title: string, tags: string[] }> => {
     const payload = {
         model: MODEL_NAMES.FLASH,
-        contents: `Analyze the following note content. Suggest a concise, descriptive title (no more than 10 words) and up to 5 relevant, single-word or two-word tags.
-Content: ${content.substring(0, 1000)}`,
+        contents: SYSTEM_INSTRUCTIONS.TITLE_AND_TAGS(content),
         config: {
             responseMimeType: "application/json",
             responseSchema: {
@@ -435,7 +424,7 @@ export const createGeneralChatSession = (): Chat => {
     return ai.chats.create({
         model: MODEL_NAMES.PRO,
         config: {
-            systemInstruction: "You are a helpful assistant with access to a user's notes. You can create, find, read, update, and delete notes and folders. You can also manage templates by creating them from existing notes, finding templates, or applying them to notes. Additionally, you can perform bulk operations like finding and replacing text across multiple notes. You MUST use the provided tools to interact with the user's workspace. If you receive a tool response with `{ success: false, error: '...' }`, you MUST NOT retry the same command. Instead, you MUST inform the user of the specific error message and ask them for clarification or a different command.",
+            systemInstruction: SYSTEM_INSTRUCTIONS.GENERAL_CHAT_TOOLS,
             tools: [{ functionDeclarations: wesCoreToolDefinitions }],
             safetySettings,
         },
@@ -447,9 +436,7 @@ export const createGeneralChatSession = (): Chat => {
 export const suggestTags = async (title: string, content: string): Promise<string[]> => {
     const payload = {
         model: MODEL_NAMES.FLASH,
-        contents: `Suggest up to 5 relevant, single-word or two-word tags for the following note.
-Title: ${title}
-Content: ${content.substring(0, 500)}`,
+        contents: SYSTEM_INSTRUCTIONS.SUGGEST_TAGS(title, content),
         config: {
             responseMimeType: "application/json",
             responseSchema: {
@@ -479,8 +466,7 @@ Content: ${content.substring(0, 500)}`,
 export const suggestTitle = async (content: string): Promise<string> => {
     const payload = {
         model: MODEL_NAMES.FLASH,
-        contents: `Suggest a concise, descriptive title for the following note content. The title should be no more than 10 words.
-Content: ${content.substring(0, 1000)}`,
+        contents: SYSTEM_INSTRUCTIONS.SUGGEST_TITLE(content),
     };
 
     return _callGemini(
@@ -504,12 +490,9 @@ export const performInlineEdit = async (text: string, action: InlineAction): Pro
         case 'makeCasual': instruction = 'Rewrite the following text in a casual tone:'; break;
     }
     
-    // FIX: Removed `config` property. The `safetySettings` are automatically
-    // applied within the `_callGemini` wrapper function. Passing a config with only
-    // `safetySettings` causes a type error as it's not a valid `GenerationConfig`.
     const payload = {
         model: MODEL_NAMES.FLASH,
-        contents: `${instruction}\n\n"${text}"`,
+        contents: SYSTEM_INSTRUCTIONS.INLINE_EDIT(instruction, text),
     };
 
     return _callGemini(
@@ -525,9 +508,7 @@ export const performInlineEdit = async (text: string, action: InlineAction): Pro
 export const summarizeAndExtractActions = async (content: string): Promise<{ summary: string; actionItems: string[] }> => {
     const payload = {
         model: MODEL_NAMES.FLASH,
-        contents: `Summarize the following note and extract a list of action items.
-Note:
-${content}`,
+        contents: SYSTEM_INSTRUCTIONS.SUMMARIZE(content),
         config: {
             responseMimeType: 'application/json',
             responseSchema: {
@@ -560,12 +541,9 @@ ${content}`,
 
 
 export const enhanceText = async (text: string, tone: string): Promise<string> => {
-    // FIX: Removed `config` property. The `safetySettings` are automatically
-    // applied within the `_callGemini` wrapper function. Passing a config with only
-    // `safetySettings` causes a type error as it's not a valid `GenerationConfig`.
     const payload = {
         model: MODEL_NAMES.FLASH,
-        contents: `Rewrite the following text to have a ${tone} tone:\n\n"${text}"`,
+        contents: SYSTEM_INSTRUCTIONS.ENHANCE_TEXT(tone, text),
     };
     
     return _callGemini(

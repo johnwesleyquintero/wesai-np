@@ -38,7 +38,7 @@ export const useNoteEditorHandlers = ({
     const { showToast } = useToast();
 
     const handleSave = useCallback(async () => {
-        if (saveStatus === 'saving') return;
+        if (saveStatus === 'saving' || saveStatus === 'saved') return;
         dispatch({ type: 'SET_SAVE_STATUS', payload: 'saving' });
         stateWhenLastSavedRef.current = editorState;
         try {

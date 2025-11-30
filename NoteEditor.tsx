@@ -337,6 +337,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
     useEditorHotkeys({
         undo,
         redo,
+        save: handleSave,
         isModalOpen: isAnyPopupOpen,
         editorElements: [titleInputRef, textareaRef],
     });

@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, useMemo, useCallback, useState, useLayoutEffect } from 'react';
 import { Note, NoteVersion, Template, InlineAction } from '../types';
 import EditorHeader from './editor/EditorHeader';
@@ -338,6 +337,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
     useEditorHotkeys({
         undo,
         redo,
+        save: handleSave,
         isModalOpen: isAnyPopupOpen,
         editorElements: [titleInputRef, textareaRef],
     });

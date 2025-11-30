@@ -3,17 +3,19 @@ import React, { useEffect } from 'react';
 interface UseEditorHotkeysProps {
     undo: () => void;
     redo: () => void;
+    save: () => void;
     isModalOpen: boolean;
     editorElements: React.RefObject<HTMLElement>[];
 }
 
 /**
- * A hook to manage global undo/redo hotkeys for the editor.
+ * A hook to manage global undo/redo/save hotkeys for the editor.
  * It's context-aware and won't trigger if a modal is open or if focus is on a non-editor input.
  */
 export const useEditorHotkeys = ({
     undo,
     redo,
+    save,
     isModalOpen,
     editorElements,
 }: UseEditorHotkeysProps) => {
@@ -36,20 +38,29 @@ export const useEditorHotkeys = ({
             const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
             const modKey = isMac ? event.metaKey : event.ctrlKey;
             
-            if (modKey && event.key.toLowerCase() === 'z') {
-                event.preventDefault(); 
-                if (event.shiftKey) {
-                    redo();
-                } else {
-                    undo();
+            if (modKey) {
+                switch(event.key.toLowerCase()) {
+                    case 'z':
+                        event.preventDefault(); 
+                        if (event.shiftKey) {
+                            redo();
+                        } else {
+                            undo();
+                        }
+                        break;
+                    case 'y':
+                        event.preventDefault();
+                        redo();
+                        break;
+                    case 's':
+                        event.preventDefault();
+                        save();
+                        break;
                 }
-            } else if (modKey && event.key.toLowerCase() === 'y') {
-                event.preventDefault();
-                redo();
             }
         };
         
         document.addEventListener('keydown', handleGlobalKeyDown);
         return () => document.removeEventListener('keydown', handleGlobalKeyDown);
-    }, [undo, redo, isModalOpen, editorElements]);
+    }, [undo, redo, save, isModalOpen, editorElements]);
 };

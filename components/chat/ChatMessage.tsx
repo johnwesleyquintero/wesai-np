@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ChatMessage, Note } from '../../types';
 import MarkdownPreview from '../MarkdownPreview';
-import { SparklesIcon, DocumentPlusIcon, ClipboardDocumentIcon, CheckIcon, EllipsisHorizontalIcon, TrashIcon, ThumbsUpIcon, ThumbsDownIcon, DocumentTextIcon, XMarkIcon, ArrowPathIcon } from '../Icons';
+import { SparklesIcon, ClipboardDocumentIcon, CheckIcon, EllipsisHorizontalIcon, TrashIcon, ThumbsUpIcon, ThumbsDownIcon, DocumentTextIcon, XMarkIcon, ArrowPathIcon } from '../Icons';
 import { useToast } from '../../context/ToastContext';
 import { useStoreContext, useUIContext, useChatContext } from '../../context/AppContext';
 import ToolCallDisplay from '../ToolCallDisplay';
@@ -44,7 +44,7 @@ const MessageActions: React.FC<{ onDelete: () => void }> = ({ onDelete }) => {
 
 const ActionButton: React.FC<{ tooltip: string; onClick: () => void; children: React.ReactNode; className?: string }> = ({ tooltip, onClick, children, className }) => (
     <div className="relative group">
-        <button onClick={onClick} className={`p-1.5 rounded-md text-light-text/60 dark:text-dark-text/60 hover:text-light-text dark:hover:text-dark-text hover:bg-light-ui dark:hover:bg-dark-ui transition-colors ${className}`}>
+        <button onClick={onClick} className={`p-2 rounded-md text-light-text/70 dark:text-dark-text/70 hover:text-light-text dark:hover:text-dark-text hover:bg-light-ui dark:hover:bg-dark-ui transition-colors ${className}`}>
             {children}
         </button>
         <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 px-2 py-1 bg-zinc-800 text-white text-xs font-semibold rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
@@ -79,22 +79,12 @@ const CopyMessageButton: React.FC<{ content: string }> = ({ content }) => {
 };
 
 const ChatMessageComponent: React.FC<MessageProps> = ({ message, onDelete, onToggleSources, isSourcesPinned }) => {
-    const { showToast } = useToast();
     const { onAddNote, setActiveNoteId, getNoteById } = useStoreContext();
     const { handleFeedback, regenerateLastResponse, chatMessages } = useChatContext();
     const { setView } = useUIContext();
     const [isProvidingFeedback, setIsProvidingFeedback] = useState(false);
 
     const isLastMessage = chatMessages[chatMessages.length - 1]?.id === message.id;
-
-    const handleSaveAsNote = async () => {
-        if (typeof message.content === 'string') {
-            const newNoteId = await onAddNote('AI Chat Response', message.content);
-            setActiveNoteId(newNoteId);
-            setView('NOTES');
-            showToast({ message: 'Saved as new note!', type: 'success' });
-        }
-    };
 
     const handleNoteClick = (noteId: string) => {
         setActiveNoteId(noteId);
@@ -117,14 +107,12 @@ const ChatMessageComponent: React.FC<MessageProps> = ({ message, onDelete, onTog
     const isAi = message.role === 'ai';
     const isTool = message.role === 'tool';
     
-    // --- Tool Message Rendering ---
     if (isTool) {
         const toolContent = message.content;
         if (typeof toolContent === 'object' && toolContent !== null && 'name' in toolContent) {
             return (
                 <div className="flex justify-start w-full mb-3 pl-12 sm:pl-14 animate-fade-in-up">
                      <div className="w-full max-w-2xl relative">
-                        {/* Connecting Line Visual - subtle suggestion of a thread */}
                         <div className="absolute -left-6 top-0 bottom-0 w-px bg-light-border/50 dark:bg-dark-border/50 hidden sm:block"></div>
                         <ToolCallDisplay content={toolContent as any} />
                      </div>
@@ -134,7 +122,6 @@ const ChatMessageComponent: React.FC<MessageProps> = ({ message, onDelete, onTog
         return null;
     }
     
-    // --- User/AI Message Rendering ---
     return (
         <div className={`group flex items-start gap-4 mb-6 ${isUser ? 'justify-end' : ''}`}>
              
@@ -200,7 +187,7 @@ const ChatMessageComponent: React.FC<MessageProps> = ({ message, onDelete, onTog
                 )}
 
                 {isAi && message.status !== 'processing' && (
-                    <div className="flex items-center gap-2 mt-4 pt-2 border-t border-light-border/30 dark:border-dark-border/30">
+                    <div className="flex items-center justify-between mt-4 pt-2 border-t border-light-border/30 dark:border-dark-border/30">
                         {isProvidingFeedback ? (
                             <div className="flex items-center gap-2 animate-fade-in w-full">
                                 <span className="text-xs font-semibold text-light-text/70 dark:text-dark-text/70 whitespace-nowrap">Reason:</span>
@@ -213,36 +200,20 @@ const ChatMessageComponent: React.FC<MessageProps> = ({ message, onDelete, onTog
                             </div>
                         ) : (
                             <>
-                                {/* Left Actions: Utilities */}
-                                <div className="flex items-center gap-1">
-                                    {message.sources && message.sources.length > 0 && (
-                                        <ActionButton tooltip={isSourcesPinned ? 'Hide Sources' : 'Show Sources'} onClick={() => onToggleSources(message.sources!)}>
-                                            <DocumentTextIcon className="w-4 h-4" />
+                                <div className="flex items-center gap-3">
+                                    <CopyMessageButton content={typeof message.content === 'string' ? message.content : ''} />
+                                    {isLastMessage && (
+                                        <ActionButton tooltip="Regenerate" onClick={regenerateLastResponse}>
+                                            <ArrowPathIcon className="w-4 h-4" />
                                         </ActionButton>
                                     )}
-                                    <ActionButton tooltip="Create Note" onClick={handleSaveAsNote}>
-                                        <DocumentPlusIcon className="w-4 h-4" />
-                                    </ActionButton>
-                                    <CopyMessageButton content={typeof message.content === 'string' ? message.content : ''} />
                                 </div>
-
-                                <div className="flex-1" />
                                 
-                                {/* Right Actions: Feedback & Regenerate */}
-                                <div className="flex items-center gap-1">
-                                    {isLastMessage && (
-                                        <>
-                                            <ActionButton tooltip="Regenerate" onClick={regenerateLastResponse}>
-                                                <ArrowPathIcon className="w-4 h-4" />
-                                            </ActionButton>
-                                            <div className="w-px h-4 bg-light-border/50 dark:bg-dark-border/50 mx-1"></div>
-                                        </>
-                                    )}
-                                    
+                                <div className="flex items-center gap-2">
                                     <button 
                                         onClick={() => handleFeedback(message.id, { rating: 'up' })}
                                         disabled={!!message.feedback}
-                                        className={`p-1.5 rounded-md transition-colors disabled:opacity-50 ${message.feedback?.rating === 'up' ? 'text-green-500 bg-green-500/10' : 'text-light-text/40 dark:text-dark-text/40 hover:text-green-500 hover:bg-green-500/10'}`}
+                                        className={`p-2 rounded-md transition-colors disabled:opacity-50 ${message.feedback?.rating === 'up' ? 'text-green-500 bg-green-500/10' : 'text-light-text/60 dark:text-dark-text/60 hover:text-green-500 hover:bg-green-500/10'}`}
                                         aria-label="Thumbs Up"
                                     >
                                         <ThumbsUpIcon filled={message.feedback?.rating === 'up'} />
@@ -250,7 +221,7 @@ const ChatMessageComponent: React.FC<MessageProps> = ({ message, onDelete, onTog
                                      <button 
                                         onClick={() => !message.feedback && setIsProvidingFeedback(true)}
                                         disabled={!!message.feedback}
-                                        className={`p-1.5 rounded-md transition-colors disabled:opacity-50 ${message.feedback?.rating === 'down' ? 'text-red-500 bg-red-500/10' : 'text-light-text/40 dark:text-dark-text/40 hover:text-red-500 hover:bg-red-500/10'}`}
+                                        className={`p-2 rounded-md transition-colors disabled:opacity-50 ${message.feedback?.rating === 'down' ? 'text-red-500 bg-red-500/10' : 'text-light-text/60 dark:text-dark-text/60 hover:text-red-500 hover:bg-red-500/10'}`}
                                         aria-label="Thumbs Down"
                                      >
                                         <ThumbsDownIcon filled={message.feedback?.rating === 'down'} />

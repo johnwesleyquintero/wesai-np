@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { ChatMessage, Note } from '../../types';
 import MarkdownPreview from '../MarkdownPreview';
@@ -23,12 +24,13 @@ const MessageActions: React.FC<{ onDelete: () => void }> = ({ onDelete }) => {
         <div className="relative">
             <button
                 onClick={() => setIsOpen(p => !p)}
-                className="p-1 rounded-full hover:bg-light-ui dark:hover:bg-dark-ui opacity-0 group-hover:opacity-100 transition-opacity"
+                className="p-1 rounded-full text-light-text/40 dark:text-dark-text/40 hover:bg-light-ui dark:hover:bg-dark-ui hover:text-light-text dark:hover:text-dark-text transition-colors"
+                aria-label="Message options"
             >
                 <EllipsisHorizontalIcon className="w-4 h-4" />
             </button>
             {isOpen && (
-                <div className="absolute bottom-full mb-1 right-0 bg-light-background dark:bg-dark-background rounded-md shadow-lg border border-light-border dark:border-dark-border z-10 py-1 min-w-[100px]">
+                <div className="absolute top-0 right-full mr-2 bg-light-background dark:bg-dark-background rounded-md shadow-lg border border-light-border dark:border-dark-border z-10 py-1 min-w-[100px]">
                     <button
                         onClick={onDelete}
                         className="w-full flex items-center gap-2 text-left px-3 py-1.5 text-sm text-red-500 hover:bg-red-500/10"
@@ -44,7 +46,7 @@ const MessageActions: React.FC<{ onDelete: () => void }> = ({ onDelete }) => {
 
 const ActionButton: React.FC<{ tooltip: string; onClick: () => void; children: React.ReactNode; className?: string }> = ({ tooltip, onClick, children, className }) => (
     <div className="relative group">
-        <button onClick={onClick} className={`p-2 rounded-md text-light-text/70 dark:text-dark-text/70 hover:text-light-text dark:hover:text-dark-text hover:bg-light-ui dark:hover:bg-dark-ui transition-colors ${className}`}>
+        <button onClick={onClick} className={`p-1.5 rounded-md text-light-text/40 dark:text-dark-text/40 hover:text-light-text dark:hover:text-dark-text hover:bg-light-ui dark:hover:bg-dark-ui transition-colors ${className}`}>
             {children}
         </button>
         <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 px-2 py-1 bg-zinc-800 text-white text-xs font-semibold rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
@@ -111,9 +113,8 @@ const ChatMessageComponent: React.FC<MessageProps> = ({ message, onDelete, onTog
         const toolContent = message.content;
         if (typeof toolContent === 'object' && toolContent !== null && 'name' in toolContent) {
             return (
-                <div className="flex justify-start w-full mb-3 pl-12 sm:pl-14 animate-fade-in-up">
-                     <div className="w-full max-w-2xl relative">
-                        <div className="absolute -left-6 top-0 bottom-0 w-px bg-light-border/50 dark:bg-dark-border/50 hidden sm:block"></div>
+                <div className="flex justify-start w-full mb-2 pl-10 sm:pl-12 animate-fade-in-up">
+                     <div className="w-full max-w-2xl">
                         <ToolCallDisplay content={toolContent as any} />
                      </div>
                 </div>
@@ -123,36 +124,40 @@ const ChatMessageComponent: React.FC<MessageProps> = ({ message, onDelete, onTog
     }
     
     return (
-        <div className={`group flex items-start gap-4 mb-6 ${isUser ? 'justify-end' : ''}`}>
+        <div className={`group flex items-start gap-3 mb-6 ${isUser ? 'justify-end' : 'justify-start'} animate-fade-in-up`}>
              
              {isAi && (
-                 <div className="w-8 h-8 rounded-full bg-gradient-to-br from-light-primary to-purple-600 dark:from-dark-primary dark:to-purple-500 flex items-center justify-center text-white flex-shrink-0 mt-1 shadow-md ring-2 ring-white dark:ring-dark-background z-10">
+                 <div className="w-8 h-8 mt-1 rounded-lg bg-light-background dark:bg-dark-background border border-light-border dark:border-dark-border flex items-center justify-center flex-shrink-0 shadow-sm text-light-primary dark:text-dark-primary">
                      <SparklesIcon className="w-5 h-5"/>
                  </div>
              )}
 
              {isUser && (
-                 <div className="flex-shrink-0 self-center opacity-0 group-hover:opacity-100 transition-opacity">
+                 <div className="flex-shrink-0 self-center opacity-0 group-hover:opacity-100 transition-opacity mr-2">
                      <MessageActions onDelete={onDelete} />
                  </div>
              )}
 
-            <div className={`p-4 rounded-2xl max-w-[90%] md:max-w-2xl shadow-sm relative ${
+            <div className={`max-w-[90%] md:max-w-2xl transition-all duration-200 ${
                 isUser 
-                    ? 'bg-light-ui dark:bg-dark-ui rounded-tr-none' 
-                    : 'bg-light-background dark:bg-dark-background border border-light-border dark:border-dark-border rounded-tl-none'
+                    ? 'bg-light-primary/10 dark:bg-dark-primary/10 border border-light-primary/20 dark:border-dark-primary/20 rounded-2xl rounded-tr-sm p-4' 
+                    : 'bg-transparent pl-1 py-1' // AI message blends into background
             }`}>
-                {message.image && <img src={`data:image/jpeg;base64,${message.image}`} alt="User upload" className="max-w-xs rounded-lg mb-3 shadow-sm" />}
+                {message.image && (
+                    <div className="mb-3">
+                        <img src={`data:image/jpeg;base64,${message.image}`} alt="User upload" className="max-w-xs rounded-lg shadow-sm border border-light-border dark:border-dark-border" />
+                    </div>
+                )}
                 
                 {isUser && message.contextNoteIds && message.contextNoteIds.length > 0 && (
-                    <div className="mb-3 pb-3 border-b border-light-border/50 dark:border-dark-border/50">
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-light-text/50 dark:text-dark-text/50 mb-2">Attached Context</p>
+                    <div className="mb-3 pb-3 border-b border-light-primary/20 dark:border-dark-primary/20">
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-light-primary/70 dark:text-dark-primary/70 mb-2">Context Attached</p>
                         <div className="flex flex-wrap gap-2">
                             {message.contextNoteIds.map(id => {
                                 const note = getNoteById(id);
                                 return (
-                                    <span key={id} className="flex items-center gap-1 text-xs px-2 py-1 rounded-md bg-white dark:bg-zinc-800 border border-light-border/50 dark:border-dark-border/50 shadow-sm">
-                                        <DocumentTextIcon className="w-3 h-3 text-light-primary dark:text-dark-primary"/>
+                                    <span key={id} className="flex items-center gap-1 text-xs px-2 py-1 rounded bg-white/50 dark:bg-black/20 text-light-text dark:text-dark-text">
+                                        <DocumentTextIcon className="w-3 h-3"/>
                                         <span className="truncate max-w-[150px]">{note ? note.title : 'Deleted Note'}</span>
                                     </span>
                                 );
@@ -161,22 +166,22 @@ const ChatMessageComponent: React.FC<MessageProps> = ({ message, onDelete, onTog
                     </div>
                 )}
 
-                <div className="chat-markdown leading-relaxed">
+                <div className="chat-markdown leading-relaxed text-sm sm:text-base">
                     {renderContent()}
                 </div>
 
                 {isAi && message.sources && message.sources.length > 0 && <SourceNotes sources={message.sources} />}
                 
                 {isAi && message.noteIds && message.noteIds.length > 0 && (
-                    <div className="mt-4 pt-3 border-t border-light-border/50 dark:border-dark-border/50">
+                    <div className="mt-4 pt-3 border-t border-light-border dark:border-dark-border">
                         <p className="text-[10px] font-bold uppercase tracking-wider text-light-text/50 dark:text-dark-text/50 mb-1">
-                            Modified System Files
+                            System Changes
                         </p>
                         <div className="flex flex-col gap-1">
                             {message.noteIds.map(noteId => {
                                 const note = getNoteById(noteId);
                                 return (
-                                    <button key={noteId} onClick={() => handleNoteClick(noteId)} className="text-xs flex items-center gap-1.5 text-light-primary dark:text-dark-primary hover:underline w-fit">
+                                    <button key={noteId} onClick={() => handleNoteClick(noteId)} className="text-xs flex items-center gap-1.5 text-light-primary dark:text-dark-primary hover:underline w-fit bg-light-ui dark:bg-dark-ui px-2 py-1 rounded">
                                         <DocumentTextIcon className="w-3 h-3"/>
                                         {note ? note.title : 'Untitled Note'}
                                     </button>
@@ -187,20 +192,20 @@ const ChatMessageComponent: React.FC<MessageProps> = ({ message, onDelete, onTog
                 )}
 
                 {isAi && message.status !== 'processing' && (
-                    <div className="flex items-center justify-between mt-4 pt-2 border-t border-light-border/30 dark:border-dark-border/30">
+                    <div className="flex items-center justify-between mt-2 pt-2 opacity-0 group-hover:opacity-100 transition-opacity">
                         {isProvidingFeedback ? (
-                            <div className="flex items-center gap-2 animate-fade-in w-full">
-                                <span className="text-xs font-semibold text-light-text/70 dark:text-dark-text/70 whitespace-nowrap">Reason:</span>
+                            <div className="flex items-center gap-2 animate-fade-in w-full bg-light-ui dark:bg-dark-ui p-1 rounded-md">
+                                <span className="text-xs font-semibold text-light-text/70 dark:text-dark-text/70 whitespace-nowrap ml-1">Reason:</span>
                                 <div className="flex flex-wrap gap-2 flex-1">
                                     {feedbackReasons.map(reason => (
-                                        <button key={reason} onClick={() => handleSelectReason(reason)} className="px-2 py-0.5 text-xs rounded-full bg-light-ui dark:bg-dark-ui hover:bg-light-ui-hover dark:hover:bg-dark-ui-hover border border-light-border dark:border-dark-border transition-colors">{reason}</button>
+                                        <button key={reason} onClick={() => handleSelectReason(reason)} className="px-2 py-0.5 text-xs rounded hover:bg-light-background dark:hover:bg-dark-background border border-transparent hover:border-light-border dark:hover:border-dark-border transition-colors">{reason}</button>
                                     ))}
                                 </div>
-                                <button onClick={() => setIsProvidingFeedback(false)} className="px-2 py-0.5 text-xs rounded-full hover:bg-red-100 dark:hover:bg-red-900/20 text-red-500 flex items-center gap-1 transition-colors flex-shrink-0"><XMarkIcon className="w-3 h-3"/> Cancel</button>
+                                <button onClick={() => setIsProvidingFeedback(false)} className="px-2 py-0.5 text-xs rounded hover:bg-red-100 dark:hover:bg-red-900/20 text-red-500 flex items-center gap-1 transition-colors flex-shrink-0"><XMarkIcon className="w-3 h-3"/> Cancel</button>
                             </div>
                         ) : (
                             <>
-                                <div className="flex items-center gap-3">
+                                <div className="flex items-center gap-1">
                                     <CopyMessageButton content={typeof message.content === 'string' ? message.content : ''} />
                                     {isLastMessage && (
                                         <ActionButton tooltip="Regenerate" onClick={regenerateLastResponse}>
@@ -209,11 +214,11 @@ const ChatMessageComponent: React.FC<MessageProps> = ({ message, onDelete, onTog
                                     )}
                                 </div>
                                 
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-1">
                                     <button 
                                         onClick={() => handleFeedback(message.id, { rating: 'up' })}
                                         disabled={!!message.feedback}
-                                        className={`p-2 rounded-md transition-colors disabled:opacity-50 ${message.feedback?.rating === 'up' ? 'text-green-500 bg-green-500/10' : 'text-light-text/60 dark:text-dark-text/60 hover:text-green-500 hover:bg-green-500/10'}`}
+                                        className={`p-1.5 rounded-md transition-colors disabled:opacity-50 ${message.feedback?.rating === 'up' ? 'text-green-500' : 'text-light-text/40 dark:text-dark-text/40 hover:text-green-500 hover:bg-light-ui dark:hover:bg-dark-ui'}`}
                                         aria-label="Thumbs Up"
                                     >
                                         <ThumbsUpIcon filled={message.feedback?.rating === 'up'} />
@@ -221,7 +226,7 @@ const ChatMessageComponent: React.FC<MessageProps> = ({ message, onDelete, onTog
                                      <button 
                                         onClick={() => !message.feedback && setIsProvidingFeedback(true)}
                                         disabled={!!message.feedback}
-                                        className={`p-2 rounded-md transition-colors disabled:opacity-50 ${message.feedback?.rating === 'down' ? 'text-red-500 bg-red-500/10' : 'text-light-text/60 dark:text-dark-text/60 hover:text-red-500 hover:bg-red-500/10'}`}
+                                        className={`p-1.5 rounded-md transition-colors disabled:opacity-50 ${message.feedback?.rating === 'down' ? 'text-red-500' : 'text-light-text/40 dark:text-dark-text/40 hover:text-red-500 hover:bg-light-ui dark:hover:bg-dark-ui'}`}
                                         aria-label="Thumbs Down"
                                      >
                                         <ThumbsDownIcon filled={message.feedback?.rating === 'down'} />
@@ -234,7 +239,7 @@ const ChatMessageComponent: React.FC<MessageProps> = ({ message, onDelete, onTog
             </div>
             
             {isAi && (
-                <div className="flex-shrink-0 self-center opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="flex-shrink-0 self-start opacity-0 group-hover:opacity-100 transition-opacity mt-2">
                     <MessageActions onDelete={onDelete} />
                 </div>
             )}

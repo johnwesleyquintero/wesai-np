@@ -18,6 +18,7 @@ interface EditorHeaderProps {
     onToggleHistory: () => void;
     isHistoryOpen: boolean;
     onApplyTemplate: (template: Template) => void;
+    onSaveAsTemplate: () => void;
     isMobileView: boolean;
     onToggleSidebar: () => void;
     onUndo: () => void;
@@ -35,25 +36,15 @@ interface EditorHeaderProps {
 
 const EditorHeader: React.FC<EditorHeaderProps> = ({ 
     note, onToggleFavorite, saveStatus, handleSave, editorTitle, onEnhance, onSummarize, onToggleHistory, isHistoryOpen, 
-    onApplyTemplate, isMobileView, onToggleSidebar, onUndo, onRedo, canUndo, canRedo,
+    onApplyTemplate, onSaveAsTemplate, isMobileView, onToggleSidebar, onUndo, onRedo, canUndo, canRedo,
     viewMode, onToggleViewMode, wordCount, charCount,
     isFullAiActionLoading, isApiKeyMissing, isAiEnabled,
 }) => {
-    const { addTemplate, handleDeleteNoteConfirm } = useStoreContext();
+    const { handleDeleteNoteConfirm } = useStoreContext();
     const { showConfirmation, isFocusMode, toggleFocusMode } = useUIContext();
     const { showToast } = useToast();
 
     const isDisabled = !!isFullAiActionLoading || saveStatus === 'saving';
-
-    const handleSaveAsTemplate = () => {
-        addTemplate(editorTitle, note.content)
-            .then(() => {
-                showToast({ message: `Template "${editorTitle}" saved!`, type: 'success' });
-            })
-            .catch((err) => {
-                showToast({ message: `Failed to save template: ${err.message}`, type: 'error' });
-            });
-    };
     
     return (
         <>
@@ -130,7 +121,7 @@ const EditorHeader: React.FC<EditorHeaderProps> = ({
                         <MoreActionsMenu 
                             note={note}
                             onApplyTemplate={onApplyTemplate}
-                            onSaveAsTemplate={handleSaveAsTemplate}
+                            onSaveAsTemplate={onSaveAsTemplate}
                             isDisabled={isDisabled}
                             wordCount={wordCount}
                             charCount={charCount}

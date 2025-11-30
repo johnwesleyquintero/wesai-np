@@ -78,75 +78,90 @@ const ChatInput: React.FC = () => {
                     </button>
                 </div>
             )}
-            <div className="max-w-3xl mx-auto">
+            
+            <div className="max-w-3xl mx-auto space-y-2">
+                {/* Horizontal Scrolling Context Pills */}
                 {contextNoteIds.length > 0 && (
-                    <div className="mb-3 animate-fade-in-up">
-                        <div className="flex items-center justify-between mb-2">
-                            <h4 className="text-xs font-bold uppercase tracking-wider text-light-text/50 dark:text-dark-text/50 flex items-center gap-2">
-                                <DocumentTextIcon className="w-3 h-3"/>
-                                Active Context ({contextNoteIds.length})
-                            </h4>
-                            <button onClick={() => setContextNoteIds([])} className="text-xs font-semibold text-light-primary dark:text-dark-primary hover:underline">Clear All</button>
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                            {contextNoteIds.map(id => {
-                                const note = getNoteById(id);
-                                return (
-                                    <div key={id} className="flex items-center gap-2 text-xs font-medium px-3 py-1.5 rounded-md bg-light-ui dark:bg-dark-ui border border-light-border dark:border-dark-border shadow-sm text-light-text dark:text-dark-text group transition-all hover:border-light-primary/50 dark:hover:border-dark-primary/50">
-                                        <span className="truncate max-w-[150px]">{note ? note.title : "Deleted Note"}</span>
-                                        <button onClick={() => handleRemoveContextNote(id)} className="text-light-text/40 dark:text-dark-text/40 hover:text-red-500 dark:hover:text-red-400 transition-colors">
-                                            <XMarkIcon className="w-3 h-3"/>
-                                        </button>
-                                    </div>
-                                );
-                            })}
-                        </div>
+                    <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-thin animate-fade-in-up">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-light-text/40 dark:text-dark-text/40 flex-shrink-0">
+                            Context ({contextNoteIds.length})
+                        </span>
+                        {contextNoteIds.map(id => {
+                            const note = getNoteById(id);
+                            return (
+                                <div key={id} className="flex items-center gap-1.5 text-xs px-2 py-1 rounded-md bg-light-ui dark:bg-dark-ui border border-light-border dark:border-dark-border shadow-sm text-light-text dark:text-dark-text flex-shrink-0 group">
+                                    <DocumentTextIcon className="w-3 h-3 text-light-primary dark:text-dark-primary opacity-70"/>
+                                    <span className="truncate max-w-[120px]">{note ? note.title : "Deleted Note"}</span>
+                                    <button onClick={() => handleRemoveContextNote(id)} className="text-light-text/30 dark:text-dark-text/30 hover:text-red-500 dark:hover:text-red-400 transition-colors">
+                                        <XMarkIcon className="w-3 h-3"/>
+                                    </button>
+                                </div>
+                            );
+                        })}
+                        <button onClick={() => setContextNoteIds([])} className="text-[10px] font-semibold text-red-500 hover:underline flex-shrink-0 ml-1">Clear</button>
                     </div>
                 )}
+
                 {image && (
-                    <div className="relative w-24 h-24 mb-3 animate-fade-in-up">
-                         <button onClick={() => setIsPreviewModalOpen(true)} className="w-full h-full rounded-lg overflow-hidden ring-2 ring-light-primary/50 dark:ring-dark-primary/50 transition-all hover:ring-light-primary dark:hover:ring-dark-primary">
+                    <div className="relative w-16 h-16 animate-fade-in-up inline-block">
+                         <button onClick={() => setIsPreviewModalOpen(true)} className="w-full h-full rounded-lg overflow-hidden ring-2 ring-light-primary dark:ring-dark-primary transition-all">
                             <img src={`data:image/jpeg;base64,${image}`} alt="Preview" className="w-full h-full object-cover" />
                         </button>
-                        <button onClick={() => { setImage(null); setIsPreviewModalOpen(false); }} className="absolute -top-2 -right-2 bg-light-background dark:bg-dark-background border border-light-border dark:border-dark-border rounded-full p-1 shadow-md hover:bg-light-ui dark:hover:bg-dark-ui text-light-text dark:text-dark-text transition-colors">
+                        <button onClick={() => { setImage(null); setIsPreviewModalOpen(false); }} className="absolute -top-2 -right-2 bg-light-background dark:bg-dark-background border border-light-border dark:border-dark-border rounded-full p-0.5 shadow-md hover:bg-light-ui dark:hover:bg-dark-ui text-light-text dark:text-dark-text transition-colors">
                             <XMarkIcon className="w-3 h-3" />
                         </button>
                     </div>
                 )}
-                 <div className={`relative flex items-end p-2 rounded-xl bg-light-ui dark:bg-dark-ui border transition-all duration-200 ${chatStatus === 'idle' ? 'border-light-border dark:border-dark-border focus-within:border-light-primary dark:focus-within:border-dark-primary focus-within:ring-1 focus-within:ring-light-primary dark:focus-within:ring-dark-primary' : 'border-light-border/50 dark:border-dark-border/50 opacity-80'}`}>
+
+                 <div className={`relative flex flex-col rounded-xl bg-light-ui/30 dark:bg-dark-ui/30 border transition-all duration-200 ${chatStatus === 'idle' ? 'border-light-border dark:border-dark-border focus-within:border-light-primary/50 dark:focus-within:border-dark-primary/50 focus-within:ring-2 focus-within:ring-light-primary/10 dark:focus-within:ring-dark-primary/10 focus-within:shadow-md' : 'border-light-border/50 dark:border-dark-border/50 opacity-80'}`}>
                     <textarea
                         ref={textareaRef}
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
                         onKeyDown={handleKeyDown}
-                        placeholder="Command your co-pilot... (e.g. 'find notes about Q4')"
+                        placeholder="Type a command or ask a question..."
                         rows={1}
-                        className="flex-1 bg-transparent focus:outline-none resize-none max-h-48 py-2.5 pl-2 pr-28 text-base"
+                        className="w-full bg-transparent focus:outline-none resize-none max-h-48 py-3 px-4 text-base rounded-xl"
                         disabled={chatStatus !== 'idle'}
                     />
-                    <div className="absolute right-2 bottom-2 flex items-center gap-1 bg-light-ui dark:bg-dark-ui pl-2">
-                        <button onClick={() => setIsNoteSelectorOpen(true)} className="p-2 rounded-lg hover:bg-light-background dark:hover:bg-dark-background text-light-text/70 dark:text-dark-text/70 transition-colors disabled:opacity-50" disabled={chatStatus !== 'idle'} aria-label="Add Context Note" title="Add Note to Context">
-                            <DocumentPlusIcon className="w-5 h-5"/>
-                        </button>
-                        <button onClick={() => fileInputRef.current?.click()} className="p-2 rounded-lg hover:bg-light-background dark:hover:bg-dark-background text-light-text/70 dark:text-dark-text/70 transition-colors disabled:opacity-50" disabled={chatStatus !== 'idle'} aria-label="Attach Image" title="Attach Image">
-                            <PaperClipIcon className="w-5 h-5"/>
-                        </button>
-                        <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/jpeg,image/png" className="hidden" />
+                    
+                    <div className="flex items-center justify-between px-2 pb-2">
+                        <div className="flex items-center gap-1">
+                            <button onClick={() => setIsNoteSelectorOpen(true)} className="p-2 rounded-lg hover:bg-light-ui dark:hover:bg-dark-ui text-light-text/60 dark:text-dark-text/60 hover:text-light-primary dark:hover:text-dark-primary transition-colors disabled:opacity-50" disabled={chatStatus !== 'idle'} title="Add Context Note">
+                                <DocumentPlusIcon className="w-5 h-5"/>
+                            </button>
+                            <button onClick={() => fileInputRef.current?.click()} className="p-2 rounded-lg hover:bg-light-ui dark:hover:bg-dark-ui text-light-text/60 dark:text-dark-text/60 hover:text-light-primary dark:hover:text-dark-primary transition-colors disabled:opacity-50" disabled={chatStatus !== 'idle'} title="Attach Image">
+                                <PaperClipIcon className="w-5 h-5"/>
+                            </button>
+                            <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/jpeg,image/png" className="hidden" />
+                        </div>
+                        
                         <button 
                             onClick={handleSend} 
                             disabled={chatStatus !== 'idle' || (!input.trim() && !image)}
-                            className="p-2 rounded-lg bg-light-primary text-white dark:bg-dark-primary dark:text-zinc-900 shadow-sm hover:bg-light-primary-hover dark:hover:bg-dark-primary-hover disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                            className={`p-2 rounded-lg transition-all duration-200 ${
+                                (input.trim() || image) && chatStatus === 'idle'
+                                    ? 'bg-light-primary text-white dark:bg-dark-primary dark:text-zinc-900 shadow-md hover:translate-y-[-1px]' 
+                                    : 'bg-light-ui dark:bg-dark-ui text-light-text/30 dark:text-dark-text/30 cursor-not-allowed'
+                            }`}
                             aria-label="Send Message"
                         >
                             <PaperAirplaneIcon className="w-5 h-5" />
                         </button>
                     </div>
                 </div>
+                
+                <div className="text-center">
+                    <p className="text-[10px] text-light-text/40 dark:text-dark-text/40">
+                        WesCore Co-Pilot can make mistakes. Verify important info.
+                    </p>
+                </div>
             </div>
+            
             <NoteSelectorModal
                 isOpen={isNoteSelectorOpen}
                 onClose={() => setIsNoteSelectorOpen(false)}
-                onSave={setContextNoteIds}
+                onSave={(ids) => setContextNoteIds(prev => Array.from(new Set([...prev, ...ids])))}
                 allNotes={notes}
                 initialSelectedIds={contextNoteIds}
             />

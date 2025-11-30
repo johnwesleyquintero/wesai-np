@@ -1,6 +1,5 @@
-
-import React, { useEffect, useRef, useMemo, useCallback, useState, useLayoutEffect } from 'react';
-import { Note, NoteVersion, Template, InlineAction } from '../types';
+import React, { useEffect, useRef, useMemo, useCallback, useLayoutEffect } from 'react';
+import { Note, Template, InlineAction } from '../types';
 import EditorHeader from './editor/EditorHeader';
 import EditorTitle from './editor/EditorTitle';
 import EditorContent from './editor/EditorContent';
@@ -19,6 +18,7 @@ import { useNoteInputHandlers } from '../hooks/useNoteInputHandlers';
 import { useNoteSync } from '../hooks/useNoteSync';
 import { useEditorGutter } from '../hooks/useEditorGutter';
 import { useEditorInsertionLogic } from '../hooks/useEditorInsertionLogic';
+import { useNoteEditorHandlers } from '../hooks/useNoteEditorHandlers';
 import EditorPopups from './editor/EditorPopups';
 import { getCursorPositionRect, getLineInfoForPosition } from '../lib/editorDOMUtils';
 import { useToast } from '../context/ToastContext';
@@ -49,7 +49,7 @@ const areNoteStatesEqual = (a: NoteState, b: NoteState): boolean => {
 
 
 const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
-    const { updateNote, toggleFavorite, notes, restoreNoteVersion } = useStoreContext();
+    const { updateNote, toggleFavorite, notes } = useStoreContext();
     const { isMobileView, onToggleSidebar, isAiRateLimited, isSettingsOpen, isCommandPaletteOpen, isSmartFolderModalOpen, isWelcomeModalOpen, isApiKeyMissing, isFocusMode, showConfirmation, hideConfirmation, isAiEnabled, isHelpOpen, confirmation } = useUIContext();
     const { session } = useAuthContext();
     const { showToast } = useToast();
@@ -158,6 +158,30 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         noteId: note.id,
         session,
         isEffectivelyReadOnly
+    });
+
+    const { 
+        handleSave, 
+        handleRestore, 
+        handleCloseHistory, 
+        handleApplyTemplate, 
+        handleSaveAsTemplate,
+        handleToggleTask, 
+        handleAddTag, 
+        handleApplyTitleSuggestion, 
+        handleContentBlur 
+    } = useNoteEditorHandlers({
+        note,
+        editorState,
+        setEditorState,
+        dispatch,
+        saveStatus,
+        stateWhenLastSavedRef,
+        setSuggestedTags,
+        setSuggestedTitle,
+        hasAutoTitledRef,
+        titleInputRef,
+        isAiEnabled
     });
 
     const { paragraphGutterTarget, setParagraphGutterTarget } = useEditorGutter({
@@ -277,30 +301,17 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         };
     }, [note.id, updateNote, showToast]);
 
-    const handleSave = useCallback(async () => {
-        if (saveStatus === 'saving') return;
-        dispatch({ type: 'SET_SAVE_STATUS', payload: 'saving' });
-        stateWhenLastSavedRef.current = editorState;
-        try {
-            await updateNote(note.id, editorState);
-            dispatch({ type: 'SET_SAVE_STATUS', payload: 'saved' });
-            showToast({ message: 'Note saved!', type: 'success' });
-        } catch (error) {
-            console.error("Manual save failed:", error);
-            showToast({ message: `Save failed. Your changes are safe here.`, type: 'error' });
-            dispatch({ type: 'SET_SAVE_STATUS', payload: 'error' });
-        }
-    }, [note.id, editorState, updateNote, showToast, dispatch, saveStatus]);
-
+    // Optimization: We use refs inside the functions so the object identity of editorActions
+    // is stable and doesn't trigger context updates on every render.
     const editorActions = useMemo(() => ({ 
         undo, redo, canUndo, canRedo, 
-        applyAiActionToFullNote: (action: InlineAction) => applyAiActionToFullNote(action, editorState.content),
-        suggestTagsForFullNote: () => suggestTagsForFullNote(editorState.title, editorState.content),
-        suggestTitleForFullNote: () => suggestTitleForFullNote(editorState.content),
-        summarizeAndFindActionForFullNote: () => summarizeAndFindActionForFullNote(editorState.content),
+        applyAiActionToFullNote: (action: InlineAction) => applyAiActionToFullNote(action, latestEditorStateRef.current.content),
+        suggestTagsForFullNote: () => suggestTagsForFullNote(latestEditorStateRef.current.title, latestEditorStateRef.current.content),
+        suggestTitleForFullNote: () => suggestTitleForFullNote(latestEditorStateRef.current.content),
+        summarizeAndFindActionForFullNote: () => summarizeAndFindActionForFullNote(latestEditorStateRef.current.content),
     }), [
         undo, redo, canUndo, canRedo, applyAiActionToFullNote, suggestTagsForFullNote, 
-        suggestTitleForFullNote, summarizeAndFindActionForFullNote, editorState.title, editorState.content
+        suggestTitleForFullNote, summarizeAndFindActionForFullNote
     ]);
 
     useEffect(() => {
@@ -394,17 +405,6 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         }
     };
     
-    const handleContentBlur = () => {
-        if (isAiEnabled && !hasAutoTitledRef.current && editorState.title === 'Untitled Note' && editorState.content.trim()) {
-            const firstLine = editorState.content.split('\n')[0].trim().replace(/^#+\s*/, '');
-            if (firstLine) {
-                const newTitle = firstLine.length > 100 ? firstLine.substring(0, 100) + '...' : firstLine;
-                setEditorState({ ...editorState, title: newTitle });
-                hasAutoTitledRef.current = true;
-            }
-        }
-    };
-
     const {
         handleInsertLink,
         handleInsertSyncedBlock,
@@ -422,39 +422,6 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         applyAiActionToFullNote
     });
 
-    const handleRestore = (version: NoteVersion) => { restoreNoteVersion(note.id, version); dispatch({ type: 'SET_PREVIEW_VERSION', payload: null }); dispatch({ type: 'SET_HISTORY_OPEN', payload: false }); };
-    const handleCloseHistory = () => { dispatch({ type: 'SET_PREVIEW_VERSION', payload: null }); dispatch({ type: 'SET_HISTORY_OPEN', payload: false }); };
-    const handleApplyTemplate = (template: Template) => {
-        const apply = () => {
-            setEditorState({ title: template.title, content: template.content, tags: []}); 
-            dispatch({ type: 'SET_VIEW_MODE', payload: 'edit' });
-        };
-
-        if (editorState.content.trim() !== '') {
-            showConfirmation({
-                title: 'Apply Template',
-                message: 'Applying a template will replace the current note content. Are you sure?',
-                confirmText: 'Apply',
-                onConfirm: apply,
-            });
-        } else {
-            apply();
-        }
-    };
-    const handleToggleTask = (lineNumber: number) => { 
-        setEditorState(prev => {
-            const lines = prev.content.split('\n'); 
-            if (lineNumber >= lines.length) return prev; 
-            const line = lines[lineNumber]; 
-            const toggledLine = line.includes('[ ]') ? line.replace('[ ]', '[x]') : line.replace(/\[(x|X)\]/, '[ ]'); 
-            lines[lineNumber] = toggledLine; 
-            const newContent = lines.join('\n'); 
-            return { ...prev, content: newContent };
-        });
-    };
-    const handleAddTag = (tagToAdd: string) => { if (!editorState.tags.includes(tagToAdd)) { setEditorState({ ...editorState, tags: [...editorState.tags, tagToAdd] }); } setSuggestedTags(prev => prev.filter(t => t !== tagToAdd)); };
-    const handleApplyTitleSuggestion = (title: string) => { setEditorState({ ...editorState, title }); setSuggestedTitle(null); };
-
     const editorPaddingClass = 'px-4 sm:px-8';
     const sharedEditorClasses = 'w-full p-0 border-0 text-base sm:text-lg resize-none focus:outline-none leading-relaxed whitespace-pre-wrap break-words';
 
@@ -465,7 +432,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
     return (
         <div className="flex-1 flex flex-col h-full relative bg-light-background dark:bg-dark-background" onDragOver={(e) => { e.preventDefault(); if (!isEffectivelyReadOnly) dispatch({ type: 'SET_DRAG_OVER', payload: true }); }} onDragLeave={() => dispatch({ type: 'SET_DRAG_OVER', payload: false })} onDrop={handleDrop} onPaste={handlePaste}>
             <pre ref={cursorMeasureRef} style={{ position: 'absolute', visibility: 'hidden', top: -9999, left: -9999, pointerEvents: 'none' }} />
-            <EditorHeader note={note} onToggleFavorite={() => toggleFavorite(note.id)} saveStatus={saveStatus} handleSave={handleSave} editorTitle={editorState.title} onEnhance={(tone) => handleEnhanceNote(tone, editorState.content)} onSummarize={() => summarizeAndFindActionForFullNote(editorState.content)} onToggleHistory={() => dispatch({type: 'SET_HISTORY_OPEN', payload: !isHistoryOpen})} isHistoryOpen={isHistoryOpen} onApplyTemplate={handleApplyTemplate} isMobileView={isMobileView} onToggleSidebar={onToggleSidebar} onUndo={undo} onRedo={redo} canUndo={canUndo} canRedo={canRedo} viewMode={viewMode} onToggleViewMode={() => dispatch({type: 'SET_VIEW_MODE', payload: viewMode === 'edit' ? 'preview' : 'edit'})} wordCount={wordCount} charCount={charCount} isFullAiActionLoading={isFullAiActionLoading} isApiKeyMissing={isApiKeyMissing} isAiEnabled={isAiEnabled} />
+            <EditorHeader note={note} onToggleFavorite={() => toggleFavorite(note.id)} saveStatus={saveStatus} handleSave={handleSave} editorTitle={editorState.title} onEnhance={(tone) => handleEnhanceNote(tone, editorState.content)} onSummarize={() => summarizeAndFindActionForFullNote(editorState.content)} onToggleHistory={() => dispatch({type: 'SET_HISTORY_OPEN', payload: !isHistoryOpen})} isHistoryOpen={isHistoryOpen} onApplyTemplate={handleApplyTemplate} onSaveAsTemplate={() => handleSaveAsTemplate(editorState.title)} isMobileView={isMobileView} onToggleSidebar={onToggleSidebar} onUndo={undo} onRedo={redo} canUndo={canUndo} canRedo={canRedo} viewMode={viewMode} onToggleViewMode={() => dispatch({type: 'SET_VIEW_MODE', payload: viewMode === 'edit' ? 'preview' : 'edit'})} wordCount={wordCount} charCount={charCount} isFullAiActionLoading={isFullAiActionLoading} isApiKeyMissing={isApiKeyMissing} isAiEnabled={isAiEnabled} />
             {isAiRateLimited && <div className="bg-yellow-100 dark:bg-yellow-900/30 border-b border-yellow-300 dark:border-yellow-700/50 py-2 px-4 text-center text-sm text-yellow-800 dark:text-yellow-200 flex-shrink-0">AI features are temporarily paused due to high usage. They will be available again shortly.</div>}
             
             <div ref={editorPaneRef} className={`flex-1 overflow-y-auto relative transition-opacity`}>

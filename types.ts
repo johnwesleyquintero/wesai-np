@@ -63,7 +63,7 @@ export interface ChatMessage {
 
 export type SearchMode = 'KEYWORD' | 'AI';
 
-export type ChatMode = 'ASSISTANT' | 'RESPONDER' | 'WESCORE_COPILOT' | 'AMAZON';
+export type ChatMode = 'WESCORE_COPILOT';
 
 export interface ChatSession {
   id: string;

@@ -1,30 +1,26 @@
-
 import React, { useRef, useEffect, useState } from 'react';
 import { useChatContext, useUIContext } from '../context/AppContext';
-import { ChatMode, Note } from '../types';
+import { Note } from '../types';
 import MarkdownPreview from './MarkdownPreview';
-import { SparklesIcon, Cog6ToothIcon, XMarkIcon } from './Icons';
+import { SparklesIcon, Cog6ToothIcon, XMarkIcon, QuestionMarkCircleIcon } from './Icons';
 import ChatViewSkeleton from './ChatViewSkeleton';
 import ChatMessageComponent from './chat/ChatMessage';
 import ChatInput from './chat/ChatInput';
 
 const ChatHeader: React.FC = () => {
-    const { chatMode, setChatMode, chatStatus, clearChat } = useChatContext();
-    const modes: { id: ChatMode; name: string; description: string }[] = [
-        { id: 'ASSISTANT', name: 'Assistant', description: 'Your knowledge co-pilot. Answers questions based on your notes.' },
-        { id: 'RESPONDER', name: 'Responder', description: 'Drafts professional customer service responses using your notes as a knowledge base.' },
-        { id: 'WESCORE_COPILOT', name: 'WesCore Co-pilot', description: 'Your operational co-pilot. Creates, finds, and manages notes on your behalf.' },
-        { id: 'AMAZON', name: 'Amazon Copywriter', description: 'Generates Amazon product listing copy based on product info and research notes.' },
-    ];
-
-    const currentMode = modes.find(m => m.id === chatMode)!;
+    const { chatStatus, clearChat } = useChatContext();
 
     return (
         <header className="p-4 border-b border-light-border dark:border-dark-border flex-shrink-0">
-            <div className="flex items-center justify-between mb-4">
-                <div>
-                    <h1 className="text-xl font-bold">{currentMode.name}</h1>
-                    <p className="text-sm text-light-text/60 dark:text-dark-text/60">{currentMode.description}</p>
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                    <SparklesIcon className="w-5 h-5 text-light-primary dark:text-dark-primary" />
+                    <div>
+                        <h1 className="text-xl font-bold leading-tight">WesCore Co-pilot</h1>
+                        <p className="text-xs text-light-text/60 dark:text-dark-text/60">
+                            Knowledge • Support • Ops • Copywriting
+                        </p>
+                    </div>
                 </div>
                 <button
                     onClick={clearChat}
@@ -33,22 +29,6 @@ const ChatHeader: React.FC = () => {
                 >
                     Clear Chat
                 </button>
-            </div>
-            <div className="flex flex-wrap justify-center gap-2">
-                {modes.map(mode => (
-                    <button
-                        key={mode.id}
-                        onClick={() => setChatMode(mode.id)}
-                        disabled={chatStatus !== 'idle'}
-                        className={`px-3 py-1.5 text-sm font-semibold rounded-lg transition-colors disabled:opacity-50 ${
-                            chatMode === mode.id
-                                ? 'bg-light-primary text-white dark:bg-dark-primary dark:text-zinc-900'
-                                : 'bg-light-ui dark:bg-dark-ui hover:bg-light-ui-hover dark:hover:bg-dark-ui-hover'
-                        }`}
-                    >
-                        {mode.name}
-                    </button>
-                ))}
             </div>
         </header>
     );
@@ -105,6 +85,26 @@ const ChatView: React.FC = () => {
             <div className="flex flex-1 min-h-0">
                 <div className="flex-1 overflow-y-auto p-4 sm:p-8">
                     <div className="max-w-3xl mx-auto w-full space-y-6">
+                        {chatMessages.length === 0 && (
+                            <div className="text-center py-10 opacity-60">
+                                <SparklesIcon className="w-12 h-12 mx-auto mb-4 text-light-primary dark:text-dark-primary" />
+                                <h3 className="text-lg font-semibold">How can I help you?</h3>
+                                <p className="text-sm mt-2 max-w-md mx-auto">
+                                    I can answer questions about your notes, draft customer responses, generate Amazon listings, or manage your workspace.
+                                </p>
+                                <div className="mt-6 flex flex-wrap justify-center gap-2">
+                                    <button className="text-xs bg-light-ui dark:bg-dark-ui px-3 py-1.5 rounded-full hover:bg-light-ui-hover dark:hover:bg-dark-ui-hover transition-colors pointer-events-none">
+                                        "Summarize my meeting notes"
+                                    </button>
+                                    <button className="text-xs bg-light-ui dark:bg-dark-ui px-3 py-1.5 rounded-full hover:bg-light-ui-hover dark:hover:bg-dark-ui-hover transition-colors pointer-events-none">
+                                        "Create a note about Q4 strategy"
+                                    </button>
+                                    <button className="text-xs bg-light-ui dark:bg-dark-ui px-3 py-1.5 rounded-full hover:bg-light-ui-hover dark:hover:bg-dark-ui-hover transition-colors pointer-events-none">
+                                        "Draft a reply to this customer..."
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                         {chatMessages.map(msg => 
                             <ChatMessageComponent 
                                 key={msg.id} 

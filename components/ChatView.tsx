@@ -8,6 +8,7 @@ import ChatInput from './chat/ChatInput';
 import ChatHeader from './chat/ChatHeader';
 import PinnedSourcesPanel from './chat/PinnedSourcesPanel';
 import ChatPlaceholder from './chat/ChatPlaceholder';
+import ThinkingIndicator from './chat/ThinkingIndicator';
 
 const ChatView: React.FC = () => {
     const { chatMessages, chatStatus, activeToolName, deleteMessage } = useChatContext();
@@ -15,9 +16,10 @@ const ChatView: React.FC = () => {
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const [pinnedSourcesInfo, setPinnedSourcesInfo] = useState<{ messageId: string; sources: Note[] } | null>(null);
 
+    // Scroll to bottom on new messages or status change
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [chatMessages, pinnedSourcesInfo]);
+    }, [chatMessages, pinnedSourcesInfo, chatStatus]);
     
     if (!chatMessages) {
         return <ChatViewSkeleton />;
@@ -47,12 +49,14 @@ const ChatView: React.FC = () => {
 
     const getStatusMessage = () => {
         switch (chatStatus) {
-            case 'searching': return 'Searching notes...';
-            case 'replying': return 'Generating response...';
-            case 'using_tool': return activeToolName ? `Using tool: ${activeToolName}...` : 'Using tools...';
+            case 'searching': return 'Searching knowledge base...';
+            case 'replying': return 'Thinking...';
+            case 'using_tool': return activeToolName ? `Executing: ${activeToolName}...` : 'Using tools...';
             default: return null;
         }
     };
+
+    const statusMessage = getStatusMessage();
 
     return (
         <div className="flex-1 flex flex-col h-full bg-light-background dark:bg-dark-background">
@@ -76,17 +80,8 @@ const ChatView: React.FC = () => {
                                 isSourcesPinned={pinnedSourcesInfo?.messageId === msg.id}
                             />
                         )}
-                        {chatStatus !== 'idle' && (
-                            <div className="flex items-start gap-4">
-                                 <div className="w-8 h-8 rounded-full bg-light-primary dark:bg-dark-primary flex items-center justify-center text-white flex-shrink-0 mt-1 animate-pulse"><SparklesIcon className="w-5 h-5"/></div>
-                                 <div className="p-3 rounded-lg bg-light-background dark:bg-dark-background">
-                                     <p className="text-sm font-semibold italic text-light-text/80 dark:text-dark-text/80">
-                                         {getStatusMessage()}
-                                    </p>
-                                </div>
-                            </div>
-                        )}
-                        <div ref={messagesEndRef} />
+                        {statusMessage && <ThinkingIndicator status={statusMessage} />}
+                        <div ref={messagesEndRef} className="h-4" />
                     </div>
                 </div>
 

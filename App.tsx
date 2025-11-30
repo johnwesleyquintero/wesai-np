@@ -1,7 +1,7 @@
-import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Sidebar from './components/Sidebar';
 import { useStoreContext } from './context/AppContext';
-import { SmartCollection } from './types';
 import ConfirmationModal from './components/ConfirmationModal';
 import { AppProvider, useUIContext, useAuthContext } from './context/AppContext';
 import ContextMenu from './components/ContextMenu';
@@ -14,14 +14,7 @@ import ApiKeyIndicator from './components/ApiKeyIndicator';
 import LandingPage from './components/LandingPage';
 import { useOnboarding } from './hooks/useOnboarding';
 import MainView from './components/MainView';
-
-const CommandPalette = React.lazy(() => import('./components/CommandPalette'));
-const SettingsModal = React.lazy(() => import('./components/SettingsModal'));
-const SmartFolderModal = React.lazy(() => import('./components/SmartFolderModal'));
-const WelcomeModal = React.lazy(() => import('./components/WelcomeModal'));
-const CoachMark = React.lazy(() => import('./components/CoachMark'));
-const HelpModal = React.lazy(() => import('./components/HelpModal'));
-
+import ModalManager from './components/ModalManager';
 
 const WELCOME_SCREEN_SIDEBAR_WIDTH_KEY = 'wesai-sidebar-width';
 const MIN_SIDEBAR_WIDTH = 280;
@@ -30,25 +23,19 @@ const MAX_SIDEBAR_WIDTH = 500;
 function AppContent() {
     const {
         notes, activeNoteId, setActiveNoteId, onAddNote,
-        addSmartCollection, updateSmartCollection,
     } = useStoreContext();
 
     const {
         isMobileView, setIsSidebarOpen, view,
-        isSettingsOpen, setIsSettingsOpen, initialSettingsTab,
-        isCommandPaletteOpen, setIsCommandPaletteOpen,
-        isSmartFolderModalOpen, setIsSmartFolderModalOpen, smartFolderToEdit, initialSmartFolderQuery,
-        isWelcomeModalOpen, closeWelcomeModal,
         contextMenu, setContextMenu,
         isApiKeyMissing,
         isSidebarCollapsed,
         toggleSidebarCollapsed,
         confirmation, hideConfirmation,
         isFocusMode,
-        isHelpOpen, setIsHelpOpen,
     } = useUIContext();
     
-    const { onboardingSteps, isOnboardingComplete, activeCoachMark, dismissCoachMark } = useOnboarding();
+    const { onboardingSteps, isOnboardingComplete } = useOnboarding();
     const isResizing = useRef(false);
 
     const [sidebarWidth, setSidebarWidth] = useState<number>(() => {
@@ -105,15 +92,6 @@ function AppContent() {
         window.addEventListener('mouseup', handleMouseUp);
     }, []);
     
-    const handleSaveSmartFolder = (data: Omit<SmartCollection, 'id'>) => {
-        if (smartFolderToEdit) {
-            updateSmartCollection(smartFolderToEdit.id, data);
-        } else {
-            addSmartCollection(data.name, data.query);
-        }
-        setIsSmartFolderModalOpen(false);
-    };
-
     return (
         <div className="flex h-screen w-screen font-sans text-light-text dark:text-dark-text bg-light-background dark:bg-dark-background overflow-hidden">
             <Sidebar
@@ -137,40 +115,7 @@ function AppContent() {
 
             {contextMenu && <ContextMenu {...contextMenu} onClose={() => setContextMenu(null)} />}
 
-            <Suspense fallback={<div />}>
-                <CommandPalette
-                    isOpen={isCommandPaletteOpen}
-                    onClose={() => setIsCommandPaletteOpen(false)}
-                />
-
-                <SettingsModal
-                    isOpen={isSettingsOpen}
-                    onClose={() => setIsSettingsOpen(false)}
-                    initialTab={initialSettingsTab}
-                />
-
-                <SmartFolderModal
-                    isOpen={isSmartFolderModalOpen}
-                    onClose={() => setIsSmartFolderModalOpen(false)}
-                    folderToEdit={smartFolderToEdit}
-                    initialQuery={initialSmartFolderQuery}
-                    onSave={handleSaveSmartFolder}
-                />
-
-                <WelcomeModal isOpen={isWelcomeModalOpen} onClose={closeWelcomeModal} />
-
-                <HelpModal isOpen={isHelpOpen} onClose={() => setIsHelpOpen(false)} />
-                
-                {activeCoachMark && (
-                    <CoachMark
-                        key={activeCoachMark.id}
-                        targetSelector={activeCoachMark.targetSelector}
-                        title={activeCoachMark.title}
-                        content={activeCoachMark.content}
-                        onDismiss={dismissCoachMark}
-                    />
-                )}
-            </Suspense>
+            <ModalManager />
 
             <ConfirmationModal
                 isOpen={confirmation.isOpen}

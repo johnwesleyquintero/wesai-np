@@ -175,7 +175,22 @@ export const useChatProviderLogic = () => {
             }
 
             if (response.text) {
-                setChatHistories(prev => ({ ...prev, [chatMode]: [...prev[chatMode], { id: crypto.randomUUID(), role: 'ai', content: response.text, noteIds: Array.from(touchedNoteIds) }] }));
+                // Extract grounding metadata if available
+                const groundingMetadata = response.candidates?.[0]?.groundingMetadata;
+                
+                setChatHistories(prev => ({ 
+                    ...prev, 
+                    [chatMode]: [
+                        ...prev[chatMode], 
+                        { 
+                            id: crypto.randomUUID(), 
+                            role: 'ai', 
+                            content: response.text, 
+                            noteIds: Array.from(touchedNoteIds),
+                            groundingMetadata // Pass metadata to the message state
+                        }
+                    ] 
+                }));
             }
 
         } catch (error) {

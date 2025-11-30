@@ -240,7 +240,11 @@ export const createGeneralChatSession = (): Chat => {
         model: MODEL_NAMES.PRO,
         config: {
             systemInstruction: SYSTEM_INSTRUCTIONS.GENERAL_CHAT_TOOLS,
-            tools: [{ functionDeclarations: wesCoreToolDefinitions }],
+            // Enable both function calling (for note ops) and Google Search (for web grounding)
+            tools: [
+                { functionDeclarations: wesCoreToolDefinitions },
+                { googleSearch: {} }
+            ],
             safetySettings,
         },
     });

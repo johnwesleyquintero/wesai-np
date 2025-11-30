@@ -59,6 +59,14 @@ export interface ChatMessage {
         tags?: string[];
     };
     contextNoteIds?: string[];
+    groundingMetadata?: {
+        groundingChunks?: Array<{
+            web?: {
+                uri?: string;
+                title?: string;
+            };
+        }>;
+    };
 }
 
 export type SearchMode = 'KEYWORD' | 'AI';

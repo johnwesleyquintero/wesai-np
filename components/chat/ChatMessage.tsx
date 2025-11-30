@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { ChatMessage, Note } from '../../types';
 import MarkdownPreview from '../MarkdownPreview';
-import { SparklesIcon, ClipboardDocumentIcon, CheckIcon, EllipsisHorizontalIcon, TrashIcon, ThumbsUpIcon, ThumbsDownIcon, DocumentTextIcon, XMarkIcon, ArrowPathIcon } from '../Icons';
+import { SparklesIcon, ClipboardDocumentIcon, CheckIcon, EllipsisHorizontalIcon, TrashIcon, ThumbsUpIcon, ThumbsDownIcon, DocumentTextIcon, XMarkIcon, ArrowPathIcon, GoogleIcon } from '../Icons';
 import { useToast } from '../../context/ToastContext';
 import { useStoreContext, useUIContext, useChatContext } from '../../context/AppContext';
 import ToolCallDisplay from '../ToolCallDisplay';
@@ -123,6 +123,8 @@ const ChatMessageComponent: React.FC<MessageProps> = ({ message, onDelete, onTog
         return null;
     }
     
+    const groundingChunks = message.groundingMetadata?.groundingChunks || [];
+    
     return (
         <div className={`group flex items-start gap-3 mb-6 ${isUser ? 'justify-end' : 'justify-start'} animate-fade-in-up`}>
              
@@ -171,6 +173,35 @@ const ChatMessageComponent: React.FC<MessageProps> = ({ message, onDelete, onTog
                 </div>
 
                 {isAi && message.sources && message.sources.length > 0 && <SourceNotes sources={message.sources} />}
+                
+                {isAi && groundingChunks.length > 0 && (
+                    <div className="mt-3 pt-3 border-t border-light-border dark:border-dark-border">
+                        <div className="flex items-center gap-2 mb-2">
+                            <GoogleIcon className="w-4 h-4"/>
+                            <p className="text-[10px] font-bold uppercase tracking-wider text-light-text/50 dark:text-dark-text/50">
+                                Search Sources
+                            </p>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                            {groundingChunks.map((chunk, index) => {
+                                if (chunk.web?.uri && chunk.web?.title) {
+                                    return (
+                                        <a 
+                                            key={index}
+                                            href={chunk.web.uri}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="flex items-center gap-1.5 max-w-full text-xs bg-light-ui dark:bg-dark-ui hover:bg-light-primary/10 dark:hover:bg-dark-primary/10 border border-light-border dark:border-dark-border rounded-full px-3 py-1 text-light-text dark:text-dark-text hover:text-light-primary dark:hover:text-dark-primary transition-colors truncate"
+                                        >
+                                            <span className="truncate max-w-[200px]">{chunk.web.title}</span>
+                                        </a>
+                                    );
+                                }
+                                return null;
+                            })}
+                        </div>
+                    </div>
+                )}
                 
                 {isAi && message.noteIds && message.noteIds.length > 0 && (
                     <div className="mt-4 pt-3 border-t border-light-border dark:border-dark-border">

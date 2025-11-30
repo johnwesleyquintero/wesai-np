@@ -1,3 +1,4 @@
+
 import { Type, Chat, Part } from "@google/genai";
 import { Note, InlineAction, SpellingError } from '../types';
 import { MODEL_NAMES } from '../lib/config';
@@ -240,10 +241,11 @@ export const createGeneralChatSession = (): Chat => {
         model: MODEL_NAMES.PRO,
         config: {
             systemInstruction: SYSTEM_INSTRUCTIONS.GENERAL_CHAT_TOOLS,
-            // Enable both function calling (for note ops) and Google Search (for web grounding)
+            // Enable function calling (for note ops). 
+            // IMPORTANT: googleSearch is deliberately removed here because mixing 
+            // functionDeclarations and googleSearch in the same request causes a 400 error.
             tools: [
                 { functionDeclarations: wesCoreToolDefinitions },
-                { googleSearch: {} }
             ],
             safetySettings,
         },

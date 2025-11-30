@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Note, SmartCollection } from '../../types';
 import NoteCard from '../NoteCard';

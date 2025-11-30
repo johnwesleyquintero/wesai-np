@@ -1,3 +1,4 @@
+
 import React, { useCallback } from 'react';
 import { NoteEditorAction, NoteEditorUIState } from './useNoteEditorReducer';
 import { SpellingError } from '../types';

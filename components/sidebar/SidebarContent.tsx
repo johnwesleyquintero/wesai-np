@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { Note, TreeNode, Collection } from '../../types';
 import SidebarNode from '../SidebarNode';

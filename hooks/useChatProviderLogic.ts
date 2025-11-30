@@ -185,7 +185,7 @@ export const useChatProviderLogic = () => {
         } finally {
             setChatStatus('idle');
             setChatHistories(prev => {
-                const newHistory = prev[chatMode].map(msg => msg.id === userMessage.id ? { ...msg, status: 'complete' } : msg);
+                const newHistory = prev[chatMode].map(msg => msg.id === userMessage.id ? { ...msg, status: 'complete' as const } : msg);
                 return { ...prev, [chatMode]: newHistory };
             });
         }

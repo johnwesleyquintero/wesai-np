@@ -1,4 +1,5 @@
-import React, { useEffect, useRef, useMemo, useCallback, useLayoutEffect } from 'react';
+
+import React, { useEffect, useRef, useMemo, useCallback, useState, useLayoutEffect } from 'react';
 import { Note, NoteVersion, Template, InlineAction } from '../types';
 import EditorHeader from './editor/EditorHeader';
 import EditorTitle from './editor/EditorTitle';
@@ -17,6 +18,7 @@ import { useEditorHotkeys } from '../hooks/useEditorHotkeys';
 import { useNoteInputHandlers } from '../hooks/useNoteInputHandlers';
 import { useNoteSync } from '../hooks/useNoteSync';
 import { useEditorGutter } from '../hooks/useEditorGutter';
+import { useEditorInsertionLogic } from '../hooks/useEditorInsertionLogic';
 import EditorPopups from './editor/EditorPopups';
 import { getCursorPositionRect, getLineInfoForPosition } from '../lib/editorDOMUtils';
 import { useToast } from '../context/ToastContext';
@@ -403,87 +405,22 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         }
     };
 
-    const handleInsertLink = (noteId: string, noteTitle: string) => {
-        const textarea = textareaRef.current;
-        if (!textarea) return;
-        if (noteLinkerForSelection) {
-            const { start, end, text } = noteLinkerForSelection;
-            setEditorState(prev => ({ ...prev, content: `${prev.content.substring(0, start)}[[${noteId}|${text}]]${prev.content.substring(end)}` }));
-            dispatch({ type: 'SET_NOTE_LINKER_FOR_SELECTION', payload: null });
-            const pos = start + noteId.length + text.length + 5;
-            desiredCursorPosRef.current = pos;
-            textarea.focus();
-        } else if (noteLinker) {
-            const { selectionStart } = textarea; const startIndex = selectionStart - noteLinker.query.length - 2;
-            setEditorState(prev => ({ ...prev, content: `${prev.content.substring(0, startIndex)}[[${noteId}|${noteTitle}]]${prev.content.substring(selectionStart)}` }));
-            dispatch({ type: 'SET_NOTE_LINKER', payload: null });
-            const pos = startIndex + noteId.length + noteTitle.length + 5;
-            desiredCursorPosRef.current = pos;
-            textarea.focus();
-        }
-    };
-    
-    const handleInsertSyncedBlock = (templateId: string) => {
-        if (!templateLinker) return;
-        const textarea = textareaRef.current;
-        if (!textarea) return;
-        const { selectionStart } = textarea;
-        const startIndex = selectionStart - templateLinker.query.length;
-        setEditorState(prev => ({ ...prev, content: `${prev.content.substring(0, startIndex)}[[sync:${templateId}]]${prev.content.substring(selectionStart)}` }));
-        dispatch({ type: 'SET_TEMPLATE_LINKER', payload: null });
-        const pos = startIndex + `[[sync:${templateId}]]`.length;
-        desiredCursorPosRef.current = pos;
-        textarea.focus();
-    };
-
-    const handleSelectCommand = (commandId: string) => {
-        if (!slashCommand) return;
-        const { range, position } = slashCommand;
-        
-        const replaceCommandText = (replacement: string, cursorOffset = replacement.length) => {
-            setEditorState(prev => {
-                const newContent = prev.content.substring(0, range.start) + replacement + prev.content.substring(range.end);
-                return { ...prev, content: newContent };
-            });
-            const pos = range.start + cursorOffset;
-            desiredCursorPosRef.current = pos;
-            textareaRef.current?.focus();
-        };
-        switch(commandId) {
-            case 'h1': replaceCommandText('# '); break; case 'h2': replaceCommandText('## '); break;
-            case 'h3': replaceCommandText('### '); break; case 'list': replaceCommandText('- '); break;
-            case 'todo': replaceCommandText('- [ ] '); break; case 'divider': replaceCommandText('---\n'); break;
-            case 'ai-summarize': summarizeAndFindActionForFullNote(editorState.content); replaceCommandText('', 0); break;
-            case 'ai-fix': applyAiActionToFullNote('fix', editorState.content); replaceCommandText('', 0); break;
-            case 'synced-block':
-                setEditorState(prev => ({...prev, content: prev.content.substring(0, range.start) + prev.content.substring(range.end)}));
-                dispatch({ type: 'SET_TEMPLATE_LINKER', payload: { query: '', position }});
-                break;
-            default: break;
-        }
-        dispatch({ type: 'SET_SLASH_COMMAND', payload: null });
-    };
-
-    const handleFormatSelection = (format: 'bold' | 'italic' | 'code' | 'link') => {
-        if (!selection) return;
-        if (format === 'link') { dispatch({ type: 'SET_NOTE_LINKER_FOR_SELECTION', payload: selection }); return; }
-        const { start, end, text } = selection; let prefix = '', suffix = '';
-        switch(format) {
-            case 'bold': prefix = suffix = '**'; break; case 'italic': prefix = suffix = '*'; break; case 'code': prefix = suffix = '`'; break;
-        }
-        setEditorState(prev => ({...prev, content: prev.content.substring(0, start) + prefix + text + suffix + prev.content.substring(end)}));
-        dispatch({ type: 'SET_SELECTION', payload: null });
-        const pos = end + prefix.length + suffix.length;
-        desiredCursorPosRef.current = pos;
-        textareaRef.current?.focus();
-    };
-    
-    const handleApplySuggestion = (suggestion: string) => {
-        if (!activeSpellingError) return;
-        const { index, length } = activeSpellingError.error;
-        setEditorState(prev => ({ ...prev, content: prev.content.substring(0, index) + suggestion + prev.content.substring(index + length) }));
-        setActiveSpellingError(null);
-    };
+    const {
+        handleInsertLink,
+        handleInsertSyncedBlock,
+        handleSelectCommand,
+        handleFormatSelection,
+        handleApplySuggestion
+    } = useEditorInsertionLogic({
+        setEditorState,
+        dispatch,
+        textareaRef,
+        desiredCursorPosRef,
+        uiState,
+        activeSpellingError,
+        summarizeAndFindActionForFullNote,
+        applyAiActionToFullNote
+    });
 
     const handleRestore = (version: NoteVersion) => { restoreNoteVersion(note.id, version); dispatch({ type: 'SET_PREVIEW_VERSION', payload: null }); dispatch({ type: 'SET_HISTORY_OPEN', payload: false }); };
     const handleCloseHistory = () => { dispatch({ type: 'SET_PREVIEW_VERSION', payload: null }); dispatch({ type: 'SET_HISTORY_OPEN', payload: false }); };

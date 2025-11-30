@@ -4,6 +4,7 @@ import { generateChatStream, semanticSearchNotes, createGeneralChatSession } fro
 import { useStoreContext } from '../context/AppContext';
 import { Chat } from '@google/genai';
 import { useDebounce } from './useDebounce';
+import { executeTool, ToolExecutionContext } from '../services/toolExecutionService';
 
 const CHAT_HISTORIES_STORAGE_KEY = 'wesai-chat-histories';
 const RESPONDERS_STORAGE_KEY = 'wesai-chat-responders';
@@ -261,6 +262,23 @@ ${s.length > 0 ? s.map((n, i) => `--- NOTE [${i + 1}]: ${n.title} ---\n${n.conte
         setChatHistories(prev => ({ ...prev, [chatMode]: [...prev[chatMode], userMessage] }));
         const touchedNoteIds = new Set<string>();
 
+        // Create the context object for the execution service
+        const toolContext: ToolExecutionContext = {
+            notes,
+            collections,
+            templates: store.templates,
+            activeNoteId,
+            getNoteById,
+            getCollectionById: store.getCollectionById,
+            onAddNote,
+            updateNoteInStore,
+            deleteNote,
+            setActiveNoteId,
+            addCollection: store.addCollection,
+            moveItem: store.moveItem,
+            addTemplate: store.addTemplate,
+        };
+
         try {
             const chat = getChat();
             let response = await chat.sendMessage({ message: query });
@@ -278,150 +296,12 @@ ${s.length > 0 ? s.map((n, i) => `--- NOTE [${i + 1}]: ${n.title} ---\n${n.conte
                 for (const [index, fc] of response.functionCalls.entries()) {
                     const toolMessageId = pendingToolMessages[index].id;
                     setActiveToolName(fc.name);
-                    let result: any;
-                    let status: 'complete' | 'error' = 'complete';
-                    try {
-                        switch (fc.name) {
-                            case 'createNote':
-                                const title = String(fc.args.title || 'Untitled Note');
-                                const content = String(fc.args.content || '');
-                                const newNoteId = await onAddNote(null, title, content);
-                                result = { success: true, noteId: newNoteId };
-                                touchedNoteIds.add(newNoteId);
-                                break;
-                            case 'findNotes':
-                                const queryToSearch = String(fc.args.query || '');
-                                const foundNotes = notes
-                                    .filter(n => n.title.toLowerCase().includes(queryToSearch.toLowerCase()))
-                                    .map(n => ({ id: n.id, title: n.title }));
-                                result = { notes: foundNotes };
-                                break;
-                             case 'getNoteContent':
-                                const noteIdToRead = String(fc.args.noteId || '');
-                                const noteToRead = getNoteById(noteIdToRead);
-                                if (noteToRead) {
-                                    result = { success: true, title: noteToRead.title, content: noteToRead.content };
-                                } else {
-                                    throw new Error("Note not found.");
-                                }
-                                break;
-                            case 'updateNote':
-                                const noteIdToUpdate = String(fc.args.noteId || '');
-                                const noteToUpdate = getNoteById(noteIdToUpdate);
-                                if (noteToUpdate) {
-                                    const updatedFields: { title?: string, content?: string } = {};
-                                    if (fc.args.title) updatedFields.title = String(fc.args.title);
-                                    if (fc.args.content) updatedFields.content = String(fc.args.content);
-                                    
-                                    if (Object.keys(updatedFields).length > 0) {
-                                        await updateNoteInStore(noteIdToUpdate, updatedFields);
-                                        result = { success: true, noteId: noteIdToUpdate };
-                                        touchedNoteIds.add(noteIdToUpdate);
-                                    } else {
-                                        throw new Error("No fields to update were provided.");
-                                    }
-                                } else {
-                                    throw new Error("Note not found.");
-                                }
-                                break;
-                            case 'deleteNote':
-                                const noteIdToDelete = String(fc.args.noteId || '');
-                                const noteToDeleteInstance = getNoteById(noteIdToDelete);
-                                if (noteToDeleteInstance) {
-                                    await deleteNote(noteIdToDelete);
-                                    if (activeNoteId === noteIdToDelete) setActiveNoteId(null);
-                                    result = { success: true, noteId: noteIdToDelete };
-                                } else {
-                                    throw new Error("Note not found.");
-                                }
-                                break;
-                             case 'createCollection':
-                                const name = String(fc.args.name || 'New Folder');
-                                const parentId = fc.args.parentId ? String(fc.args.parentId) : null;
-                                const newCollectionId = await store.addCollection(name, parentId);
-                                result = { success: true, collectionId: newCollectionId };
-                                break;
-                            case 'findCollections':
-                                const collectionQuery = String(fc.args.query || '').toLowerCase();
-                                const foundCollections = collections
-                                    .filter(c => c.name.toLowerCase().includes(collectionQuery))
-                                    .map(c => ({ id: c.id, name: c.name }));
-                                result = { collections: foundCollections };
-                                break;
-                            case 'moveNoteToCollection':
-                                const noteIdToMove = String(fc.args.noteId || '');
-                                const collectionId = fc.args.collectionId === null || fc.args.collectionId === 'null' ? null : String(fc.args.collectionId);
-                                const noteToMove = getNoteById(noteIdToMove);
-                                const collection = collectionId ? store.getCollectionById(collectionId) : { name: 'root' };
-                                
-                                if (noteToMove && (collection || collectionId === null)) {
-                                    await store.moveItem(noteIdToMove, collectionId, 'inside');
-                                    result = { success: true };
-                                } else {
-                                    throw new Error("Note or destination folder not found.");
-                                }
-                                break;
-                            case 'findTemplates':
-                                const templateQuery = String(fc.args.query || '').toLowerCase();
-                                const foundTemplates = store.templates
-                                    .filter(t => t.title.toLowerCase().includes(templateQuery))
-                                    .map(t => ({ id: t.id, title: t.title }));
-                                result = { templates: foundTemplates };
-                                break;
-                            case 'createTemplateFromNote':
-                                const noteIdForTemplate = String(fc.args.noteId || '');
-                                const noteForTemplate = getNoteById(noteIdForTemplate);
-                                if (noteForTemplate) {
-                                    await store.addTemplate(noteForTemplate.title, noteForTemplate.content);
-                                    result = { success: true, templateTitle: noteForTemplate.title };
-                                } else {
-                                    throw new Error("Note not found.");
-                                }
-                                break;
-                            case 'applyTemplateToNote':
-                                const templateIdToApply = String(fc.args.templateId || '');
-                                const noteIdToApplyTo = String(fc.args.noteId || '');
-                                const templateToApply = store.templates.find(t => t.id === templateIdToApply);
-                                const noteToApplyToInstance = getNoteById(noteIdToApplyTo);
-
-                                if (templateToApply && noteToApplyToInstance) {
-                                    await updateNoteInStore(noteIdToApplyTo, {
-                                        title: templateToApply.title,
-                                        content: templateToApply.content,
-                                    });
-                                    result = { success: true, noteId: noteIdToApplyTo };
-                                    touchedNoteIds.add(noteIdToApplyTo);
-                                } else {
-                                    if (!templateToApply) throw new Error("Template not found.");
-                                    if (!noteToApplyToInstance) throw new Error("Note not found.");
-                                }
-                                break;
-                            case 'findAndReplaceInNotes':
-                                const { searchQuery, newText, caseSensitive = false } = fc.args;
-                                if (typeof searchQuery !== 'string' || typeof newText !== 'string') {
-                                    throw new Error("searchQuery and newText must be provided as strings.");
-                                }
-                                const regex = new RegExp(searchQuery, caseSensitive ? 'g' : 'gi');
-                                const notesToUpdate = notes.filter(note => regex.test(note.content));
-                                
-                                const updatePromises = notesToUpdate.map(note => {
-                                    const newContent = note.content.replace(regex, newText);
-                                    return updateNoteInStore(note.id, { content: newContent });
-                                });
-
-                                await Promise.all(updatePromises);
-
-                                result = { success: true, notesUpdated: notesToUpdate.length, updatedNoteIds: notesToUpdate.map(n => n.id) };
-                                break;
-                            default:
-                                throw new Error(`Unknown function: ${fc.name}`);
-                        }
-                    } catch (toolError) {
-                        result = { success: false, error: (toolError as Error).message };
-                        status = 'error';
-                    } finally {
-                        setActiveToolName(null);
-                    }
+                    
+                    const { result, status, touchedNoteIds: newTouchedIds } = await executeTool(fc.name, fc.args, toolContext);
+                    
+                    newTouchedIds.forEach(id => touchedNoteIds.add(id));
+                    
+                    setActiveToolName(null);
 
                     setChatHistories(prev => {
                         const newHistory = prev[chatMode].map(msg => {

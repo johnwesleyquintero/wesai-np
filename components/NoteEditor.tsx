@@ -1,5 +1,6 @@
-import React, { useEffect, useRef, useMemo, useCallback, useLayoutEffect } from 'react';
-import { Note, Template, InlineAction } from '../types';
+
+import React, { useEffect, useRef, useMemo, useCallback, useState, useLayoutEffect } from 'react';
+import { Note, NoteVersion, Template, InlineAction } from '../types';
 import EditorHeader from './editor/EditorHeader';
 import EditorTitle from './editor/EditorTitle';
 import EditorContent from './editor/EditorContent';
@@ -49,7 +50,7 @@ const areNoteStatesEqual = (a: NoteState, b: NoteState): boolean => {
 
 
 const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
-    const { updateNote, toggleFavorite, notes } = useStoreContext();
+    const { updateNote, toggleFavorite, notes, restoreNoteVersion } = useStoreContext();
     const { isMobileView, onToggleSidebar, isAiRateLimited, isSettingsOpen, isCommandPaletteOpen, isSmartFolderModalOpen, isWelcomeModalOpen, isApiKeyMissing, isFocusMode, showConfirmation, hideConfirmation, isAiEnabled, isHelpOpen, confirmation } = useUIContext();
     const { session } = useAuthContext();
     const { showToast } = useToast();
@@ -158,30 +159,6 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         noteId: note.id,
         session,
         isEffectivelyReadOnly
-    });
-
-    const { 
-        handleSave, 
-        handleRestore, 
-        handleCloseHistory, 
-        handleApplyTemplate, 
-        handleSaveAsTemplate,
-        handleToggleTask, 
-        handleAddTag, 
-        handleApplyTitleSuggestion, 
-        handleContentBlur 
-    } = useNoteEditorHandlers({
-        note,
-        editorState,
-        setEditorState,
-        dispatch,
-        saveStatus,
-        stateWhenLastSavedRef,
-        setSuggestedTags,
-        setSuggestedTitle,
-        hasAutoTitledRef,
-        titleInputRef,
-        isAiEnabled
     });
 
     const { paragraphGutterTarget, setParagraphGutterTarget } = useEditorGutter({
@@ -301,17 +278,40 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         };
     }, [note.id, updateNote, showToast]);
 
-    // Optimization: We use refs inside the functions so the object identity of editorActions
-    // is stable and doesn't trigger context updates on every render.
+    // Use the custom hook for all editor handlers
+    const { 
+        handleSave, 
+        handleRestore, 
+        handleCloseHistory, 
+        handleApplyTemplate, 
+        handleSaveAsTemplate,
+        handleToggleTask, 
+        handleAddTag, 
+        handleApplyTitleSuggestion, 
+        handleContentBlur 
+    } = useNoteEditorHandlers({
+        note,
+        editorState,
+        setEditorState,
+        dispatch,
+        saveStatus,
+        stateWhenLastSavedRef,
+        setSuggestedTags,
+        setSuggestedTitle,
+        hasAutoTitledRef,
+        titleInputRef,
+        isAiEnabled
+    });
+
     const editorActions = useMemo(() => ({ 
         undo, redo, canUndo, canRedo, 
-        applyAiActionToFullNote: (action: InlineAction) => applyAiActionToFullNote(action, latestEditorStateRef.current.content),
-        suggestTagsForFullNote: () => suggestTagsForFullNote(latestEditorStateRef.current.title, latestEditorStateRef.current.content),
-        suggestTitleForFullNote: () => suggestTitleForFullNote(latestEditorStateRef.current.content),
-        summarizeAndFindActionForFullNote: () => summarizeAndFindActionForFullNote(latestEditorStateRef.current.content),
+        applyAiActionToFullNote: (action: InlineAction) => applyAiActionToFullNote(action, editorState.content),
+        suggestTagsForFullNote: () => suggestTagsForFullNote(editorState.title, editorState.content),
+        suggestTitleForFullNote: () => suggestTitleForFullNote(editorState.content),
+        summarizeAndFindActionForFullNote: () => summarizeAndFindActionForFullNote(editorState.content),
     }), [
         undo, redo, canUndo, canRedo, applyAiActionToFullNote, suggestTagsForFullNote, 
-        suggestTitleForFullNote, summarizeAndFindActionForFullNote
+        suggestTitleForFullNote, summarizeAndFindActionForFullNote, editorState.title, editorState.content
     ]);
 
     useEffect(() => {

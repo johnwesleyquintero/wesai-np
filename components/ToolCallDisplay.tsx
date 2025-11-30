@@ -1,9 +1,12 @@
+
 import React, { useState, useEffect } from 'react';
 import { 
     Cog6ToothIcon, CheckIcon, ExclamationCircleIcon, ChevronDownIcon, 
     MagnifyingGlassIcon, PencilSquareIcon, TrashIcon, FolderIcon, 
-    DocumentDuplicateIcon, ServerStackIcon, ArrowUturnRightIcon
+    DocumentDuplicateIcon, ServerStackIcon, ArrowUturnRightIcon,
+    ArrowTopRightOnSquareIcon
 } from './Icons';
+import { useStoreContext, useUIContext } from '../context/AppContext';
 
 interface ToolCallDisplayProps {
     content: {
@@ -27,23 +30,26 @@ const getToolConfig = (name: string) => {
             icon: <MagnifyingGlassIcon className="w-4 h-4" />, 
             label: 'Searching Knowledge Base',
             color: 'text-blue-500 dark:text-blue-400',
-            bgColor: 'bg-blue-500/10'
+            bgColor: 'bg-blue-500/10 dark:bg-blue-500/20',
+            borderColor: 'border-blue-200 dark:border-blue-800'
         };
     }
     if (n.includes('create') || n.includes('add')) {
         return { 
             icon: <PencilSquareIcon className="w-4 h-4" />, 
-            label: 'Creating System Resource',
+            label: 'Creating Resource',
             color: 'text-green-500 dark:text-green-400',
-            bgColor: 'bg-green-500/10'
+            bgColor: 'bg-green-500/10 dark:bg-green-500/20',
+            borderColor: 'border-green-200 dark:border-green-800'
         };
     }
-    if (n.includes('update') || n.includes('replace') || n.includes('move')) {
+    if (n.includes('update') || n.includes('replace') || n.includes('move') || n.includes('apply')) {
         return { 
             icon: <ServerStackIcon className="w-4 h-4" />, 
-            label: 'Updating System Context',
+            label: 'Updating System',
             color: 'text-orange-500 dark:text-orange-400',
-            bgColor: 'bg-orange-500/10'
+            bgColor: 'bg-orange-500/10 dark:bg-orange-500/20',
+            borderColor: 'border-orange-200 dark:border-orange-800'
         };
     }
     if (n.includes('delete')) {
@@ -51,7 +57,8 @@ const getToolConfig = (name: string) => {
             icon: <TrashIcon className="w-4 h-4" />, 
             label: 'Removing Resource',
             color: 'text-red-500 dark:text-red-400',
-            bgColor: 'bg-red-500/10'
+            bgColor: 'bg-red-500/10 dark:bg-red-500/20',
+            borderColor: 'border-red-200 dark:border-red-800'
         };
     }
     if (n.includes('template')) {
@@ -59,20 +66,24 @@ const getToolConfig = (name: string) => {
             icon: <DocumentDuplicateIcon className="w-4 h-4" />, 
             label: 'Managing Templates',
             color: 'text-purple-500 dark:text-purple-400',
-            bgColor: 'bg-purple-500/10'
+            bgColor: 'bg-purple-500/10 dark:bg-purple-500/20',
+            borderColor: 'border-purple-200 dark:border-purple-800'
         };
     }
     return { 
         icon: <Cog6ToothIcon className="w-4 h-4" />, 
         label: 'System Operation',
         color: 'text-gray-500 dark:text-gray-400',
-        bgColor: 'bg-gray-500/10'
+        bgColor: 'bg-gray-500/10 dark:bg-gray-500/20',
+        borderColor: 'border-gray-200 dark:border-gray-700'
     };
 };
 
 const ToolCallDisplay: React.FC<ToolCallDisplayProps> = ({ content }) => {
     const { name, args, result, status } = content;
     const [isExpanded, setIsExpanded] = useState(status === 'error'); 
+    const { setActiveNoteId } = useStoreContext();
+    const { setView } = useUIContext();
     
     // Auto-collapse when status changes to complete, auto-expand on error
     useEffect(() => {
@@ -84,17 +95,17 @@ const ToolCallDisplay: React.FC<ToolCallDisplayProps> = ({ content }) => {
     const getStatusStyles = () => {
         switch (status) {
             case 'pending': return {
-                border: 'border-light-primary/30 dark:border-dark-primary/30',
+                containerBorder: 'border-light-primary/30 dark:border-dark-primary/30',
                 icon: <div className="w-3.5 h-3.5 border-2 border-light-primary dark:border-dark-primary border-t-transparent rounded-full animate-spin" />,
                 text: 'text-light-primary dark:text-dark-primary'
             };
             case 'complete': return {
-                border: 'border-green-500/30',
-                icon: <CheckIcon className="w-4 h-4 text-green-500" />,
-                text: 'text-green-600 dark:text-green-400'
+                containerBorder: `border-transparent ${toolConfig.bgColor}`,
+                icon: <CheckIcon className={`w-4 h-4 ${toolConfig.color}`} />,
+                text: toolConfig.color
             };
             case 'error': return {
-                border: 'border-red-500/30',
+                containerBorder: 'border-red-500/30 bg-red-50 dark:bg-red-900/10',
                 icon: <ExclamationCircleIcon className="w-4 h-4 text-red-500" />,
                 text: 'text-red-600 dark:text-red-400'
             };
@@ -103,8 +114,42 @@ const ToolCallDisplay: React.FC<ToolCallDisplayProps> = ({ content }) => {
 
     const statusStyles = getStatusStyles();
 
+    // Specific renderer for "Create/Update Note" success state
+    if (status === 'complete' && result?.success && (name === 'createNote' || name === 'updateNote' || name === 'createTemplateFromNote')) {
+        const title = args.title || result.templateTitle || "Untitled Note";
+        const id = result.noteId;
+
+        return (
+            <div className={`rounded-lg border ${toolConfig.borderColor} ${toolConfig.bgColor} overflow-hidden my-2`}>
+                <div className="flex items-center justify-between p-3">
+                    <div className="flex items-center gap-3">
+                        <div className={`p-1.5 rounded-md bg-white/50 dark:bg-black/20 ${toolConfig.color}`}>
+                            {toolConfig.icon}
+                        </div>
+                        <div>
+                            <div className={`text-xs font-bold uppercase tracking-wider ${toolConfig.color} opacity-80`}>
+                                {name === 'createNote' ? 'Created New Note' : name === 'updateNote' ? 'Updated Note' : 'Created Template'}
+                            </div>
+                            <div className="text-sm font-bold text-light-text dark:text-dark-text mt-0.5 truncate max-w-[200px] sm:max-w-xs">
+                                {title}
+                            </div>
+                        </div>
+                    </div>
+                    {id && (
+                        <button 
+                            onClick={() => { setActiveNoteId(id); setView('NOTES'); }}
+                            className="flex items-center gap-1 px-3 py-1.5 bg-white dark:bg-black/20 rounded-md text-xs font-semibold hover:bg-white/80 dark:hover:bg-black/40 transition-colors shadow-sm"
+                        >
+                            Open <ArrowTopRightOnSquareIcon className="w-3 h-3" />
+                        </button>
+                    )}
+                </div>
+            </div>
+        );
+    }
+
     return (
-        <div className={`group rounded-lg border bg-light-background dark:bg-dark-background overflow-hidden transition-all duration-300 my-2 ${statusStyles.border}`}>
+        <div className={`group rounded-lg border bg-light-background dark:bg-dark-background overflow-hidden transition-all duration-300 my-2 ${statusStyles.containerBorder}`}>
             {/* Header */}
             <button 
                 onClick={() => setIsExpanded(!isExpanded)}
@@ -117,16 +162,16 @@ const ToolCallDisplay: React.FC<ToolCallDisplayProps> = ({ content }) => {
                     <div>
                         <div className="flex items-center gap-2">
                             <span className="text-xs font-bold uppercase tracking-wider text-light-text/50 dark:text-dark-text/50">
-                                System Action
+                                {toolConfig.label}
                             </span>
                             {status === 'pending' && (
                                 <span className="flex items-center gap-1 text-[10px] font-medium text-light-primary dark:text-dark-primary bg-light-primary/10 dark:bg-dark-primary/10 px-1.5 py-0.5 rounded-full animate-pulse">
-                                    Processing
+                                    Processing...
                                 </span>
                             )}
                         </div>
-                        <div className="text-sm font-semibold text-light-text/90 dark:text-dark-text/90 mt-0.5">
-                            {toolConfig.label}
+                        <div className="text-sm font-medium text-light-text/80 dark:text-dark-text/80 mt-0.5 font-mono opacity-80 truncate max-w-[200px]">
+                            {name}(...)
                         </div>
                     </div>
                 </div>
@@ -144,7 +189,7 @@ const ToolCallDisplay: React.FC<ToolCallDisplayProps> = ({ content }) => {
                     isExpanded ? 'max-h-[500px] opacity-100 border-t border-light-border/50 dark:border-dark-border/50' : 'max-h-0 opacity-0'
                 }`}
             >
-                <div className="p-3 bg-light-ui/20 dark:bg-dark-ui/20 text-xs font-mono space-y-3">
+                <div className="p-3 bg-light-ui/30 dark:bg-dark-ui/30 text-xs font-mono space-y-3">
                     {/* Input Args */}
                     <div>
                         <div className="flex items-center gap-1.5 text-light-text/50 dark:text-dark-text/50 mb-1.5 px-1">

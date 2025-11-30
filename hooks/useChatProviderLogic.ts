@@ -231,6 +231,32 @@ export const useChatProviderLogic = () => {
         });
     }, []);
 
+    const regenerateLastResponse = useCallback(async () => {
+        const currentHistory = chatHistoriesRef.current[chatMode];
+        if (currentHistory.length < 2) return;
+
+        const lastMsg = currentHistory[currentHistory.length - 1];
+        const userMsg = currentHistory[currentHistory.length - 2];
+
+        // Ensure we are regenerating an AI response triggered by a user
+        if (lastMsg.role === 'ai' && userMsg.role === 'user') {
+             // Remove both the AI response and the triggering User message from history
+             // because sendMessage will re-add the user message.
+             setChatHistories(prev => ({
+                ...prev,
+                [chatMode]: prev[chatMode].slice(0, -2)
+            }));
+            
+            // Restore context from that turn
+            if (userMsg.contextNoteIds) setContextNoteIds(userMsg.contextNoteIds);
+
+            // Send again
+            if (typeof userMsg.content === 'string') {
+                await sendMessage(userMsg.content, userMsg.image);
+            }
+        }
+    }, [chatMode, sendMessage, setContextNoteIds]);
+
     const chatValue = useMemo(() => ({
         chatMessages: chatHistories[chatMode] || [], 
         chatStatus,
@@ -240,6 +266,7 @@ export const useChatProviderLogic = () => {
         deleteMessage, 
         handleFeedback, 
         recallLastMessage,
+        regenerateLastResponse,
         contextNoteIds, 
         setContextNoteIds,
         // Legacy props compatibility (can be removed later if not used in View)
@@ -247,7 +274,7 @@ export const useChatProviderLogic = () => {
     }), [
         chatHistories, chatStatus, sendMessage, clearChat,
         activeToolName, deleteMessage, handleFeedback, recallLastMessage,
-        contextNoteIds, setContextNoteIds
+        regenerateLastResponse, contextNoteIds, setContextNoteIds
     ]);
 
     return chatValue;

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ChatMessage, Note } from '../../types';
 import MarkdownPreview from '../MarkdownPreview';
-import { SparklesIcon, DocumentPlusIcon, DocumentDuplicateIcon, CheckIcon, EllipsisHorizontalIcon, TrashIcon, ThumbsUpIcon, ThumbsDownIcon, DocumentTextIcon, XMarkIcon } from '../Icons';
+import { SparklesIcon, DocumentPlusIcon, ClipboardDocumentIcon, CheckIcon, EllipsisHorizontalIcon, TrashIcon, ThumbsUpIcon, ThumbsDownIcon, DocumentTextIcon, XMarkIcon, ArrowPathIcon } from '../Icons';
 import { useToast } from '../../context/ToastContext';
 import { useStoreContext, useUIContext, useChatContext } from '../../context/AppContext';
 import ToolCallDisplay from '../ToolCallDisplay';
@@ -42,9 +42,9 @@ const MessageActions: React.FC<{ onDelete: () => void }> = ({ onDelete }) => {
     );
 };
 
-const ActionButton: React.FC<{ tooltip: string; onClick: () => void; children: React.ReactNode }> = ({ tooltip, onClick, children }) => (
+const ActionButton: React.FC<{ tooltip: string; onClick: () => void; children: React.ReactNode; className?: string }> = ({ tooltip, onClick, children, className }) => (
     <div className="relative group">
-        <button onClick={onClick} className="p-1.5 rounded-md text-light-text/60 dark:text-dark-text/60 hover:text-light-text dark:hover:text-dark-text hover:bg-light-ui dark:hover:bg-dark-ui transition-colors">
+        <button onClick={onClick} className={`p-1.5 rounded-md text-light-text/60 dark:text-dark-text/60 hover:text-light-text dark:hover:text-dark-text hover:bg-light-ui dark:hover:bg-dark-ui transition-colors ${className}`}>
             {children}
         </button>
         <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 px-2 py-1 bg-zinc-800 text-white text-xs font-semibold rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
@@ -68,11 +68,11 @@ const CopyMessageButton: React.FC<{ content: string }> = ({ content }) => {
     };
 
     return (
-        <ActionButton tooltip={isCopied ? "Copied!" : "Copy to Clipboard"} onClick={handleCopy}>
+        <ActionButton tooltip={isCopied ? "Copied!" : "Copy"} onClick={handleCopy}>
             {isCopied ? (
                 <CheckIcon className="w-4 h-4 text-green-500 dark:text-green-400" />
             ) : (
-                <DocumentDuplicateIcon className="w-4 h-4" />
+                <ClipboardDocumentIcon className="w-4 h-4" />
             )}
         </ActionButton>
     );
@@ -81,10 +81,11 @@ const CopyMessageButton: React.FC<{ content: string }> = ({ content }) => {
 const ChatMessageComponent: React.FC<MessageProps> = ({ message, onDelete, onToggleSources, isSourcesPinned }) => {
     const { showToast } = useToast();
     const { onAddNote, setActiveNoteId, getNoteById } = useStoreContext();
-    const { handleFeedback } = useChatContext();
+    const { handleFeedback, regenerateLastResponse, chatMessages } = useChatContext();
     const { setView } = useUIContext();
     const [isProvidingFeedback, setIsProvidingFeedback] = useState(false);
 
+    const isLastMessage = chatMessages[chatMessages.length - 1]?.id === message.id;
 
     const handleSaveAsNote = async () => {
         if (typeof message.content === 'string') {
@@ -199,43 +200,62 @@ const ChatMessageComponent: React.FC<MessageProps> = ({ message, onDelete, onTog
                 )}
 
                 {isAi && message.status !== 'processing' && (
-                    <div className="flex items-center gap-1 mt-3 pt-2 border-t border-light-border/30 dark:border-dark-border/30">
+                    <div className="flex items-center gap-2 mt-4 pt-2 border-t border-light-border/30 dark:border-dark-border/30">
                         {isProvidingFeedback ? (
-                            <div className="flex items-center gap-2 animate-fade-in">
-                                <span className="text-xs font-semibold text-light-text/70 dark:text-dark-text/70">Reason:</span>
-                                {feedbackReasons.map(reason => (
-                                    <button key={reason} onClick={() => handleSelectReason(reason)} className="px-2 py-0.5 text-xs rounded-full bg-light-ui dark:bg-dark-ui hover:bg-light-ui-hover dark:hover:bg-dark-ui-hover border border-light-border dark:border-dark-border transition-colors">{reason}</button>
-                                ))}
-                                <button onClick={() => setIsProvidingFeedback(false)} className="px-2 py-0.5 text-xs rounded-full hover:bg-red-100 dark:hover:bg-red-900/20 text-red-500 flex items-center gap-1 transition-colors"><XMarkIcon className="w-3 h-3"/> Cancel</button>
+                            <div className="flex items-center gap-2 animate-fade-in w-full">
+                                <span className="text-xs font-semibold text-light-text/70 dark:text-dark-text/70 whitespace-nowrap">Reason:</span>
+                                <div className="flex flex-wrap gap-2 flex-1">
+                                    {feedbackReasons.map(reason => (
+                                        <button key={reason} onClick={() => handleSelectReason(reason)} className="px-2 py-0.5 text-xs rounded-full bg-light-ui dark:bg-dark-ui hover:bg-light-ui-hover dark:hover:bg-dark-ui-hover border border-light-border dark:border-dark-border transition-colors">{reason}</button>
+                                    ))}
+                                </div>
+                                <button onClick={() => setIsProvidingFeedback(false)} className="px-2 py-0.5 text-xs rounded-full hover:bg-red-100 dark:hover:bg-red-900/20 text-red-500 flex items-center gap-1 transition-colors flex-shrink-0"><XMarkIcon className="w-3 h-3"/> Cancel</button>
                             </div>
                         ) : (
                             <>
-                                {message.sources && message.sources.length > 0 && (
-                                    <ActionButton tooltip={isSourcesPinned ? 'Hide Sources' : 'Show Sources'} onClick={() => onToggleSources(message.sources!)}>
-                                        <DocumentTextIcon className="w-4 h-4" />
+                                {/* Left Actions: Utilities */}
+                                <div className="flex items-center gap-1">
+                                    {message.sources && message.sources.length > 0 && (
+                                        <ActionButton tooltip={isSourcesPinned ? 'Hide Sources' : 'Show Sources'} onClick={() => onToggleSources(message.sources!)}>
+                                            <DocumentTextIcon className="w-4 h-4" />
+                                        </ActionButton>
+                                    )}
+                                    <ActionButton tooltip="Create Note" onClick={handleSaveAsNote}>
+                                        <DocumentPlusIcon className="w-4 h-4" />
                                     </ActionButton>
-                                )}
-                                <ActionButton tooltip="Save as Note" onClick={handleSaveAsNote}>
-                                    <DocumentPlusIcon className="w-4 h-4" />
-                                </ActionButton>
-                                <CopyMessageButton content={typeof message.content === 'string' ? message.content : ''} />
+                                    <CopyMessageButton content={typeof message.content === 'string' ? message.content : ''} />
+                                </div>
 
                                 <div className="flex-1" />
                                 
-                                <button 
-                                    onClick={() => handleFeedback(message.id, { rating: 'up' })}
-                                    disabled={!!message.feedback}
-                                    className={`p-1.5 rounded-md transition-colors disabled:opacity-50 ${message.feedback?.rating === 'up' ? 'text-green-500 bg-green-500/10' : 'text-light-text/40 dark:text-dark-text/40 hover:text-green-500 hover:bg-green-500/10'}`}
-                                >
-                                    <ThumbsUpIcon filled={message.feedback?.rating === 'up'} />
-                                </button>
-                                 <button 
-                                    onClick={() => !message.feedback && setIsProvidingFeedback(true)}
-                                    disabled={!!message.feedback}
-                                    className={`p-1.5 rounded-md transition-colors disabled:opacity-50 ${message.feedback?.rating === 'down' ? 'text-red-500 bg-red-500/10' : 'text-light-text/40 dark:text-dark-text/40 hover:text-red-500 hover:bg-red-500/10'}`}
-                                 >
-                                    <ThumbsDownIcon filled={message.feedback?.rating === 'down'} />
-                                </button>
+                                {/* Right Actions: Feedback & Regenerate */}
+                                <div className="flex items-center gap-1">
+                                    {isLastMessage && (
+                                        <>
+                                            <ActionButton tooltip="Regenerate" onClick={regenerateLastResponse}>
+                                                <ArrowPathIcon className="w-4 h-4" />
+                                            </ActionButton>
+                                            <div className="w-px h-4 bg-light-border/50 dark:bg-dark-border/50 mx-1"></div>
+                                        </>
+                                    )}
+                                    
+                                    <button 
+                                        onClick={() => handleFeedback(message.id, { rating: 'up' })}
+                                        disabled={!!message.feedback}
+                                        className={`p-1.5 rounded-md transition-colors disabled:opacity-50 ${message.feedback?.rating === 'up' ? 'text-green-500 bg-green-500/10' : 'text-light-text/40 dark:text-dark-text/40 hover:text-green-500 hover:bg-green-500/10'}`}
+                                        aria-label="Thumbs Up"
+                                    >
+                                        <ThumbsUpIcon filled={message.feedback?.rating === 'up'} />
+                                    </button>
+                                     <button 
+                                        onClick={() => !message.feedback && setIsProvidingFeedback(true)}
+                                        disabled={!!message.feedback}
+                                        className={`p-1.5 rounded-md transition-colors disabled:opacity-50 ${message.feedback?.rating === 'down' ? 'text-red-500 bg-red-500/10' : 'text-light-text/40 dark:text-dark-text/40 hover:text-red-500 hover:bg-red-500/10'}`}
+                                        aria-label="Thumbs Down"
+                                     >
+                                        <ThumbsDownIcon filled={message.feedback?.rating === 'down'} />
+                                    </button>
+                                </div>
                             </>
                         )}
                     </div>

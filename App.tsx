@@ -1,5 +1,5 @@
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Sidebar from './components/Sidebar';
 import { useStoreContext } from './context/AppContext';
 import ConfirmationModal from './components/ConfirmationModal';
@@ -23,7 +23,7 @@ const MAX_SIDEBAR_WIDTH = 500;
 
 function AppContent() {
     const {
-        notes, activeNoteId, setActiveNoteId, onAddNote,
+        notes, activeNoteId, setActiveNoteId, onAddNote, activeNote
     } = useStoreContext();
 
     const {
@@ -55,11 +55,7 @@ function AppContent() {
         }
     }, [isFocusMode, isSidebarCollapsed, toggleSidebarCollapsed]);
     
-    const activeNote = useMemo(() => {
-        if (!activeNoteId) return null;
-        return notes.find(n => n.id === activeNoteId) || null;
-    }, [activeNoteId, notes]);
-    
+    // Safety check: if the active note ID exists but isn't in the list (e.g. deleted), clear it.
     useEffect(() => {
         if (activeNoteId && !notes.some(n => n.id === activeNoteId)) {
             setActiveNoteId(null);

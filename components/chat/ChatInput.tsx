@@ -1,22 +1,23 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useChatContext, useStoreContext } from '../../context/AppContext';
-import { useToast } from '../../context/ToastContext';
-import { XMarkIcon, DocumentPlusIcon, PaperClipIcon, PaperAirplaneIcon, XCircleIcon, DocumentTextIcon } from '../Icons';
+import { XMarkIcon, DocumentPlusIcon, PaperClipIcon, PaperAirplaneIcon, DocumentTextIcon } from '../Icons';
 import NoteSelectorModal from '../NoteSelectorModal';
+import { useChatAttachments } from '../../hooks/useChatAttachments';
 
 const ChatInput: React.FC = () => {
     const [input, setInput] = useState('');
-    const [image, setImage] = useState<string | null>(null);
-    const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
     const { 
         chatStatus, sendMessage, recallLastMessage, deleteMessage, contextNoteIds, setContextNoteIds,
     } = useChatContext();
-    const { showToast } = useToast();
     const { getNoteById, notes } = useStoreContext();
     const textareaRef = useRef<HTMLTextAreaElement>(null);
-    const fileInputRef = useRef<HTMLInputElement>(null);
     const [isNoteSelectorOpen, setIsNoteSelectorOpen] = useState(false);
+
+    const { 
+        image, isPreviewModalOpen, setIsPreviewModalOpen, fileInputRef, 
+        handleFileChange, clearAttachment, triggerFileInput 
+    } = useChatAttachments();
 
     useEffect(() => {
         const textarea = textareaRef.current;
@@ -28,14 +29,13 @@ const ChatInput: React.FC = () => {
     }, [input]);
     
     const handleSend = () => {
-        if (!input.trim() || chatStatus !== 'idle') return;
+        if (!input.trim() && !image) return;
+        if (chatStatus !== 'idle') return;
         
         sendMessage(input, image || undefined);
 
         setInput('');
-        setImage(null);
-        setIsPreviewModalOpen(false);
-        if (fileInputRef.current) fileInputRef.current.value = '';
+        clearAttachment();
     };
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -49,18 +49,6 @@ const ChatInput: React.FC = () => {
                 setInput(messageToRecall.content);
                 deleteMessage(messageToRecall.id);
             }
-        }
-    };
-
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                const base64String = (reader.result as string).replace('data:', '').replace(/^.+,/, '');
-                setImage(base64String);
-            };
-            reader.readAsDataURL(file);
         }
     };
     
@@ -107,7 +95,7 @@ const ChatInput: React.FC = () => {
                          <button onClick={() => setIsPreviewModalOpen(true)} className="w-full h-full rounded-lg overflow-hidden ring-2 ring-light-primary dark:ring-dark-primary transition-all">
                             <img src={`data:image/jpeg;base64,${image}`} alt="Preview" className="w-full h-full object-cover" />
                         </button>
-                        <button onClick={() => { setImage(null); setIsPreviewModalOpen(false); }} className="absolute -top-2 -right-2 bg-light-background dark:bg-dark-background border border-light-border dark:border-dark-border rounded-full p-0.5 shadow-md hover:bg-light-ui dark:hover:bg-dark-ui text-light-text dark:text-dark-text transition-colors">
+                        <button onClick={clearAttachment} className="absolute -top-2 -right-2 bg-light-background dark:bg-dark-background border border-light-border dark:border-dark-border rounded-full p-0.5 shadow-md hover:bg-light-ui dark:hover:bg-dark-ui text-light-text dark:text-dark-text transition-colors">
                             <XMarkIcon className="w-3 h-3" />
                         </button>
                     </div>
@@ -130,7 +118,7 @@ const ChatInput: React.FC = () => {
                             <button onClick={() => setIsNoteSelectorOpen(true)} className="p-2 rounded-lg hover:bg-light-ui dark:hover:bg-dark-ui text-light-text/60 dark:text-dark-text/60 hover:text-light-primary dark:hover:text-dark-primary transition-colors disabled:opacity-50" disabled={chatStatus !== 'idle'} title="Add Context Note">
                                 <DocumentPlusIcon className="w-5 h-5"/>
                             </button>
-                            <button onClick={() => fileInputRef.current?.click()} className="p-2 rounded-lg hover:bg-light-ui dark:hover:bg-dark-ui text-light-text/60 dark:text-dark-text/60 hover:text-light-primary dark:hover:text-dark-primary transition-colors disabled:opacity-50" disabled={chatStatus !== 'idle'} title="Attach Image">
+                            <button onClick={triggerFileInput} className="p-2 rounded-lg hover:bg-light-ui dark:hover:bg-dark-ui text-light-text/60 dark:text-dark-text/60 hover:text-light-primary dark:hover:text-dark-primary transition-colors disabled:opacity-50" disabled={chatStatus !== 'idle'} title="Attach Image">
                                 <PaperClipIcon className="w-5 h-5"/>
                             </button>
                             <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/jpeg,image/png" className="hidden" />

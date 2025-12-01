@@ -1,5 +1,4 @@
-
-import { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 
 export const useChatAttachments = () => {
     const [image, setImage] = useState<string | null>(null);

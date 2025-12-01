@@ -1,3 +1,4 @@
+
 import React, { useCallback, RefObject } from 'react';
 import { Note, Template, NoteVersion } from '../types';
 import { useStoreContext, useUIContext } from '../context/AppContext';

@@ -1,11 +1,11 @@
-import React, { useEffect, useRef, useMemo, useCallback, useState, useLayoutEffect } from 'react';
+
+import React, { useEffect, useRef, useMemo, useCallback, useState, useLayoutEffect, Suspense } from 'react';
 import { Note, NoteVersion, Template, InlineAction } from './types';
 import EditorHeader from './components/editor/EditorHeader';
 import EditorTitle from './components/editor/EditorTitle';
 import EditorContent from './components/editor/EditorContent';
 import EditorMeta from './components/editor/EditorMeta';
 import EditorStatusBar from './components/editor/EditorStatusBar';
-import VersionHistorySidebar from './components/VersionHistorySidebar';
 import { useUndoableState } from './hooks/useUndoableState';
 import { useEditorContext, useStoreContext, useUIContext, useAuthContext } from './context/AppContext';
 import { useBacklinks } from './hooks/useBacklinks';
@@ -24,6 +24,9 @@ import EditorPopups from './components/editor/EditorPopups';
 import { getCursorPositionRect, getLineInfoForPosition } from './lib/editorDOMUtils';
 import { useToast } from './context/ToastContext';
 import { SparklesIcon } from './components/Icons';
+
+// Lazy load sidebar
+const VersionHistorySidebar = React.lazy(() => import('./components/VersionHistorySidebar'));
 
 interface NoteEditorProps {
     note: Note;
@@ -534,7 +537,11 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
                 textareaRef={textareaRef}
                 desiredCursorPosRef={desiredCursorPosRef}
             />
-            {isHistoryOpen && <VersionHistorySidebar history={note.history || []} onClose={handleCloseHistory} onPreview={(version) => dispatch({ type: 'SET_PREVIEW_VERSION', payload: version })} onRestore={handleRestore} activeVersionTimestamp={previewVersion?.savedAt} />}
+            {isHistoryOpen && (
+                <Suspense fallback={null}>
+                    <VersionHistorySidebar history={note.history || []} onClose={handleCloseHistory} onPreview={(version) => dispatch({ type: 'SET_PREVIEW_VERSION', payload: version })} onRestore={handleRestore} activeVersionTimestamp={previewVersion?.savedAt} />
+                </Suspense>
+            )}
             {isDragOver && <div className="absolute inset-0 bg-light-primary/10 dark:bg-dark-primary/10 border-4 border-dashed border-light-primary dark:border-dark-primary rounded-2xl m-4 pointer-events-none flex items-center justify-center"><p className="text-light-primary dark:text-dark-primary font-bold text-2xl">Drop file to import</p></div>}
         </div>
     );

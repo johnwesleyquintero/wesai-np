@@ -1,12 +1,14 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import { AppProvider, useUIContext, useAuthContext } from './context/AppContext';
 import { ToastProvider } from './context/ToastContext';
 import SuspenseLoader from './components/SuspenseLoader';
-import Auth from './components/Auth';
 import { setupStorageBucket } from './lib/supabaseClient';
-import LandingPage from './components/LandingPage';
-import WorkspaceLayout from './components/WorkspaceLayout';
+
+// Lazy load main views to split the bundle
+const Auth = React.lazy(() => import('./components/Auth'));
+const LandingPage = React.lazy(() => import('./components/LandingPage'));
+const WorkspaceLayout = React.lazy(() => import('./components/WorkspaceLayout'));
 
 function AppContainer() {
     const { session, isSessionLoading } = useAuthContext();
@@ -25,12 +27,24 @@ function AppContainer() {
 
     if (!session && !isDemoMode) {
         if (showAuth) {
-            return <Auth onBack={() => setShowAuth(false)} onEnterDemo={() => setIsDemoMode(true)} />;
+            return (
+                <Suspense fallback={<SuspenseLoader />}>
+                    <Auth onBack={() => setShowAuth(false)} onEnterDemo={() => setIsDemoMode(true)} />
+                </Suspense>
+            );
         }
-        return <LandingPage onGetStarted={() => setShowAuth(true)} onEnterDemo={() => setIsDemoMode(true)} />;
+        return (
+            <Suspense fallback={<SuspenseLoader />}>
+                <LandingPage onGetStarted={() => setShowAuth(true)} onEnterDemo={() => setIsDemoMode(true)} />
+            </Suspense>
+        );
     }
 
-    return <WorkspaceLayout />;
+    return (
+        <Suspense fallback={<SuspenseLoader />}>
+            <WorkspaceLayout />
+        </Suspense>
+    );
 }
 
 export default function App() {

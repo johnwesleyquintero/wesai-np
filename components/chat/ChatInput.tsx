@@ -24,7 +24,7 @@ const ChatInput: React.FC = () => {
         if (textarea) {
             textarea.style.height = 'auto';
             const scrollHeight = textarea.scrollHeight;
-            textarea.style.height = `${Math.min(scrollHeight, 192)}px`; // Cap at 12rem (48 * 4)
+            textarea.style.height = `${Math.min(scrollHeight, 192)}px`; // Cap at 12rem
         }
     }, [input]);
     
@@ -56,6 +56,8 @@ const ChatInput: React.FC = () => {
         setContextNoteIds(prev => prev.filter(id => id !== idToRemove));
     };
 
+    const hasContext = contextNoteIds.length > 0 || image;
+
     return (
         <div className="flex-shrink-0 p-4 sm:px-8 sm:pb-8 bg-light-background dark:bg-dark-background">
             {isPreviewModalOpen && image && (
@@ -68,22 +70,22 @@ const ChatInput: React.FC = () => {
             )}
             
             <div className="max-w-3xl mx-auto">
-                <div className={`relative flex flex-col rounded-2xl bg-light-ui dark:bg-dark-ui border transition-all duration-200 ${
+                <div className={`relative flex flex-col rounded-2xl bg-white dark:bg-zinc-900 border transition-all duration-200 ${
                     chatStatus === 'idle' 
-                        ? 'border-light-border dark:border-dark-border focus-within:border-light-primary dark:focus-within:border-dark-primary focus-within:ring-1 focus-within:ring-light-primary dark:focus-within:ring-dark-primary shadow-sm' 
+                        ? 'border-light-border dark:border-dark-border focus-within:border-light-primary dark:focus-within:border-dark-primary focus-within:ring-2 focus-within:ring-light-primary/20 dark:focus-within:ring-dark-primary/20 shadow-sm' 
                         : 'border-light-border/50 dark:border-dark-border/50 opacity-80'
                 }`}>
                     
-                    {/* Integrated Context/Attachment Area */}
-                    {(contextNoteIds.length > 0 || image) && (
-                        <div className="flex items-center gap-2 p-3 pb-0 overflow-x-auto scrollbar-thin animate-fade-in">
+                    {/* Integrated Context/Attachment Staging Area */}
+                    {hasContext && (
+                        <div className="flex items-center gap-2 px-3 pt-3 pb-2 overflow-x-auto scrollbar-thin animate-fade-in border-b border-light-border/30 dark:border-dark-border/30">
                             {contextNoteIds.map(id => {
                                 const note = getNoteById(id);
                                 return (
-                                    <div key={id} className="flex items-center gap-1.5 text-xs px-2 py-1 rounded bg-white dark:bg-zinc-800 border border-light-border dark:border-zinc-700 text-light-text dark:text-dark-text flex-shrink-0 shadow-sm group">
+                                    <div key={id} className="flex items-center gap-1.5 text-xs px-2 py-1 rounded-md bg-light-ui dark:bg-dark-ui border border-light-border dark:border-zinc-700 text-light-text dark:text-dark-text flex-shrink-0 shadow-sm group transition-colors">
                                         <DocumentTextIcon className="w-3 h-3 text-light-primary dark:text-dark-primary"/>
                                         <span className="truncate max-w-[120px] font-medium">{note ? note.title : "Deleted Note"}</span>
-                                        <button onClick={() => handleRemoveContextNote(id)} className="ml-1 text-light-text/40 dark:text-dark-text/40 hover:text-red-500 dark:hover:text-red-400">
+                                        <button onClick={() => handleRemoveContextNote(id)} className="ml-1 p-0.5 rounded-full hover:bg-black/5 dark:hover:bg-white/10 text-light-text/40 dark:text-dark-text/40 hover:text-red-500 dark:hover:text-red-400">
                                             <XMarkIcon className="w-3 h-3"/>
                                         </button>
                                     </div>
@@ -91,7 +93,7 @@ const ChatInput: React.FC = () => {
                             })}
                             {image && (
                                 <div className="relative group flex-shrink-0">
-                                    <button onClick={() => setIsPreviewModalOpen(true)} className="relative w-10 h-10 rounded overflow-hidden ring-1 ring-light-border dark:ring-dark-border">
+                                    <button onClick={() => setIsPreviewModalOpen(true)} className="relative w-10 h-10 rounded-md overflow-hidden ring-1 ring-light-border dark:ring-dark-border hover:ring-light-primary dark:hover:ring-dark-primary transition-all">
                                         <img src={`data:image/jpeg;base64,${image}`} alt="Preview" className="w-full h-full object-cover" />
                                     </button>
                                     <button onClick={clearAttachment} className="absolute -top-1.5 -right-1.5 bg-zinc-800 text-white rounded-full p-0.5 shadow-md opacity-0 group-hover:opacity-100 transition-opacity">
@@ -107,17 +109,17 @@ const ChatInput: React.FC = () => {
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
                         onKeyDown={handleKeyDown}
-                        placeholder="Ask WesCore..."
+                        placeholder={hasContext ? "Ask questions about this context..." : "Ask WesCore..."}
                         rows={1}
                         className="w-full bg-transparent focus:outline-none resize-none max-h-48 py-3 px-4 text-base min-h-[52px]"
                         disabled={chatStatus !== 'idle'}
                     />
                     
                     <div className="flex items-center justify-between px-2 pb-2">
-                        <div className="flex items-center">
+                        <div className="flex items-center gap-1">
                             <button 
                                 onClick={() => setIsNoteSelectorOpen(true)} 
-                                className="p-2 rounded-lg text-light-text/50 dark:text-dark-text/50 hover:text-light-primary dark:hover:text-dark-primary hover:bg-light-background/50 dark:hover:bg-dark-background/50 transition-colors disabled:opacity-50" 
+                                className="p-2 rounded-lg text-light-text/50 dark:text-dark-text/50 hover:text-light-primary dark:hover:text-dark-primary hover:bg-light-ui dark:hover:bg-dark-ui transition-colors disabled:opacity-50" 
                                 disabled={chatStatus !== 'idle'} 
                                 title="Add Context"
                             >
@@ -125,7 +127,7 @@ const ChatInput: React.FC = () => {
                             </button>
                             <button 
                                 onClick={triggerFileInput} 
-                                className="p-2 rounded-lg text-light-text/50 dark:text-dark-text/50 hover:text-light-primary dark:hover:text-dark-primary hover:bg-light-background/50 dark:hover:bg-dark-background/50 transition-colors disabled:opacity-50" 
+                                className="p-2 rounded-lg text-light-text/50 dark:text-dark-text/50 hover:text-light-primary dark:hover:text-dark-primary hover:bg-light-ui dark:hover:bg-dark-ui transition-colors disabled:opacity-50" 
                                 disabled={chatStatus !== 'idle'} 
                                 title="Attach Image"
                             >
@@ -140,7 +142,7 @@ const ChatInput: React.FC = () => {
                             className={`p-2 rounded-lg transition-all duration-200 ${
                                 (input.trim() || image) && chatStatus === 'idle'
                                     ? 'bg-light-primary text-white dark:bg-dark-primary dark:text-zinc-900 shadow-md hover:scale-105 active:scale-95' 
-                                    : 'bg-light-background/50 dark:bg-dark-background/50 text-light-text/20 dark:text-dark-text/20 cursor-not-allowed'
+                                    : 'bg-light-ui dark:bg-dark-ui text-light-text/20 dark:text-dark-text/20 cursor-not-allowed'
                             }`}
                             aria-label="Send Message"
                         >

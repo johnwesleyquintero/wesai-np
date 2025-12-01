@@ -2,8 +2,7 @@
 import React, { useState } from 'react';
 import { ChatMessage, Note } from '../../types';
 import MarkdownPreview from '../MarkdownPreview';
-import { SparklesIcon, ClipboardDocumentIcon, CheckIcon, EllipsisHorizontalIcon, TrashIcon, ThumbsUpIcon, ThumbsDownIcon, DocumentTextIcon, XMarkIcon, ArrowPathIcon, GoogleIcon } from '../Icons';
-import { useToast } from '../../context/ToastContext';
+import { SparklesIcon, ClipboardDocumentIcon, CheckIcon, EllipsisHorizontalIcon, TrashIcon, ThumbsUpIcon, ThumbsDownIcon, DocumentTextIcon, XMarkIcon, ArrowPathIcon, GoogleIcon, ArrowTopRightOnSquareIcon } from '../Icons';
 import { useStoreContext, useUIContext, useChatContext } from '../../context/AppContext';
 import ToolCallDisplay from '../ToolCallDisplay';
 import SourceNotes from './SourceNotes';
@@ -129,7 +128,7 @@ const ChatMessageComponent: React.FC<MessageProps> = ({ message, onDelete, onTog
         <div className={`group flex items-start gap-3 mb-6 ${isUser ? 'justify-end' : 'justify-start'} animate-fade-in-up`}>
              
              {isAi && (
-                 <div className="w-8 h-8 mt-1 rounded-lg bg-light-background dark:bg-dark-background border border-light-border dark:border-dark-border flex items-center justify-center flex-shrink-0 shadow-sm text-light-primary dark:text-dark-primary">
+                 <div className="w-8 h-8 mt-1 rounded-lg bg-white dark:bg-zinc-800 border border-light-border dark:border-dark-border flex items-center justify-center flex-shrink-0 shadow-sm text-light-primary dark:text-dark-primary">
                      <SparklesIcon className="w-5 h-5"/>
                  </div>
              )}
@@ -142,7 +141,7 @@ const ChatMessageComponent: React.FC<MessageProps> = ({ message, onDelete, onTog
 
             <div className={`max-w-[90%] md:max-w-2xl transition-all duration-200 ${
                 isUser 
-                    ? 'bg-light-primary/10 dark:bg-dark-primary/10 border border-light-primary/20 dark:border-dark-primary/20 rounded-2xl rounded-tr-sm p-4' 
+                    ? 'bg-light-ui dark:bg-dark-ui border border-light-border/50 dark:border-dark-border/50 rounded-2xl rounded-tr-sm p-4 shadow-sm' 
                     : 'bg-transparent pl-1 py-1' // AI message blends into background
             }`}>
                 {message.image && (
@@ -152,15 +151,16 @@ const ChatMessageComponent: React.FC<MessageProps> = ({ message, onDelete, onTog
                 )}
                 
                 {isUser && message.contextNoteIds && message.contextNoteIds.length > 0 && (
-                    <div className="mb-3 pb-3 border-b border-light-primary/20 dark:border-dark-primary/20">
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-light-primary/70 dark:text-dark-primary/70 mb-2">Context Attached</p>
+                    <div className="mb-3 pb-3 border-b border-light-border dark:border-dark-border">
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-light-text/50 dark:text-dark-text/50 mb-2 flex items-center gap-1">
+                            <DocumentTextIcon className="w-3 h-3"/> Context Attached
+                        </p>
                         <div className="flex flex-wrap gap-2">
                             {message.contextNoteIds.map(id => {
                                 const note = getNoteById(id);
                                 return (
-                                    <span key={id} className="flex items-center gap-1 text-xs px-2 py-1 rounded bg-white/50 dark:bg-black/20 text-light-text dark:text-dark-text">
-                                        <DocumentTextIcon className="w-3 h-3"/>
-                                        <span className="truncate max-w-[150px]">{note ? note.title : 'Deleted Note'}</span>
+                                    <span key={id} className="flex items-center gap-1.5 text-xs px-2 py-1 rounded-md bg-white dark:bg-zinc-900 border border-light-border dark:border-zinc-700 text-light-text/80 dark:text-dark-text/80 shadow-sm">
+                                        <span className="truncate max-w-[150px] font-medium">{note ? note.title : 'Deleted Note'}</span>
                                     </span>
                                 );
                             })}
@@ -172,60 +172,74 @@ const ChatMessageComponent: React.FC<MessageProps> = ({ message, onDelete, onTog
                     {renderContent()}
                 </div>
 
-                {isAi && message.sources && message.sources.length > 0 && <SourceNotes sources={message.sources} />}
-                
-                {isAi && groundingChunks.length > 0 && (
-                    <div className="mt-3 pt-3 border-t border-light-border dark:border-dark-border">
-                        <div className="flex items-center gap-2 mb-2">
-                            <GoogleIcon className="w-4 h-4"/>
-                            <p className="text-[10px] font-bold uppercase tracking-wider text-light-text/50 dark:text-dark-text/50">
-                                Search Sources
-                            </p>
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                            {groundingChunks.map((chunk, index) => {
-                                if (chunk.web?.uri && chunk.web?.title) {
-                                    return (
-                                        <a 
-                                            key={index}
-                                            href={chunk.web.uri}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="flex items-center gap-1.5 max-w-full text-xs bg-light-ui dark:bg-dark-ui hover:bg-light-primary/10 dark:hover:bg-dark-primary/10 border border-light-border dark:border-dark-border rounded-full px-3 py-1 text-light-text dark:text-dark-text hover:text-light-primary dark:hover:text-dark-primary transition-colors truncate"
-                                        >
-                                            <span className="truncate max-w-[200px]">{chunk.web.title}</span>
-                                        </a>
-                                    );
-                                }
-                                return null;
-                            })}
-                        </div>
+                {/* Footer Section for AI Artifacts */}
+                {(isAi && (message.sources?.length || groundingChunks.length > 0 || (message.noteIds && message.noteIds.length > 0))) ? (
+                    <div className="mt-4 flex flex-col gap-3">
+                        
+                        {/* Internal Sources */}
+                        {message.sources && message.sources.length > 0 && <SourceNotes sources={message.sources} />}
+                        
+                        {/* External Web Sources */}
+                        {groundingChunks.length > 0 && (
+                            <div className="pt-3 border-t border-light-border/50 dark:border-dark-border/50">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <GoogleIcon className="w-3 h-3"/>
+                                    <p className="text-[10px] font-bold uppercase tracking-wider text-light-text/50 dark:text-dark-text/50">
+                                        Web Sources
+                                    </p>
+                                </div>
+                                <div className="flex flex-wrap gap-2">
+                                    {groundingChunks.map((chunk, index) => {
+                                        if (chunk.web?.uri && chunk.web?.title) {
+                                            return (
+                                                <a 
+                                                    key={index}
+                                                    href={chunk.web.uri}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="flex items-center gap-1.5 max-w-full text-xs bg-white dark:bg-zinc-800 hover:bg-light-ui dark:hover:bg-dark-ui border border-light-border dark:border-zinc-700 rounded-md px-2 py-1 text-light-text dark:text-dark-text hover:text-light-primary dark:hover:text-dark-primary transition-all shadow-sm truncate group/link"
+                                                >
+                                                    <span className="truncate max-w-[200px]">{chunk.web.title}</span>
+                                                    <ArrowTopRightOnSquareIcon className="w-3 h-3 opacity-50 group-hover/link:opacity-100" />
+                                                </a>
+                                            );
+                                        }
+                                        return null;
+                                    })}
+                                </div>
+                            </div>
+                        )}
+                        
+                        {/* System Changes */}
+                        {message.noteIds && message.noteIds.length > 0 && (
+                            <div className="pt-3 border-t border-light-border/50 dark:border-dark-border/50">
+                                <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 mb-2 flex items-center gap-1">
+                                    <CheckIcon className="w-3 h-3"/> System Updates
+                                </p>
+                                <div className="flex flex-col gap-1">
+                                    {message.noteIds.map(noteId => {
+                                        const note = getNoteById(noteId);
+                                        return (
+                                            <button key={noteId} onClick={() => handleNoteClick(noteId)} className="text-xs flex items-center justify-between gap-2 w-full text-left bg-emerald-50 dark:bg-emerald-900/10 hover:bg-emerald-100 dark:hover:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800/30 px-3 py-1.5 rounded-md transition-colors group/note">
+                                                <span className="flex items-center gap-2 text-emerald-900 dark:text-emerald-100">
+                                                    <DocumentTextIcon className="w-3 h-3 opacity-70"/>
+                                                    <span className="font-medium">{note ? note.title : 'Untitled Note'}</span>
+                                                </span>
+                                                <ArrowTopRightOnSquareIcon className="w-3 h-3 text-emerald-500 opacity-0 group-hover/note:opacity-100 transition-opacity" />
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
                     </div>
-                )}
-                
-                {isAi && message.noteIds && message.noteIds.length > 0 && (
-                    <div className="mt-4 pt-3 border-t border-light-border dark:border-dark-border">
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-light-text/50 dark:text-dark-text/50 mb-1">
-                            System Changes
-                        </p>
-                        <div className="flex flex-col gap-1">
-                            {message.noteIds.map(noteId => {
-                                const note = getNoteById(noteId);
-                                return (
-                                    <button key={noteId} onClick={() => handleNoteClick(noteId)} className="text-xs flex items-center gap-1.5 text-light-primary dark:text-dark-primary hover:underline w-fit bg-light-ui dark:bg-dark-ui px-2 py-1 rounded">
-                                        <DocumentTextIcon className="w-3 h-3"/>
-                                        {note ? note.title : 'Untitled Note'}
-                                    </button>
-                                );
-                            })}
-                        </div>
-                    </div>
-                )}
+                ) : null}
 
+                {/* Feedback & Actions */}
                 {isAi && message.status !== 'processing' && (
-                    <div className="flex items-center justify-between mt-2 pt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex items-center justify-between mt-3 pt-2 opacity-0 group-hover:opacity-100 transition-opacity">
                         {isProvidingFeedback ? (
-                            <div className="flex items-center gap-2 animate-fade-in w-full bg-light-ui dark:bg-dark-ui p-1 rounded-md">
+                            <div className="flex items-center gap-2 animate-fade-in w-full bg-light-ui dark:bg-dark-ui p-1 rounded-md border border-light-border dark:border-dark-border">
                                 <span className="text-xs font-semibold text-light-text/70 dark:text-dark-text/70 whitespace-nowrap ml-1">Reason:</span>
                                 <div className="flex flex-wrap gap-2 flex-1">
                                     {feedbackReasons.map(reason => (
@@ -249,7 +263,7 @@ const ChatMessageComponent: React.FC<MessageProps> = ({ message, onDelete, onTog
                                     <button 
                                         onClick={() => handleFeedback(message.id, { rating: 'up' })}
                                         disabled={!!message.feedback}
-                                        className={`p-1.5 rounded-md transition-colors disabled:opacity-50 ${message.feedback?.rating === 'up' ? 'text-green-500' : 'text-light-text/40 dark:text-dark-text/40 hover:text-green-500 hover:bg-light-ui dark:hover:bg-dark-ui'}`}
+                                        className={`p-1.5 rounded-md transition-colors disabled:opacity-50 ${message.feedback?.rating === 'up' ? 'text-green-500 bg-green-50 dark:bg-green-900/20' : 'text-light-text/40 dark:text-dark-text/40 hover:text-green-500 hover:bg-light-ui dark:hover:bg-dark-ui'}`}
                                         aria-label="Thumbs Up"
                                     >
                                         <ThumbsUpIcon filled={message.feedback?.rating === 'up'} />
@@ -257,7 +271,7 @@ const ChatMessageComponent: React.FC<MessageProps> = ({ message, onDelete, onTog
                                      <button 
                                         onClick={() => !message.feedback && setIsProvidingFeedback(true)}
                                         disabled={!!message.feedback}
-                                        className={`p-1.5 rounded-md transition-colors disabled:opacity-50 ${message.feedback?.rating === 'down' ? 'text-red-500' : 'text-light-text/40 dark:text-dark-text/40 hover:text-red-500 hover:bg-light-ui dark:hover:bg-dark-ui'}`}
+                                        className={`p-1.5 rounded-md transition-colors disabled:opacity-50 ${message.feedback?.rating === 'down' ? 'text-red-500 bg-red-50 dark:bg-red-900/20' : 'text-light-text/40 dark:text-dark-text/40 hover:text-red-500 hover:bg-light-ui dark:hover:bg-dark-ui'}`}
                                         aria-label="Thumbs Down"
                                      >
                                         <ThumbsDownIcon filled={message.feedback?.rating === 'down'} />

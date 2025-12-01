@@ -95,8 +95,9 @@ const GraphView: React.FC = () => {
         const fontSize = 12 / globalScale;
         const nodeRadius = 3 + Math.log2(node.val || 1) * (isSelected ? 1.5 : 1);
         
-        const nodeColor = theme === 'dark' ? '#22d3ee' : '#06b6d4';
-        const selectedColor = '#facc15'; // yellow-400
+        // Monochrome colors
+        const nodeColor = theme === 'dark' ? '#fafafa' : '#18181b'; // Zinc-50 / Zinc-950
+        const selectedColor = '#facc15'; // yellow-400 (keep accent for selection)
         const labelColor = theme === 'dark' ? 'rgba(248, 250, 252, 0.8)' : 'rgba(2, 6, 23, 0.8)';
         
         ctx.globalAlpha = isDimmed ? 0.1 : 1;
@@ -106,7 +107,8 @@ const GraphView: React.FC = () => {
             const haloRadius = nodeRadius + 4 / globalScale;
             ctx.beginPath();
             ctx.arc(node.x, node.y, haloRadius, 0, 2 * Math.PI, false);
-            ctx.fillStyle = isSelected ? 'rgba(250, 204, 21, 0.2)' : (theme === 'dark' ? 'rgba(34, 211, 238, 0.2)' : 'rgba(6, 182, 212, 0.2)');
+            // Subtle halo
+            ctx.fillStyle = isSelected ? 'rgba(250, 204, 21, 0.2)' : (theme === 'dark' ? 'rgba(250, 250, 250, 0.2)' : 'rgba(24, 24, 27, 0.2)');
             ctx.fill();
         }
 
@@ -129,7 +131,7 @@ const GraphView: React.FC = () => {
     
     const linkColor = useCallback((link: Link<GraphNode>) => {
         const isDimmed = selectedNodes.size > 0 && !highlightedLinks.has(link);
-        return isDimmed ? 'rgba(128, 128, 128, 0.05)' : (theme === 'dark' ? 'rgba(51, 65, 85, 0.5)' : 'rgba(203, 213, 225, 0.7)');
+        return isDimmed ? 'rgba(128, 128, 128, 0.05)' : (theme === 'dark' ? 'rgba(82, 82, 91, 0.5)' : 'rgba(161, 161, 170, 0.7)'); // Zinc colors
     }, [highlightedLinks, selectedNodes, theme]);
     
     const onRenderFramePost = useCallback((ctx: CanvasRenderingContext2D, globalScale: number) => {
@@ -145,7 +147,7 @@ const GraphView: React.FC = () => {
         ctx.moveTo(x, y);
         ctx.lineTo(mouseX, mouseY);
         ctx.setLineDash([8, 4]);
-        ctx.strokeStyle = theme === 'dark' ? 'rgba(34, 211, 238, 0.5)' : 'rgba(6, 182, 212, 0.5)';
+        ctx.strokeStyle = theme === 'dark' ? 'rgba(250, 250, 250, 0.5)' : 'rgba(24, 24, 27, 0.5)';
         ctx.lineWidth = 2;
         ctx.stroke();
         ctx.restore();

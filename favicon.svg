@@ -1,12 +1,12 @@
 <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
   <style>
     /* Default to light theme */
-    .background { fill: #f8fafc; } /* light-background */
-    .stroke { stroke: #06b6d4; } /* light-primary */
+    .background { fill: #ffffff; } 
+    .stroke { stroke: #18181b; } 
 
     @media (prefers-color-scheme: dark) {
-      .background { fill: #020617; } /* dark-background */
-      .stroke { stroke: #22d3ee; } /* dark-primary */
+      .background { fill: #09090b; } 
+      .stroke { stroke: #fafafa; } 
     }
   </style>
   <rect width="64" height="64" rx="12" class="background"/>

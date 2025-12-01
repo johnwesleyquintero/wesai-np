@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef } from 'react';
 import { useUIContext } from '../context/AppContext';
 import { LockClosedIcon, SparklesIcon, MagnifyingGlassIcon, TrendingUpIcon, Cog6ToothIcon, PencilSquareIcon, ServerStackIcon, SunIcon, MoonIcon, LinkIcon, LightBulbIcon } from './Icons';
@@ -159,7 +160,7 @@ const LandingPage: React.FC<{ onGetStarted: () => void; onEnterDemo: () => void;
                 <section className="pt-32 pb-20 text-center relative overflow-hidden">
                     <div className="absolute inset-0 -z-10 bg-light-ui/30 dark:bg-dark-ui/30 [mask-image:radial-gradient(ellipse_at_center,black,transparent_70%)]"></div>
                     <div className="container mx-auto px-4">
-                        <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight bg-gradient-to-r from-cyan-500 to-cyan-600 dark:from-cyan-400 dark:to-cyan-500 bg-clip-text text-transparent">
+                        <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight bg-gradient-to-r from-zinc-900 to-zinc-600 dark:from-zinc-100 dark:to-zinc-400 bg-clip-text text-transparent">
                             One cockpit, endless AI-powered workflows.
                         </h1>
                         <p className="mt-6 max-w-2xl mx-auto text-lg text-light-text/70 dark:text-dark-text/70">
@@ -182,7 +183,7 @@ const LandingPage: React.FC<{ onGetStarted: () => void; onEnterDemo: () => void;
                                 <p className="text-slate-500">&gt; Action: JW to draft blog post</p>
                             </div>
                             <div className="animate-step2">
-                                <p className="text-cyan-400">/summarize<span className="inline-block w-px h-4 bg-cyan-400 animate-pulse ml-0.5"></span></p>
+                                <p className="text-zinc-100">/summarize<span className="inline-block w-px h-4 bg-zinc-100 animate-pulse ml-0.5"></span></p>
                             </div>
                             <div className="animate-step3">
                                 <p className="text-slate-300 font-bold">[✨ AI Summary]</p>

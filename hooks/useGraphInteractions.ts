@@ -160,12 +160,11 @@ export const useGraphInteractions = ({
         if (node && fgRef.current) {
             hoverTimeoutRef.current = window.setTimeout(() => {
                 const fullNote = notes.find(n => n.id === node.id);
-                // ForceGraph sometimes returns incomplete node objects in hover events,
-                // but usually it works. We need to ensure we have coordinates.
-                const nodeWithCoords = node as any; 
-                if (fullNote && typeof nodeWithCoords.x === 'number' && typeof nodeWithCoords.y === 'number') {
+                
+                // Use safe type checking instead of casting to any
+                if (fullNote && typeof node.x === 'number' && typeof node.y === 'number') {
                     // Coordinates need to be mapped to screen space
-                    const { x, y } = fgRef.current!.graph2ScreenCoords(nodeWithCoords.x, nodeWithCoords.y);
+                    const { x, y } = fgRef.current!.graph2ScreenCoords(node.x, node.y);
                     setPreviewNode({ note: fullNote, pos: { x, y } });
                 }
             }, 300);

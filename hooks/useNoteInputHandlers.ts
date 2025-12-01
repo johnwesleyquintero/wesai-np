@@ -1,3 +1,4 @@
+
 import React, { useCallback, useRef } from 'react';
 import { uploadImage, getPublicUrl } from '../lib/supabaseClient';
 import { useToast } from '../context/ToastContext';
@@ -105,6 +106,17 @@ export const useNoteInputHandlers = ({
         }
     }, [dispatch, isEffectivelyReadOnly, session, noteId, showToast, setEditorState, textareaRef]);
 
+    const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+        e.preventDefault();
+        if (!isEffectivelyReadOnly) {
+            dispatch({ type: 'SET_DRAG_OVER', payload: true });
+        }
+    }, [isEffectivelyReadOnly, dispatch]);
+
+    const handleDragLeave = useCallback(() => {
+        dispatch({ type: 'SET_DRAG_OVER', payload: false });
+    }, [dispatch]);
+
     const handlePaste = useCallback((e: React.ClipboardEvent<HTMLDivElement>) => {
         if (isEffectivelyReadOnly || !session?.user) return;
         const items = e.clipboardData?.items;
@@ -141,6 +153,8 @@ export const useNoteInputHandlers = ({
     return {
         handleKeyDown,
         handleDrop,
+        handleDragOver,
+        handleDragLeave,
         handlePaste,
         desiredCursorPosRef
     };

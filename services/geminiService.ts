@@ -6,6 +6,16 @@ import { wesCoreToolDefinitions } from '../lib/toolDefinitions';
 import { SYSTEM_INSTRUCTIONS } from '../lib/prompts';
 import { callGemini, getGenAI, fireRateLimitEvent, safetySettings } from '../lib/aiClient';
 
+// --- Helper Utilities ---
+const safeParseJSON = <T>(text: string, contextDescription: string): T => {
+    try {
+        return JSON.parse(text.trim());
+    } catch (e) {
+        console.error(`Failed to parse JSON for ${contextDescription}:`, e, text);
+        throw new Error("AI returned invalid data format.");
+    }
+};
+
 // --- Spellcheck ---
 export const findMisspelledWords = async (text: string): Promise<SpellingError[]> => {
     if (!text.trim()) return [];
@@ -34,14 +44,7 @@ export const findMisspelledWords = async (text: string): Promise<SpellingError[]
         payload,
         {
             errorMessage: 'Error in findMisspelledWords:',
-            processResponse: (res) => {
-                try {
-                    return JSON.parse(res.text.trim());
-                } catch (e) {
-                    console.error('Failed to parse JSON for misspelled words:', e, res.text);
-                    throw new Error("AI returned invalid data format.");
-                }
-            },
+            processResponse: (res) => safeParseJSON(res.text, 'misspelled words'),
             onError: () => { throw new Error("Failed to find misspelled words."); }
         }
     );
@@ -64,14 +67,7 @@ export const getSpellingSuggestions = async (word: string): Promise<string[]> =>
         payload,
         {
             errorMessage: 'Error in getSpellingSuggestions:',
-            processResponse: (res) => {
-                try {
-                    return JSON.parse(res.text.trim());
-                } catch (e) {
-                    console.error('Failed to parse JSON for spelling suggestions:', e, res.text);
-                    throw new Error("AI returned invalid data format.");
-                }
-            },
+            processResponse: (res) => safeParseJSON(res.text, 'spelling suggestions'),
             onError: () => { throw new Error("Failed to get spelling suggestions."); }
         }
     );
@@ -106,14 +102,7 @@ export const semanticSearchNotes = async (query: string, notes: Note[], limit: n
         payload,
         {
             errorMessage: 'Error in semanticSearchNotes:',
-            processResponse: (res) => {
-                try {
-                    return JSON.parse(res.text.trim());
-                } catch (e) {
-                    console.error('Failed to parse JSON in semanticSearchNotes:', e, res.text);
-                    throw new Error("AI search returned invalid data format.");
-                }
-            },
+            processResponse: (res) => safeParseJSON(res.text, 'semantic search'),
             onError: () => {
                 throw new Error("AI search failed. Please check your API key and try again.");
             },
@@ -144,14 +133,7 @@ export const suggestNoteConsolidation = async (note1: Note, note2: Note): Promis
         payload,
         {
             errorMessage: 'Error in suggestNoteConsolidation:',
-            processResponse: (res) => {
-                try {
-                    return JSON.parse(res.text.trim());
-                } catch(e) {
-                    console.error('Failed to parse JSON for note consolidation:', e, res.text);
-                    throw new Error("AI returned invalid data format.");
-                }
-            },
+            processResponse: (res) => safeParseJSON(res.text, 'note consolidation'),
             onError: () => { throw new Error("Failed to generate consolidation. Please try again."); }
         }
     );
@@ -186,16 +168,11 @@ export const suggestTitleAndTags = async (content: string): Promise<{ title: str
         {
             errorMessage: 'Error suggesting title and tags:',
             processResponse: (res) => {
-                try {
-                    const result = JSON.parse(res.text.trim());
-                    if (result.title) {
-                        result.title = result.title.replace(/["\.]/g, '');
-                    }
-                    return result;
-                } catch(e) {
-                    console.error('Failed to parse JSON for title/tags:', e, res.text);
-                    throw new Error("AI returned invalid data format.");
+                const result = safeParseJSON<{title: string, tags: string[]}>(res.text, 'title and tags');
+                if (result.title) {
+                    result.title = result.title.replace(/["\.]/g, '');
                 }
+                return result;
             },
             onError: () => { throw new Error("Failed to suggest title and tags."); }
         }
@@ -271,14 +248,7 @@ export const suggestTags = async (title: string, content: string): Promise<strin
         payload,
         {
             errorMessage: 'Error suggesting tags:',
-            processResponse: (res) => {
-                try {
-                    return JSON.parse(res.text.trim());
-                } catch(e) {
-                    console.error('Failed to parse JSON for tags:', e, res.text);
-                    throw new Error("AI returned invalid data format.");
-                }
-            },
+            processResponse: (res) => safeParseJSON(res.text, 'tags'),
             onError: () => { throw new Error("Failed to suggest tags."); }
         }
     );
@@ -347,14 +317,7 @@ export const summarizeAndExtractActions = async (content: string): Promise<{ sum
         payload,
         {
             errorMessage: 'Error in summarizeAndExtractActions:',
-            processResponse: (res) => {
-                try {
-                    return JSON.parse(res.text.trim());
-                } catch(e) {
-                    console.error('Failed to parse JSON for summary:', e, res.text);
-                    throw new Error("AI returned invalid data format.");
-                }
-            },
+            processResponse: (res) => safeParseJSON(res.text, 'summary and actions'),
             onError: () => { throw new Error("Failed to summarize and find actions."); }
         }
     );

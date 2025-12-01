@@ -2,7 +2,7 @@
 
 **The operator-first platform for building, executing, and automating high-value workflows. Powered by a modular AI engine and real-time cloud sync.**
 
-WesCore is a centralized cockpit for operators to execute workflows, manage data, and automate tasks. It combines a fast, responsive interface with a multi-mode AI assistant powered by the Google Gemini API. All your data is securely stored in your own cloud backend, making it accessible across all your devices.
+WesCore is a centralized cockpit for operators to execute workflows, manage data, and automate tasks. It combines a fast, responsive interface with a unified, context-aware AI assistant powered by the Google Gemini API. All your data is securely stored in your own cloud backend, making it accessible across all your devices.
 
 ## Key Features
 
@@ -21,18 +21,18 @@ WesCore is a centralized cockpit for operators to execute workflows, manage data
 - **PWA Ready:** Installable as a Progressive Web App with offline caching of core assets for faster load times and a native-like experience.
 
 ### AI-Powered by Google Gemini
-- **Multi-Mode AI Assistant:** A versatile AI assistant with four distinct modes for different tasks:
-    - **Knowledge Assistant:** Engage in a conversation with your notes. Ask complex questions and receive synthesized answers with direct links to the source notes. It can automatically find relevant notes via semantic search, or you can manually select a specific set of notes to use as its knowledge base for precision control.
-    - **Service Responder:** Transform your notes into an operational playbook. Paste a customer inquiry, and the AI will use your knowledge base (either automatically found or manually selected) to draft a professional, compliant response.
-    - **Amazon Copywriter:** Generates compelling, SEO-optimized Amazon product listing copy based on product info and research notes.
-    - **WesCore Co-pilot (with Tools):** Your operational co-pilot. This assistant uses **Function Calling** to understand natural language commands and interact with your workspace. It can create, find, read, update, delete, and organize notes; manage templates; and even perform bulk find-and-replace operations across your entire workspace.
-- **Proactive Related Notes (AI Co-Pilot):** As you write, the AI analyzes your content in real-time to proactively surface semantically related notes from your knowledge base, helping you discover hidden connections without breaking your flow.
-- **Knowledge Graph Visualization:** A dynamic, interactive force-directed graph that visually represents the connections between your notes. Preview notes on hover, zoom and pan, and even create new links by holding `Alt` and dragging between nodes.
+- **Unified WesCore Co-pilot:** A single, intelligent interface that adapts its behavior based on your intent. The Co-pilot utilizes **Function Calling** to interact directly with your workspace—creating, finding, updating, and organizing notes autonomously. It dynamically adopts specialized operational modes:
+    - **The Strategist:** Provides high-level insights, synthesis, and planning advice using your notes as context.
+    - **The Service Responder:** Drafts professional, policy-compliant responses to customer inquiries by referencing your internal knowledge base.
+    - **The E-commerce Expert:** Generates SEO-optimized product listings and marketing copy tailored for platforms like Amazon.
+    - **The Systems Architect:** Identifies structural improvements, suggesting templates or consolidations for your content.
+- **Proactive Related Notes:** As you write, the AI analyzes your content in real-time to proactively surface semantically related notes from your knowledge base, helping you discover hidden connections without breaking your flow.
+- **Knowledge Graph Visualization:** A dynamic, interactive force-directed graph that visually represents the connections between your notes. Preview notes on hover, zoom and pan, and create new links instantly by holding `Alt` and dragging between nodes.
 - **Self-Improving Intelligence & Analytics:**
-    - **Direct AI Feedback Loop:** Users can give thumbs up/down feedback on chat responses. A downvote prompts for specific reasons (e.g., 'Incorrect', 'Not Helpful'), providing granular data to fine-tune AI performance beyond just CTR.
-    - **CTR Analytics:** A foundational feedback loop makes the AI smarter. The system logs every suggestion "impression" and user "click," providing a dashboard to measure relevance and continuously refine the AI's performance.
-    - **Trend Analysis Dashboard:** Visualize conceptual clusters, "hot topics," and the most frequent connections between your ideas, giving you a strategic overview of your knowledge base.
-    - **AI-Powered Consolidation:** From the Trend Analysis dashboard, generate an AI-powered consolidated note from any frequently linked pair of notes, helping you synthesize ideas and reduce redundancy.
+    - **Direct AI Feedback Loop:** Users can give thumbs up/down feedback on chat responses with specific reasons (e.g., 'Incorrect', 'Not Helpful'), allowing you to fine-tune the system.
+    - **CTR Analytics Dashboard:** Tracks the relevance of AI suggestions by monitoring impressions and clicks, providing a clear view of how effectively the AI is surfacing useful content.
+    - **Trend Analysis Dashboard:** Visualizes conceptual clusters, "hot topics," and frequent connections within your knowledge base to reveal emerging themes.
+    - **AI-Powered Consolidation:** Generate comprehensive, synthesized notes from frequently linked pairs directly from the Trend Analysis dashboard.
 - **Semantic Search:** Go beyond keyword matching to find notes based on their conceptual meaning.
 - **Inline AI Assistant:** Select any text to fix spelling, adjust tone (professional, casual), expand or shorten content, and simplify language.
 - **Paragraph-Level AI Actions:** A contextual AI menu appears in the editor's margin, allowing you to run actions like 'fix grammar' on individual paragraphs without needing to select any text.
@@ -40,19 +40,18 @@ WesCore is a centralized cockpit for operators to execute workflows, manage data
 - **Content Generation & Summarization:**
     - Automatically suggest descriptive titles and relevant tags based on your note's content.
     - Generate a concise summary and extract a checklist of action items from your note with a single command.
-- **Multimodal Input:** Provide visual context to the AI by attaching images to your prompts in any assistant mode via drag-and-drop, a file picker, or pasting directly from your clipboard.
+- **Multimodal Input:** Provide visual context to the AI by attaching images to your prompts via drag-and-drop, a file picker, or pasting directly from your clipboard.
 
 ### Productivity and Workflow
 - **Optimized for Performance & Scale:** A highly-optimized Supabase backend with custom database indexing ensures data retrieval is instantaneous. The frontend is built with lazy-loading components for a fast initial load.
 - **Frictionless Demo Mode:** Explore a fully-featured demo workspace instantly, without needing to sign up or provide an API key.
 - **Full Keyboard Navigation:** Navigate the entire sidebar, select notes, and expand folders using only your keyboard for maximum efficiency.
 - **Robust Editing Experience:** A reliable undo/redo system that covers all note attributes (title, content, tags) ensures you never lose an idea.
-- **Manual Save Control:** The editor features an explicit "Save" button that appears only when there are unsaved changes, giving you full control over when to commit your work. The distracting auto-save-on-pause is gone, but the safety net of saving automatically when you navigate away remains.
+- **Manual Save Control:** The editor features an explicit "Save" button for deliberate commits, while still maintaining a safety net that auto-saves when you navigate away.
 - **Actionable UI Feedback:** All pop-up notifications are actionable, with manual dismiss controls, so they never interrupt your flow.
 - **Command Palette:** Press `Ctrl/Cmd + K` to access nearly every application feature, from creating notes to executing AI actions.
 - **Slash Commands:** Type `/` in the editor to quickly insert headings, lists, to-do items, dividers, and trigger AI actions.
 - **Edit Last Message:** Press `ArrowUp` in an empty chat input to quickly recall, edit, and resubmit your last query.
-- **Saved Chat Responders:** Save and reuse common prompts in the "Responder" chat mode, turning complex customer service tasks into one-click actions.
 - **Collapsible Sidebar:** Maximize your writing space on desktop by collapsing the sidebar to a compact, icon-only view.
 - **Drag & Drop Import:** Drag text or markdown files directly into the editor or onto a folder in the sidebar to instantly create new notes.
 - **Full Data Portability:** Export your entire notepad—including all notes, folders, and templates—to a single JSON file for backup. Import a backup file to restore your data.

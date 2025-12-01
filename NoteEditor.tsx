@@ -15,6 +15,7 @@ import { useAiSuggestions } from './hooks/useAiSuggestions';
 import { useAiActions } from './hooks/useAiActions';
 import { useEditorHotkeys } from './hooks/useEditorHotkeys';
 import { useNoteInputHandlers } from './hooks/useNoteInputHandlers';
+import { useAutoPairing } from './hooks/useAutoPairing';
 import { useNoteSync } from './hooks/useNoteSync';
 import { useEditorGutter } from './hooks/useEditorGutter';
 import { useEditorInsertionLogic } from './hooks/useEditorInsertionLogic';
@@ -143,13 +144,17 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
     const titleInputRef = useRef<HTMLInputElement>(null);
     const editorPaneRef = useRef<HTMLDivElement>(null);
     const cursorMeasureRef = useRef<HTMLPreElement>(null);
+    const desiredCursorPosRef = useRef<number | { start: number; end: number } | null>(null);
     const hasAutoTitledRef = useRef(false);
     
-    const { 
-        handleKeyDown, 
-        handleDrop, 
-        handlePaste, 
+    const { handleKeyDown } = useAutoPairing({ 
+        setEditorState, 
         desiredCursorPosRef 
+    });
+
+    const { 
+        handleDrop, 
+        handlePaste 
     } = useNoteInputHandlers({
         editorState,
         setEditorState,
@@ -157,7 +162,8 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         dispatch,
         noteId: note.id,
         session,
-        isEffectivelyReadOnly
+        isEffectivelyReadOnly,
+        desiredCursorPosRef
     });
 
     const { paragraphGutterTarget, setParagraphGutterTarget } = useEditorGutter({

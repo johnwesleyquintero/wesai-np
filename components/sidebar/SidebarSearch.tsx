@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { MagnifyingGlassIcon, SparklesIcon, FolderPlusIcon } from '../Icons';
 import { useStoreContext, useUIContext } from '../../context/AppContext';
 import OnboardingChecklist from '../OnboardingChecklist';
+import { useDebounce } from '../../hooks/useDebounce';
 
 interface OnboardingStep {
     id: string;
@@ -16,11 +17,38 @@ interface SidebarSearchProps {
 
 const SidebarSearch: React.FC<SidebarSearchProps> = ({ onboardingSteps, isOnboardingComplete }) => {
     const { 
-        searchTerm, handleSearchTermChange: setSearchTerm, searchMode, setSearchMode,
-        isAiSearching, aiSearchError, activeSmartCollection, recentQueries,
+        searchTerm, handleSearchTermChange: setSearchTermInContext, searchMode, setSearchMode,
+        isAiSearching, activeSmartCollection, recentQueries,
     } = useStoreContext();
     const { isApiKeyMissing, isAiRateLimited, openSmartFolderModal, isAiEnabled } = useUIContext();
+    
+    // Local state for immediate UI feedback without triggering global re-renders
+    const [localSearchTerm, setLocalSearchTerm] = useState(searchTerm);
     const [isSearchFocused, setIsSearchFocused] = useState(false);
+    
+    // Debounce the update to the global context
+    const debouncedLocalSearchTerm = useDebounce(localSearchTerm, 300);
+
+    // Sync local state when context changes externally (e.g. clearing search)
+    useEffect(() => {
+        setLocalSearchTerm(searchTerm);
+    }, [searchTerm]);
+
+    // Push debounced changes to context
+    useEffect(() => {
+        if (debouncedLocalSearchTerm !== searchTerm) {
+            setSearchTermInContext(debouncedLocalSearchTerm);
+        }
+    }, [debouncedLocalSearchTerm, setSearchTermInContext, searchTerm]);
+
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setLocalSearchTerm(e.target.value);
+    };
+
+    const handleSelectRecentQuery = useCallback((query: string) => {
+        setLocalSearchTerm(query);
+        setSearchTermInContext(query);
+    }, [setSearchTermInContext]);
 
     return (
         <div className="px-4 py-3 border-b border-light-border dark:border-dark-border flex-shrink-0">
@@ -29,15 +57,15 @@ const SidebarSearch: React.FC<SidebarSearchProps> = ({ onboardingSteps, isOnboar
                 <input
                     type="text"
                     placeholder={activeSmartCollection ? activeSmartCollection.query : "Search notes..."}
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
+                    value={activeSmartCollection ? '' : localSearchTerm}
+                    onChange={handleInputChange}
                     onFocus={() => setIsSearchFocused(true)}
                     onBlur={() => setTimeout(() => setIsSearchFocused(false), 200)}
                     className="w-full pl-9 pr-24 py-2 text-sm bg-light-background dark:bg-dark-background rounded-md border border-light-border dark:border-dark-border focus:ring-1 focus:ring-light-primary focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
                     disabled={!!activeSmartCollection}
                 />
                 <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-light-text/50 dark:text-dark-text/50" />
-                 {isSearchFocused && !searchTerm && recentQueries && recentQueries.length > 0 && (
+                 {isSearchFocused && !localSearchTerm && recentQueries && recentQueries.length > 0 && (
                     <div className="absolute top-full mt-2 w-full bg-light-background dark:bg-dark-background rounded-md shadow-lg border border-light-border dark:border-dark-border z-10 py-1">
                         <h4 className="px-3 pt-2 pb-1 text-xs font-semibold text-light-text/60 dark:text-dark-text/60">Recent Searches</h4>
                         {recentQueries.map((query) => (
@@ -45,7 +73,7 @@ const SidebarSearch: React.FC<SidebarSearchProps> = ({ onboardingSteps, isOnboar
                                 key={query}
                                 onMouseDown={(e) => {
                                     e.preventDefault();
-                                    setSearchTerm(query);
+                                    handleSelectRecentQuery(query);
                                 }}
                                 className="w-full text-left px-3 py-2 text-sm hover:bg-light-ui dark:hover:bg-dark-ui truncate"
                             >
@@ -60,8 +88,8 @@ const SidebarSearch: React.FC<SidebarSearchProps> = ({ onboardingSteps, isOnboar
                     )}
                     <div className="relative group">
                         <button
-                            onClick={() => openSmartFolderModal(null, searchTerm)}
-                            disabled={!searchTerm.trim() || !!activeSmartCollection || !isAiEnabled}
+                            onClick={() => openSmartFolderModal(null, localSearchTerm)}
+                            disabled={!localSearchTerm.trim() || !!activeSmartCollection || !isAiEnabled}
                             className="p-1 rounded-md text-light-text/60 dark:text-dark-text/60 hover:bg-light-ui dark:hover:bg-dark-ui disabled:opacity-30 disabled:cursor-not-allowed"
                             aria-label="Save search as smart folder"
                         >

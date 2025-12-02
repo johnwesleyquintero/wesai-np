@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, useMemo, useCallback, useState, useLayoutEffect, Suspense } from 'react';
 import { Note, NoteVersion, Template, InlineAction } from './types';
 import EditorHeader from './components/editor/EditorHeader';
@@ -24,6 +23,7 @@ import EditorPopups from './components/editor/EditorPopups';
 import { getCursorPositionRect, getLineInfoForPosition } from './lib/editorDOMUtils';
 import { useToast } from './context/ToastContext';
 import { SparklesIcon } from './components/Icons';
+import { useEditorPopupState } from './hooks/useEditorPopupState';
 
 // Lazy load sidebar
 const VersionHistorySidebar = React.lazy(() => import('./components/VersionHistorySidebar'));
@@ -438,6 +438,31 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         performParagraphAiAction(action, selection, editorState.content);
     }, [performParagraphAiAction, editorState.content]);
 
+    // Use logic hook to consolidate popup props
+    const editorPopupsProps = useEditorPopupState({
+        uiState,
+        dispatch,
+        editorPaneRef,
+        textareaRef,
+        desiredCursorPosRef,
+        activeSpellingError,
+        setActiveSpellingError,
+        spellingSuggestions,
+        isLoadingSuggestions,
+        suggestionError,
+        isApiKeyMissing,
+        isAiEnabled,
+        handlers: {
+            handleInsertLink,
+            handleInsertSyncedBlock,
+            handleSelectCommand,
+            handleInlineAiAction: (action, selection) => handleInlineAiAction(action, selection),
+            handleFormatSelection,
+            handleApplySuggestion,
+            handleParagraphAiAction
+        }
+    });
+
     return (
         <div className="flex-1 flex flex-col h-full relative bg-light-background dark:bg-dark-background" onDragOver={(e) => { e.preventDefault(); if (!isEffectivelyReadOnly) dispatch({ type: 'SET_DRAG_OVER', payload: true }); }} onDragLeave={() => dispatch({ type: 'SET_DRAG_OVER', payload: false })} onDrop={handleDrop} onPaste={handlePaste}>
             <pre ref={cursorMeasureRef} style={{ position: 'absolute', visibility: 'hidden', top: -9999, left: -9999, pointerEvents: 'none' }} />
@@ -506,37 +531,8 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
             
             <EditorStatusBar wordCount={wordCount} charCount={charCount} readingTime={readingTime} isCheckingSpelling={isCheckingSpelling} />
 
-            <EditorPopups
-                noteLinker={noteLinker}
-                templateLinker={templateLinker}
-                slashCommand={slashCommand}
-                selection={selection}
-                noteLinkerForSelection={noteLinkerForSelection}
-                gutterMenu={gutterMenu}
-                activeSpellingError={activeSpellingError}
-                spellingSuggestions={spellingSuggestions}
-                isLoadingSuggestions={isLoadingSuggestions}
-                suggestionError={suggestionError}
-                isAiActionLoading={isAiActionLoading}
-                isApiKeyMissing={isApiKeyMissing}
-                isAiEnabled={isAiEnabled}
-                onInsertLink={handleInsertLink}
-                onInsertSyncedBlock={handleInsertSyncedBlock}
-                onSelectCommand={handleSelectCommand}
-                onInlineAiAction={(action) => handleInlineAiAction(action, selection!)}
-                onFormatSelection={handleFormatSelection}
-                onApplySpellingSuggestion={handleApplySuggestion}
-                onParagraphAiAction={handleParagraphAiAction}
-                closeNoteLinker={() => dispatch({ type: 'SET_NOTE_LINKER', payload: null })}
-                closeTemplateLinker={() => dispatch({ type: 'SET_TEMPLATE_LINKER', payload: null })}
-                closeSlashCommand={() => dispatch({ type: 'SET_SLASH_COMMAND', payload: null })}
-                closeSelection={() => dispatch({ type: 'SET_SELECTION', payload: null })}
-                closeSpelling={() => setActiveSpellingError(null)}
-                closeGutterMenu={() => dispatch({ type: 'SET_GUTTER_MENU', payload: null })}
-                editorPaneRef={editorPaneRef}
-                textareaRef={textareaRef}
-                desiredCursorPosRef={desiredCursorPosRef}
-            />
+            <EditorPopups {...editorPopupsProps} />
+            
             {isHistoryOpen && (
                 <Suspense fallback={null}>
                     <VersionHistorySidebar history={note.history || []} onClose={handleCloseHistory} onPreview={(version) => dispatch({ type: 'SET_PREVIEW_VERSION', payload: version })} onRestore={handleRestore} activeVersionTimestamp={previewVersion?.savedAt} />

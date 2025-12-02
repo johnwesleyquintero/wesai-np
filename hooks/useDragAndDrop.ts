@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { Collection } from '../types';
 
 interface DragData {
@@ -154,8 +154,6 @@ export const useDragAndDrop = (
         }
 
         // --- Handle Item Drop FIRST ---
-        // To prevent issues in browsers that add "Files" to internal drags,
-        // we explicitly check for our custom data format first.
         const jsonData = e.dataTransfer.getData('application/json');
         if (jsonData) {
             try {
@@ -184,13 +182,18 @@ export const useDragAndDrop = (
     }, [id, type, isDisabled, isDragOver, dropPosition, onMoveItem, onDropFile, resetState]);
 
 
-    const dragAndDropProps = {
+    const dragAndDropProps = useMemo(() => ({
         draggable: !isDisabled,
         onDragStart: handleDragStart,
         onDragOver: handleDragOver,
         onDragLeave: handleDragLeave,
         onDrop: handleDrop,
-    };
+    }), [isDisabled, handleDragStart, handleDragOver, handleDragLeave, handleDrop]);
 
-    return { isDragOver, isFileOver, dropPosition, dragAndDropProps };
+    return useMemo(() => ({ 
+        isDragOver, 
+        isFileOver, 
+        dropPosition, 
+        dragAndDropProps 
+    }), [isDragOver, isFileOver, dropPosition, dragAndDropProps]);
 };

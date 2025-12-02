@@ -1,3 +1,4 @@
+
 import React from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -11,20 +12,27 @@ interface RecursiveRendererProps {
     recursionDepth?: number;
 }
 
+const MAX_RECURSION = 5;
+
+// Hoist Regex to module scope to prevent re-creation on every render
+const SYNC_BLOCK_REGEX = /(\[\[sync:[\w-]+\]\])/g;
+const SYNC_ID_EXTRACT_REGEX = /\[\[sync:([\w-]+)\]\]/;
+const COMBINED_LINK_REGEX = /(\[\[([a-zA-Z0-9-]+)(?:\|(.*?))?\]\])|\[(\d+)\]/g;
+
 const RecursiveRenderer: React.FC<RecursiveRendererProps> = ({ content, onToggleTask, components, recursionDepth = 0 }) => {
     const { templates } = useStoreContext();
-    const MAX_RECURSION = 5;
 
     if (recursionDepth > MAX_RECURSION) {
         return <div className="my-2 p-2 bg-red-100 dark:bg-red-900/30 border border-red-300 dark:border-red-500/50 rounded-md text-sm text-red-700 dark:text-red-200">[Sync loop detected. Maximum depth exceeded.]</div>;
     }
 
-    const parts = content.split(/(\[\[sync:[\w-]+\]\])/g);
+    // Use the hoisted regex for splitting
+    const parts = content.split(SYNC_BLOCK_REGEX);
 
     return (
         <>
             {parts.map((part, index) => {
-                const syncMatch = part.match(/\[\[sync:([\w-]+)\]\]/);
+                const syncMatch = part.match(SYNC_ID_EXTRACT_REGEX);
                 if (syncMatch) {
                     const templateId = syncMatch[1];
                     const template = templates.find(t => t.id === templateId);
@@ -43,9 +51,7 @@ const RecursiveRenderer: React.FC<RecursiveRendererProps> = ({ content, onToggle
                     return <div key={index} className="my-2 p-2 bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-300 dark:border-yellow-500/50 rounded-md text-sm text-yellow-700 dark:text-yellow-200">[Synced block not found: {templateId}]</div>;
                 }
 
-                // A single regex to match both note links and source citations to prevent replacement conflicts.
-                const combinedRegex = /(\[\[([a-zA-Z0-9-]+)(?:\|(.*?))?\]\])|\[(\d+)\]/g;
-                const preprocessedPart = part.replace(combinedRegex, (match, _noteLinkMatch, noteId, noteText, sourceNum) => {
+                const preprocessedPart = part.replace(COMBINED_LINK_REGEX, (match, _noteLinkMatch, noteId, noteText, sourceNum) => {
                     // If noteId is truthy, it's a note link
                     if (noteId) {
                         const displayText = noteText || noteId;

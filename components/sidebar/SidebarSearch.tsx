@@ -3,6 +3,7 @@ import { MagnifyingGlassIcon, SparklesIcon, FolderPlusIcon } from '../Icons';
 import { useStoreContext, useUIContext } from '../../context/AppContext';
 import OnboardingChecklist from '../OnboardingChecklist';
 import { useDebounce } from '../../hooks/useDebounce';
+import Tooltip from '../Tooltip';
 
 interface OnboardingStep {
     id: string;
@@ -22,19 +23,15 @@ const SidebarSearch: React.FC<SidebarSearchProps> = ({ onboardingSteps, isOnboar
     } = useStoreContext();
     const { isApiKeyMissing, isAiRateLimited, openSmartFolderModal, isAiEnabled } = useUIContext();
     
-    // Local state for immediate UI feedback without triggering global re-renders
     const [localSearchTerm, setLocalSearchTerm] = useState(searchTerm);
     const [isSearchFocused, setIsSearchFocused] = useState(false);
     
-    // Debounce the update to the global context
     const debouncedLocalSearchTerm = useDebounce(localSearchTerm, 300);
 
-    // Sync local state when context changes externally (e.g. clearing search)
     useEffect(() => {
         setLocalSearchTerm(searchTerm);
     }, [searchTerm]);
 
-    // Push debounced changes to context
     useEffect(() => {
         if (debouncedLocalSearchTerm !== searchTerm) {
             setSearchTermInContext(debouncedLocalSearchTerm);
@@ -86,7 +83,7 @@ const SidebarSearch: React.FC<SidebarSearchProps> = ({ onboardingSteps, isOnboar
                     {isAiSearching && (
                         <SparklesIcon className="w-4 h-4 text-light-primary dark:text-dark-primary animate-spin" />
                     )}
-                    <div className="relative group">
+                    <Tooltip content="Save as Smart Folder" position="top">
                         <button
                             onClick={() => openSmartFolderModal(null, localSearchTerm)}
                             disabled={!localSearchTerm.trim() || !!activeSmartCollection || !isAiEnabled}
@@ -95,11 +92,7 @@ const SidebarSearch: React.FC<SidebarSearchProps> = ({ onboardingSteps, isOnboar
                         >
                             <FolderPlusIcon className="w-4 h-4" />
                         </button>
-                         <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 px-2 py-1 bg-zinc-800 dark:bg-zinc-700 text-white dark:text-dark-text text-xs font-semibold rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
-                            Save as Smart Folder
-                            <div className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-t-4 border-t-zinc-800 dark:border-t-zinc-700 border-x-4 border-x-transparent" />
-                        </div>
-                    </div>
+                    </Tooltip>
                 </div>
             </div>
             {isAiEnabled && !isApiKeyMissing && <div className="flex items-center mt-2 text-xs">

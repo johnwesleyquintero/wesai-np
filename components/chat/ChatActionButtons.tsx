@@ -1,6 +1,6 @@
-
 import React, { useState } from 'react';
 import { EllipsisHorizontalIcon, TrashIcon, CheckIcon, ClipboardDocumentIcon } from '../Icons';
+import Tooltip from '../Tooltip';
 
 export const MessageActions: React.FC<{ onDelete: () => void }> = ({ onDelete }) => {
     const [isOpen, setIsOpen] = useState(false);
@@ -30,15 +30,11 @@ export const MessageActions: React.FC<{ onDelete: () => void }> = ({ onDelete })
 };
 
 export const ActionButton: React.FC<{ tooltip: string; onClick: () => void; children: React.ReactNode; className?: string }> = ({ tooltip, onClick, children, className }) => (
-    <div className="relative group">
+    <Tooltip content={tooltip} position="top">
         <button onClick={onClick} className={`p-1.5 rounded-md text-light-text/40 dark:text-dark-text/40 hover:text-light-text dark:hover:text-dark-text hover:bg-light-ui dark:hover:bg-dark-ui transition-colors ${className}`}>
             {children}
         </button>
-        <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 px-2 py-1 bg-zinc-800 text-white text-xs font-semibold rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
-            {tooltip}
-            <div className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-t-4 border-t-zinc-800 border-x-4 border-x-transparent" />
-        </div>
-    </div>
+    </Tooltip>
 );
 
 export const CopyMessageButton: React.FC<{ content: string }> = ({ content }) => {

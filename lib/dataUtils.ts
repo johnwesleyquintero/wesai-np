@@ -1,5 +1,6 @@
 
 import { Part } from "@google/genai";
+import { NoteState } from "../types";
 
 /**
  * Normalizes the 'contents' part of a Gemini request by trimming whitespace 
@@ -48,3 +49,23 @@ export function sortObjectKeys(obj: any): any {
     }
     return result;
 }
+
+/**
+ * Deep equality check for NoteState objects (title, content, tags).
+ */
+export const areNoteStatesEqual = (a: NoteState, b: NoteState): boolean => {
+    if (!a || !b) return a === b;
+    if (a.title !== b.title || a.content !== b.content) {
+        return false;
+    }
+    if (a.tags.length !== b.tags.length) {
+        return false;
+    }
+    const tagsSetA = new Set(a.tags);
+    for (const tag of b.tags) {
+        if (!tagsSetA.has(tag)) {
+            return false;
+        }
+    }
+    return true;
+};

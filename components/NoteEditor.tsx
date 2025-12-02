@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useMemo, useCallback, useLayoutEffect, Suspense } from 'react';
-import { Note, InlineAction } from '../types';
+import { Note, NoteState, InlineAction } from '../types';
 import EditorHeader from './editor/EditorHeader';
 import EditorTitle from './editor/EditorTitle';
 import EditorContent from './editor/EditorContent';
@@ -19,12 +19,14 @@ import { useNoteSync } from '../hooks/useNoteSync';
 import { useEditorGutter } from '../hooks/useEditorGutter';
 import { useEditorInsertionLogic } from '../hooks/useEditorInsertionLogic';
 import { useNoteEditorHandlers } from '../hooks/useNoteEditorHandlers';
+import { useNoteEditorLifecycle } from '../hooks/useNoteEditorLifecycle';
 import EditorPopups from './editor/EditorPopups';
 import { getCursorPositionRect, getLineInfoForPosition } from '../lib/editorDOMUtils';
 import { useToast } from '../context/ToastContext';
 import { SparklesIcon } from './Icons';
 import { useEditorPopupState } from '../hooks/useEditorPopupState';
 import { useAutoResizeTextArea } from '../hooks/useAutoResizeTextArea';
+import { areNoteStatesEqual } from '../lib/dataUtils';
 
 // Lazy load sidebar
 const VersionHistorySidebar = React.lazy(() => import('./VersionHistorySidebar'));
@@ -32,26 +34,6 @@ const VersionHistorySidebar = React.lazy(() => import('./VersionHistorySidebar')
 interface NoteEditorProps {
     note: Note;
 }
-
-type NoteState = { title: string; content: string; tags: string[] };
-
-const areNoteStatesEqual = (a: NoteState, b: NoteState): boolean => {
-    if (!a || !b) return a === b;
-    if (a.title !== b.title || a.content !== b.content) {
-        return false;
-    }
-    if (a.tags.length !== b.tags.length) {
-        return false;
-    }
-    const tagsSetA = new Set(a.tags);
-    for (const tag of b.tags) {
-        if (!tagsSetA.has(tag)) {
-            return false;
-        }
-    }
-    return true;
-};
-
 
 const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
     const { updateNote, toggleFavorite, notes, restoreNoteVersion } = useStoreContext();
@@ -186,6 +168,23 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         isApiKeyMissing
     });
 
+    // Extracted Lifecycle Logic (Init, Dirty Check, Unmount Save)
+    useNoteEditorLifecycle({
+        note,
+        editorState,
+        latestEditorStateRef,
+        dispatch,
+        saveStatus,
+        previewVersion,
+        updateNote,
+        showToast,
+        resetAiSuggestions,
+        setActiveSpellingError,
+        setParagraphGutterTarget,
+        hasAutoTitledRef,
+        titleInputRef
+    });
+
     useLayoutEffect(() => {
         if (desiredCursorPosRef.current !== null && textareaRef.current) {
             const pos = desiredCursorPosRef.current;
@@ -211,72 +210,12 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         const finalReadingTime = Math.ceil(finalWordCount / 200);
         return { wordCount: finalWordCount, charCount: content.length, readingTime: finalReadingTime };
     }, [editorState.content]);
-
-    useEffect(() => {
-        dispatch({ type: 'RESET_STATE_FOR_NEW_NOTE' });
-        resetAiSuggestions();
-        setActiveSpellingError(null);
-        hasAutoTitledRef.current = false;
-        setParagraphGutterTarget(null);
-        
-        if (note.title === 'Untitled Note' && note.content === '') {
-            dispatch({ type: 'SET_VIEW_MODE', payload: 'edit' });
-            setTimeout(() => titleInputRef.current?.focus(), 100);
-        }
-    }, [note.id, resetAiSuggestions, setActiveSpellingError, dispatch, setParagraphGutterTarget]);
     
     useEffect(() => {
         if (editorState.content.trim() === '') {
             hasAutoTitledRef.current = false;
         }
     }, [editorState.content]);
-
-    useEffect(() => {
-        if (previewVersion) return;
-
-        const isLiveDirty = !areNoteStatesEqual(editorState, {
-            title: note.title,
-            content: note.content,
-            tags: note.tags,
-        });
-
-        if (isLiveDirty) {
-            if (saveStatus === 'saved') {
-                dispatch({ type: 'SET_SAVE_STATUS', payload: 'unsaved' });
-            }
-        } else {
-            if (saveStatus !== 'saved') {
-                dispatch({ type: 'SET_SAVE_STATUS', payload: 'saved' });
-            }
-        }
-    }, [editorState, note.title, note.content, note.tags, previewVersion, saveStatus, dispatch]);
-    
-    useEffect(() => {
-        const noteAtMount = note;
-        const sessionKeyAtMount = `wescore-editor-session-${noteAtMount.id}`;
-
-        return () => {
-            const latestStateForNote = latestEditorStateRef.current;
-            const isDirty = !areNoteStatesEqual(latestStateForNote, {
-                title: noteAtMount.title,
-                content: noteAtMount.content,
-                tags: noteAtMount.tags,
-            });
-    
-            if (isDirty) {
-                updateNote(noteAtMount.id, latestStateForNote).catch(error => {
-                     console.error("Failed to save note on unmount/change:", error);
-                     showToast({ message: `Failed to save "${noteAtMount.title}".`, type: 'error' });
-                });
-            }
-
-            try {
-                sessionStorage.removeItem(sessionKeyAtMount);
-            } catch (e) {
-                console.warn(`Could not remove session storage for key ${sessionKeyAtMount}:`, e);
-            }
-        };
-    }, [note.id, updateNote, showToast]);
 
     // Use the custom hook for all editor handlers
     const { 

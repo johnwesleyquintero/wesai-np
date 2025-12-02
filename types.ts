@@ -26,6 +26,12 @@ export interface Note {
     parentId: string | null;
 }
 
+export type NoteState = {
+    title: string;
+    content: string;
+    tags: string[];
+};
+
 export interface Collection {
     id: string;
     userId?: string;

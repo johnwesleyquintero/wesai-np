@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Note } from '../types';
 import { StarIcon } from './Icons';
 import Highlight from './Highlight';
@@ -21,7 +21,8 @@ const NoteCard: React.FC<NoteCardProps> = ({
     id, title, content, updatedAt, isFavorite, 
     isActive, onClick, searchTerm, onContextMenu 
 }) => {
-    const preview = generatePreviewFromMarkdown(content);
+    // Memoize the preview generation to prevent expensive regex re-execution on every render
+    const preview = useMemo(() => generatePreviewFromMarkdown(content), [content]);
 
     return (
         <div

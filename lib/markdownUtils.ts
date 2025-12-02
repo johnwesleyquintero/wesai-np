@@ -5,7 +5,10 @@ export const generatePreviewFromMarkdown = (markdown: string, length: number = 1
         return '';
     }
 
-    let plainText = markdown;
+    // Optimization: Truncate input before heavy regex processing.
+    // We only need a short preview, so processing 5000+ chars is unnecessary.
+    // We take a safe buffer (e.g., 10x the needed length) to account for markdown syntax removal.
+    let plainText = markdown.length > length * 20 ? markdown.substring(0, length * 20) : markdown;
 
     // A series of replacements to strip Markdown syntax for a clean preview.
     plainText = plainText

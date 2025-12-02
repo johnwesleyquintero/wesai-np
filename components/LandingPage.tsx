@@ -107,7 +107,7 @@ const LandingPage: React.FC<{ onGetStarted: () => void; onEnterDemo: () => void;
 
         if (scrollRef.current) {
             Array.from(scrollRef.current.children).forEach((child) => {
-                observer.observe(child);
+                observer.observe(child as Element);
             });
         }
 

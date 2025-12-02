@@ -1,5 +1,5 @@
 
-import { useCallback } from 'react';
+import React, { useCallback } from 'react';
 import { ForceGraphMethods, LinkObject as Link } from 'react-force-graph-2d';
 import { GraphNode } from './useGraphData';
 

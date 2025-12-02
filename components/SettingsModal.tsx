@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect, useRef } from 'react';
-import { PlusIcon, EyeIcon, EyeSlashIcon, ClipboardDocumentIcon, ArrowDownTrayIcon, ArrowUpTrayIcon } from './Icons';
+import { PlusIcon, EyeIcon, EyeSlashIcon, ArrowDownTrayIcon, ArrowUpTrayIcon } from './Icons';
 import TemplateEditorModal from './TemplateEditorModal';
 import { Template, SettingsTab } from '../types';
 import { useStoreContext, useUIContext } from '../context/AppContext';
@@ -8,6 +9,7 @@ import { useToast } from '../context/ToastContext';
 import { useModalAccessibility } from '../hooks/useModalAccessibility';
 import { supabase } from '../lib/supabaseClient';
 import { useApiKey } from '../hooks/useApiKey';
+import { useDataManagement } from '../hooks/useDataManagement';
 
 interface SettingsModalProps {
     isOpen: boolean;
@@ -29,18 +31,18 @@ const TabButton: React.FC<{ active: boolean; onClick: () => void; children: Reac
 );
 
 const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialTab }) => {
-    const { templates, addTemplate, updateTemplate, deleteTemplate, notes, collections, smartCollections, importData } = useStoreContext();
+    const { templates, addTemplate, updateTemplate, deleteTemplate } = useStoreContext();
     const { isAiEnabled, toggleAiEnabled, showConfirmation } = useUIContext();
     const { showToast } = useToast();
     
     const { apiKey, saveApiKey } = useApiKey();
+    const { handleExportAll, handleImportClick, confirmImport, isImportConfirmOpen, setIsImportConfirmOpen } = useDataManagement();
+
     const [localApiKey, setLocalApiKey] = useState(apiKey || '');
     const [isSaving, setIsSaving] = useState(false);
     
     const [isTemplateEditorOpen, setIsTemplateEditorOpen] = useState(false);
     const [templateToEdit, setTemplateToEdit] = useState<Template | null>(null);
-    const [isImportConfirmOpen, setIsImportConfirmOpen] = useState(false);
-    const [dataToImport, setDataToImport] = useState<any | null>(null);
     
     const [isKeyVisible, setIsKeyVisible] = useState(false);
     const [apiKeyError, setApiKeyError] = useState<string | null>(null);
@@ -100,72 +102,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
     const handleSignOut = async () => {
         await supabase.auth.signOut();
         onClose();
-    };
-    
-    const handleExport = () => {
-        const allData = {
-            notes,
-            collections,
-            smartCollections,
-            templates,
-        };
-        const jsonString = JSON.stringify(allData, null, 2);
-        const blob = new Blob([jsonString], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        const date = new Date().toISOString().slice(0, 10);
-        a.download = `wesai-notepad-backup-${date}.json`;
-        a.href = url;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        showToast({ message: 'Data exported successfully!', type: 'success' });
-        onClose();
-    };
-
-    const handleImportClick = () => {
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = '.json,application/json';
-        input.onchange = (e) => {
-            const file = (e.target as HTMLInputElement).files?.[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = (event) => {
-                    try {
-                        const data = JSON.parse(event.target!.result as string);
-                        if (data.notes && data.collections && data.templates && data.smartCollections) {
-                            setDataToImport(data);
-                            setIsImportConfirmOpen(true);
-                        } else {
-                            showToast({ message: 'Invalid backup file format.', type: 'error' });
-                        }
-                    } catch (err) {
-                        showToast({ message: 'Error reading backup file.', type: 'error' });
-                        console.error(err);
-                    }
-                };
-                reader.readAsText(file);
-            }
-        };
-        input.click();
-    };
-    
-    const handleImportConfirm = async () => {
-        if (dataToImport) {
-            try {
-                await importData(dataToImport);
-                setIsImportConfirmOpen(false);
-                setDataToImport(null);
-                showToast({ message: 'Data imported! App will now reload.', type: 'success' });
-                setTimeout(() => window.location.reload(), 1500);
-            } catch (error) {
-                const message = error instanceof Error ? error.message : "An unknown error occurred during import.";
-                showToast({ message: `Import failed: ${message}`, type: 'error' });
-                setIsImportConfirmOpen(false);
-            }
-        }
     };
     
     const handleSaveSettings = () => {
@@ -311,7 +247,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
                                     Export all your data to a single JSON file for backup, or import a backup file to restore your entire workspace.
                                 </p>
                                 <div className="flex space-x-4">
-                                    <button onClick={handleExport} className="flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-md bg-light-ui dark:bg-dark-ui hover:bg-light-ui-hover dark:hover:bg-dark-ui-hover">
+                                    <button onClick={handleExportAll} className="flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-md bg-light-ui dark:bg-dark-ui hover:bg-light-ui-hover dark:hover:bg-dark-ui-hover">
                                         <ArrowDownTrayIcon />
                                         Export All Data
                                     </button>
@@ -341,7 +277,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
             <ConfirmationModal
                 isOpen={isImportConfirmOpen}
                 onClose={() => setIsImportConfirmOpen(false)}
-                onConfirm={handleImportConfirm}
+                onConfirm={confirmImport}
                 title="Overwrite All Data?"
                 message='Importing a backup file will permanently replace all your current notes, folders, and templates. This action cannot be undone. To confirm, please type "OVERWRITE" below.'
                 confirmText="Overwrite"

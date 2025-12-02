@@ -10,16 +10,13 @@ interface ToastProps {
 
 const toastConfig = {
     success: {
-        icon: <CheckBadgeIcon className="text-green-500" />,
-        style: 'bg-green-50 border-green-300 dark:bg-green-900/50 dark:border-green-700/50 text-green-800 dark:text-green-200',
+        icon: <CheckBadgeIcon className="w-5 h-5 text-emerald-500 dark:text-emerald-400" />,
     },
     error: {
-        icon: <ExclamationTriangleIcon className="text-red-500" />,
-        style: 'bg-red-50 border-red-300 dark:bg-red-900/50 dark:border-red-700/50 text-red-800 dark:text-red-200',
+        icon: <ExclamationTriangleIcon className="w-5 h-5 text-rose-500 dark:text-rose-400" />,
     },
     info: {
-        icon: <InformationCircleIcon className="text-blue-500" />,
-        style: 'bg-blue-50 border-blue-300 dark:bg-blue-900/50 dark:border-blue-700/50 text-blue-800 dark:text-blue-200',
+        icon: <InformationCircleIcon className="w-5 h-5 text-zinc-500 dark:text-zinc-400" />,
     },
 };
 
@@ -28,7 +25,6 @@ const Toast: React.FC<ToastProps> = ({ message, type, onDismiss }) => {
     const timeoutRef = useRef<number | null>(null);
     const dismissedRef = useRef(false);
     const isMounted = useIsMounted();
-
 
     const handleDismiss = React.useCallback(() => {
         if (dismissedRef.current) return;
@@ -48,10 +44,12 @@ const Toast: React.FC<ToastProps> = ({ message, type, onDismiss }) => {
     }, [onDismiss, isMounted]);
 
     useEffect(() => {
-        setIsVisible(true);
-        // Only auto-dismiss non-error toasts
+        // Use requestAnimationFrame to ensure the entry transition plays
+        requestAnimationFrame(() => setIsVisible(true));
+        
+        // Auto-dismiss logic
         if (type !== 'error') {
-            timeoutRef.current = window.setTimeout(handleDismiss, 5000);
+            timeoutRef.current = window.setTimeout(handleDismiss, 4000);
         }
 
         return () => {
@@ -61,22 +59,34 @@ const Toast: React.FC<ToastProps> = ({ message, type, onDismiss }) => {
         };
     }, [type, handleDismiss]);
 
-    const { icon, style } = toastConfig[type];
+    const { icon } = toastConfig[type];
 
     return (
         <div
-            className={`flex items-center justify-between gap-3 px-4 py-3 rounded-lg shadow-lg border text-sm font-medium transition-all duration-300 max-w-sm ${style} ${
-                isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
-            }`}
+            className={`flex items-start gap-3 p-3 rounded-xl shadow-2xl border text-sm transition-all duration-300 transform w-full max-w-sm pointer-events-auto
+            bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md border-zinc-200 dark:border-zinc-800 text-zinc-800 dark:text-zinc-200
+            ${isVisible ? 'translate-y-0 opacity-100 scale-100' : 'translate-y-4 opacity-0 scale-95'}
+            `}
             role="alert"
+            onMouseEnter={() => {
+                if (timeoutRef.current && type !== 'error') {
+                    clearTimeout(timeoutRef.current);
+                    timeoutRef.current = null;
+                }
+            }}
+            onMouseLeave={() => {
+                if (!timeoutRef.current && type !== 'error' && !dismissedRef.current) {
+                    timeoutRef.current = window.setTimeout(handleDismiss, 2000);
+                }
+            }}
         >
-            <div className="flex items-center gap-3 min-w-0">
-                <div className="flex-shrink-0">{icon}</div>
-                <span className="flex-1 break-words">{message}</span>
+            <div className="flex-shrink-0 mt-0.5">{icon}</div>
+            <div className="flex-1 pt-0.5 min-w-0">
+                <p className="leading-snug break-words font-medium">{message}</p>
             </div>
             <button 
                 onClick={handleDismiss} 
-                className="p-1 rounded-full hover:bg-black/10 dark:hover:bg-white/10 transition-colors flex-shrink-0 -mr-1"
+                className="p-1 rounded-md text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors flex-shrink-0 -mr-1"
                 aria-label="Dismiss"
             >
                 <XMarkIcon className="w-4 h-4" />

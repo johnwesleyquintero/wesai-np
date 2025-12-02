@@ -1,5 +1,5 @@
-import React, { useEffect, useRef, useMemo, useCallback, useState, useLayoutEffect, Suspense } from 'react';
-import { Note, NoteVersion, Template, InlineAction } from '../types';
+import React, { useEffect, useRef, useMemo, useCallback, useLayoutEffect, Suspense } from 'react';
+import { Note, InlineAction } from '../types';
 import EditorHeader from './editor/EditorHeader';
 import EditorTitle from './editor/EditorTitle';
 import EditorContent from './editor/EditorContent';
@@ -24,6 +24,7 @@ import { getCursorPositionRect, getLineInfoForPosition } from '../lib/editorDOMU
 import { useToast } from '../context/ToastContext';
 import { SparklesIcon } from './Icons';
 import { useEditorPopupState } from '../hooks/useEditorPopupState';
+import { useAutoResizeTextArea } from '../hooks/useAutoResizeTextArea';
 
 // Lazy load sidebar
 const VersionHistorySidebar = React.lazy(() => import('./VersionHistorySidebar'));
@@ -150,6 +151,10 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
     const desiredCursorPosRef = useRef<number | { start: number; end: number } | null>(null);
     const hasAutoTitledRef = useRef(false);
     
+    // Auto-resize logic using the new hook
+    // We only enable this in 'edit' mode, controlled by passing `editorState.content` dependency
+    useAutoResizeTextArea(textareaRef, viewMode === 'edit' ? editorState.content : '');
+
     const { handleKeyDown } = useAutoPairing({ 
         setEditorState, 
         desiredCursorPosRef 
@@ -206,19 +211,6 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         const finalReadingTime = Math.ceil(finalWordCount / 200);
         return { wordCount: finalWordCount, charCount: content.length, readingTime: finalReadingTime };
     }, [editorState.content]);
-
-    useEffect(() => {
-        const textarea = textareaRef.current;
-        if (textarea && viewMode === 'edit') {
-            const resize = () => {
-                textarea.style.height = 'auto';
-                textarea.style.height = `${textarea.scrollHeight}px`;
-            };
-            resize();
-            window.addEventListener('resize', resize);
-            return () => window.removeEventListener('resize', resize);
-        }
-    }, [editorState.content, viewMode]);
 
     useEffect(() => {
         dispatch({ type: 'RESET_STATE_FOR_NEW_NOTE' });

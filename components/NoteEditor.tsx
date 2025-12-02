@@ -1,6 +1,5 @@
-
-import React, { useEffect, useRef, useMemo, useCallback, useLayoutEffect, Suspense } from 'react';
-import { Note, NoteVersion, InlineAction } from '../types';
+import React, { useEffect, useRef, useMemo, useLayoutEffect, Suspense, useCallback } from 'react';
+import { Note, InlineAction } from '../types';
 import EditorHeader from './editor/EditorHeader';
 import EditorTitle from './editor/EditorTitle';
 import EditorContent from './editor/EditorContent';
@@ -21,6 +20,7 @@ import { useEditorGutter } from '../hooks/useEditorGutter';
 import { useEditorInsertionLogic } from '../hooks/useEditorInsertionLogic';
 import { useNoteEditorHandlers } from '../hooks/useNoteEditorHandlers';
 import { useNoteEditorLifecycle } from '../hooks/useNoteEditorLifecycle';
+import { useEditorTriggerDetection } from '../hooks/useEditorTriggerDetection';
 import EditorPopups from './editor/EditorPopups';
 import { getCursorPositionRect, getLineInfoForPosition } from '../lib/editorDOMUtils';
 import { useToast } from '../context/ToastContext';
@@ -37,7 +37,7 @@ interface NoteEditorProps {
 }
 
 const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
-    const { updateNote, toggleFavorite, notes, restoreNoteVersion } = useStoreContext();
+    const { updateNote, toggleFavorite, notes } = useStoreContext();
     const { isMobileView, onToggleSidebar, isAiRateLimited, isSettingsOpen, isCommandPaletteOpen, isSmartFolderModalOpen, isWelcomeModalOpen, isApiKeyMissing, isFocusMode, showConfirmation, hideConfirmation, isAiEnabled, isHelpOpen, confirmation } = useUIContext();
     const { session } = useAuthContext();
     const { showToast } = useToast();
@@ -135,7 +135,6 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
     const hasAutoTitledRef = useRef(false);
     
     // Auto-resize logic using the new hook
-    // We only enable this in 'edit' mode, controlled by passing `editorState.content` dependency
     useAutoResizeTextArea(textareaRef, viewMode === 'edit' ? editorState.content : '');
 
     const { handleKeyDown } = useAutoPairing({ 
@@ -168,6 +167,8 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         isAiEnabled,
         isApiKeyMissing
     });
+
+    const { detectTriggers } = useEditorTriggerDetection({ dispatch, cursorMeasureRef });
 
     // Extracted Lifecycle Logic (Init, Dirty Check, Unmount Save)
     useNoteEditorLifecycle({
@@ -285,30 +286,10 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
 
 
     const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-        const { value, selectionStart } = e.target;
+        const { value } = e.target;
         setEditorState({ ...editorState, content: value });
-        dispatch({ type: 'SET_SELECTION', payload: null }); 
         setActiveSpellingError(null);
-        dispatch({ type: 'SET_GUTTER_MENU', payload: null });
-
-        const textBeforeCursor = value.substring(0, selectionStart);
-        const slashMatch = textBeforeCursor.match(/(?:\s|^)\/([\w-]*)$/);
-        const linkerMatch = textBeforeCursor.match(/\[\[([^\[\]]*)$/);
-
-        const measureRef = cursorMeasureRef.current;
-
-        if (slashMatch && measureRef) {
-            const query = slashMatch[1];
-            const rect = getCursorPositionRect(e.target, selectionStart, measureRef, value);
-            const range = { start: selectionStart - query.length - 1, end: selectionStart };
-            dispatch({ type: 'SET_SLASH_COMMAND', payload: { query, position: { top: rect.bottom, left: rect.left }, range } });
-        } else if (linkerMatch && measureRef) {
-            const rect = getCursorPositionRect(e.target, selectionStart, measureRef, value);
-            dispatch({ type: 'SET_NOTE_LINKER', payload: { query: linkerMatch[1], position: { top: rect.bottom + window.scrollY, left: rect.left + window.scrollX } } });
-        } else {
-            if (slashCommand) dispatch({ type: 'SET_SLASH_COMMAND', payload: null });
-            if (noteLinker) dispatch({ type: 'SET_NOTE_LINKER', payload: null });
-        }
+        detectTriggers(e);
     };
     
     const handleSelect = () => {
@@ -423,7 +404,6 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
                         </button>
                     )}
                     
-                    {/* Staggered Animations */}
                     <div key={`title-${animationKey}`} className="stagger-enter-1">
                         <EditorTitle
                             titleInputRef={titleInputRef}

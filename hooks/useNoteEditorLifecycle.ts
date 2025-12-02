@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef } from 'react';
 import { Note, NoteVersion, NoteState } from '../types';
 import { NoteEditorAction } from './useNoteEditorReducer';

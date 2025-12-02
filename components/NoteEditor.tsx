@@ -1,5 +1,6 @@
+
 import React, { useEffect, useRef, useMemo, useCallback, useLayoutEffect, Suspense } from 'react';
-import { Note, NoteState, InlineAction } from '../types';
+import { Note, NoteVersion, InlineAction } from '../types';
 import EditorHeader from './editor/EditorHeader';
 import EditorTitle from './editor/EditorTitle';
 import EditorContent from './editor/EditorContent';
@@ -53,7 +54,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         redo,
         canUndo,
         canRedo,
-    } = useUndoableState<NoteState>(
+    } = useUndoableState<{ title: string; content: string; tags: string[] }>(
         {
             title: note.title,
             content: note.content,
@@ -70,7 +71,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         latestEditorStateRef.current = editorState;
     }, [editorState]);
     
-    const stateWhenLastSavedRef = useRef<NoteState | null>(null);
+    const stateWhenLastSavedRef = useRef<{ title: string; content: string; tags: string[] } | null>(null);
 
     // Use the extracted Sync Logic Hook
     useNoteSync({
@@ -394,6 +395,9 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         }
     });
 
+    // Key to force re-animation when note changes
+    const animationKey = note.id;
+
     return (
         <div className="flex-1 flex flex-col h-full relative bg-light-background dark:bg-dark-background" onDragOver={(e) => { e.preventDefault(); if (!isEffectivelyReadOnly) dispatch({ type: 'SET_DRAG_OVER', payload: true }); }} onDragLeave={() => dispatch({ type: 'SET_DRAG_OVER', payload: false })} onDrop={handleDrop} onPaste={handlePaste}>
             <pre ref={cursorMeasureRef} style={{ position: 'absolute', visibility: 'hidden', top: -9999, left: -9999, pointerEvents: 'none' }} />
@@ -418,45 +422,55 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
                             <SparklesIcon />
                         </button>
                     )}
-                    <EditorTitle
-                        titleInputRef={titleInputRef}
-                        value={displayedTitle}
-                        onChange={(e) => setEditorState({ ...editorState, title: e.target.value })}
-                        isReadOnly={isEffectivelyReadOnly}
-                        suggestion={suggestedTitle}
-                        onApplySuggestion={handleApplyTitleSuggestion}
-                        isSuggesting={isSuggestingTitle}
-                        isApiKeyMissing={isApiKeyMissing}
-                        isAiEnabled={isAiEnabled}
-                    />
-                    <EditorContent
-                        textareaRef={textareaRef}
-                        viewMode={viewMode}
-                        displayedTitle={displayedTitle}
-                        displayedContent={displayedContent}
-                        isReadOnly={isEffectivelyReadOnly}
-                        onChange={handleChange}
-                        onSelect={handleSelect}
-                        onKeyDown={handleKeyDown}
-                        onKeyUp={handleSelect}
-                        onClick={handleSelect}
-                        onBlur={handleContentBlur}
-                        onToggleTask={handleToggleTask}
-                        sharedEditorClasses={sharedEditorClasses}
-                    />
-                    <EditorMeta
-                        note={note}
-                        backlinks={backlinks}
-                        tags={displayedTags}
-                        onTagsChange={(tags) => setEditorState({ ...editorState, tags })}
-                        isReadOnly={isEffectivelyReadOnly}
-                        allExistingTags={allTags}
-                        suggestedTags={suggestedTags}
-                        onAddTag={handleAddTag}
-                        isLoadingTags={isSuggestingTags}
-                        isApiKeyMissing={isApiKeyMissing}
-                        isAiEnabled={isAiEnabled}
-                    />
+                    
+                    {/* Staggered Animations */}
+                    <div key={`title-${animationKey}`} className="stagger-enter-1">
+                        <EditorTitle
+                            titleInputRef={titleInputRef}
+                            value={displayedTitle}
+                            onChange={(e) => setEditorState({ ...editorState, title: e.target.value })}
+                            isReadOnly={isEffectivelyReadOnly}
+                            suggestion={suggestedTitle}
+                            onApplySuggestion={handleApplyTitleSuggestion}
+                            isSuggesting={isSuggestingTitle}
+                            isApiKeyMissing={isApiKeyMissing}
+                            isAiEnabled={isAiEnabled}
+                        />
+                    </div>
+                    
+                    <div key={`content-${animationKey}`} className="stagger-enter-3">
+                        <EditorContent
+                            textareaRef={textareaRef}
+                            viewMode={viewMode}
+                            displayedTitle={displayedTitle}
+                            displayedContent={displayedContent}
+                            isReadOnly={isEffectivelyReadOnly}
+                            onChange={handleChange}
+                            onSelect={handleSelect}
+                            onKeyDown={handleKeyDown}
+                            onKeyUp={handleSelect}
+                            onClick={handleSelect}
+                            onBlur={handleContentBlur}
+                            onToggleTask={handleToggleTask}
+                            sharedEditorClasses={sharedEditorClasses}
+                        />
+                    </div>
+
+                    <div key={`meta-${animationKey}`} className="stagger-enter-2">
+                        <EditorMeta
+                            note={note}
+                            backlinks={backlinks}
+                            tags={displayedTags}
+                            onTagsChange={(tags) => setEditorState({ ...editorState, tags })}
+                            isReadOnly={isEffectivelyReadOnly}
+                            allExistingTags={allTags}
+                            suggestedTags={suggestedTags}
+                            onAddTag={handleAddTag}
+                            isLoadingTags={isSuggestingTags}
+                            isApiKeyMissing={isApiKeyMissing}
+                            isAiEnabled={isAiEnabled}
+                        />
+                    </div>
                 </div>
             </div>
             

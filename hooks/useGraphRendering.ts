@@ -1,3 +1,4 @@
+
 import { useCallback } from 'react';
 import { ForceGraphMethods, LinkObject as Link } from 'react-force-graph-2d';
 import { GraphNode } from './useGraphData';
@@ -44,6 +45,14 @@ export const useGraphRendering = ({
         
         ctx.globalAlpha = isDimmed ? 0.1 : 1;
         
+        // Neural Glow (Dark Mode only)
+        if (theme === 'dark' && !isDimmed) {
+            ctx.shadowBlur = isSelected ? 15 : 8;
+            ctx.shadowColor = isSelected ? 'rgba(250, 204, 21, 0.6)' : 'rgba(250, 250, 250, 0.3)';
+        } else {
+            ctx.shadowBlur = 0;
+        }
+        
         // Halo for hovered or initial hot node
         if (!isDimmed && (isHovered || isInitialHot)) {
             const haloRadius = nodeRadius + 4 / globalScale;
@@ -59,6 +68,9 @@ export const useGraphRendering = ({
         ctx.arc(node.x, node.y, nodeRadius, 0, 2 * Math.PI, false);
         ctx.fillStyle = isSelected ? selectedColor : nodeColor;
         ctx.fill();
+        
+        // Reset Shadow for text
+        ctx.shadowBlur = 0;
 
         if (!isDimmed) {
             ctx.font = `${fontSize}px Sans-Serif`;

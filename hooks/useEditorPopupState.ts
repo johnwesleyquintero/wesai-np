@@ -1,3 +1,4 @@
+
 import React, { useMemo } from 'react';
 import { NoteEditorAction, NoteEditorUIState } from './useNoteEditorReducer';
 import { InlineAction, SpellingError } from '../types';

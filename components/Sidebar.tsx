@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useUIContext } from '../context/AppContext';
 import SidebarHeader from './sidebar/SidebarHeader';
@@ -38,7 +39,7 @@ const Sidebar: React.FC<SidebarProps> = ({
 
     return (
         <aside 
-            className={`absolute md:relative z-30 flex flex-col h-full bg-light-ui dark:bg-dark-ui border-r border-light-border dark:border-dark-border transform transition-all duration-300 ease-in-out ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 flex-shrink-0`}
+            className={`absolute md:relative z-30 flex flex-col h-full bg-light-ui/90 dark:bg-dark-ui/90 backdrop-blur-xl border-r border-light-border dark:border-dark-border transform transition-all duration-300 ease-in-out ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 flex-shrink-0`}
             style={{ width: isMobileView ? '20rem' : isSidebarCollapsed ? `${COLLAPSED_WIDTH}px` : `${width}px` }}
         >
            {isSidebarCollapsed && !isMobileView ? (

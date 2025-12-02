@@ -1,8 +1,9 @@
+
 import React, { useCallback } from 'react';
 import { performInlineEdit, summarizeAndExtractActions, enhanceText } from '../services/geminiService';
 import { NoteEditorUIState, NoteEditorAction } from './useNoteEditorReducer';
 import type { InlineAction } from '../types';
-import { useToast } from '../context/ToastContext';
+import { toast } from '../lib/toast';
 
 type EditorState = { title: string; content: string; tags: string[] };
 type Dispatch = React.Dispatch<NoteEditorAction>;
@@ -11,7 +12,6 @@ export const useAiActions = (
     setEditorState: (newStateOrFn: EditorState | ((prevState: EditorState) => EditorState)) => void,
     dispatch: Dispatch
 ) => {
-    const { showToast } = useToast();
     
     const applyAiActionToFullNote = useCallback(async (action: InlineAction, content: string) => {
         dispatch({ type: 'SET_FULL_AI_ACTION_LOADING', payload: `Applying: ${action}...` });
@@ -19,11 +19,11 @@ export const useAiActions = (
             const newContent = await performInlineEdit(content, action);
             setEditorState(prev => ({ ...prev, content: newContent }));
         } catch (error) {
-            showToast({ message: error instanceof Error ? error.message : 'An unknown error occurred.', type: 'error' });
+            toast.error(error);
         } finally {
             dispatch({ type: 'SET_FULL_AI_ACTION_LOADING', payload: null });
         }
-    }, [setEditorState, dispatch, showToast]);
+    }, [setEditorState, dispatch]);
     
     const summarizeAndFindActionForFullNote = useCallback(async (content: string) => {
         dispatch({ type: 'SET_FULL_AI_ACTION_LOADING', payload: 'Summarizing...' });
@@ -37,11 +37,11 @@ export const useAiActions = (
                 setEditorState(prev => ({ ...prev, content: newContent }));
             }
         } catch (error) {
-            showToast({ message: error instanceof Error ? error.message : 'An unknown error occurred.', type: 'error' });
+            toast.error(error);
         } finally {
             dispatch({ type: 'SET_FULL_AI_ACTION_LOADING', payload: null });
         }
-    }, [setEditorState, dispatch, showToast]);
+    }, [setEditorState, dispatch]);
 
     const handleEnhanceNote = useCallback(async (tone: string, content: string) => {
         if (!tone.trim()) return;
@@ -50,11 +50,11 @@ export const useAiActions = (
             const enhancedContent = await enhanceText(content, tone);
             setEditorState(prev => ({ ...prev, content: enhancedContent }));
         } catch (error) {
-            showToast({ message: error instanceof Error ? error.message : 'An unknown error occurred.', type: 'error' });
+            toast.error(error);
         } finally {
             dispatch({ type: 'SET_FULL_AI_ACTION_LOADING', payload: null });
         }
-    }, [setEditorState, dispatch, showToast]);
+    }, [setEditorState, dispatch]);
 
     const handleInlineAiAction = useCallback(async (action: InlineAction, selection: NonNullable<NoteEditorUIState['selection']>) => {
         dispatch({ type: 'SET_AI_ACTION_LOADING', payload: true });
@@ -66,12 +66,12 @@ export const useAiActions = (
             });
             return selection.start + newText.length;
         } catch (error) {
-            showToast({ message: error instanceof Error ? error.message : 'An unknown error occurred.', type: 'error' });
+            toast.error(error);
             return null;
         } finally {
             dispatch({ type: 'SET_AI_ACTION_LOADING', payload: false });
         }
-    }, [setEditorState, dispatch, showToast]);
+    }, [setEditorState, dispatch]);
 
     const handleParagraphAiAction = useCallback(async (action: InlineAction, selection: { start: number; end: number }, content: string) => {
         dispatch({ type: 'SET_FULL_AI_ACTION_LOADING', payload: `Applying: ${action}...` });
@@ -85,11 +85,11 @@ export const useAiActions = (
                 return { ...prev, content: newContent };
             });
         } catch (error) {
-            showToast({ message: error instanceof Error ? error.message : 'An unknown error occurred.', type: 'error' });
+            toast.error(error);
         } finally {
             dispatch({ type: 'SET_FULL_AI_ACTION_LOADING', payload: null });
         }
-    }, [setEditorState, dispatch, showToast]);
+    }, [setEditorState, dispatch]);
 
     return {
         applyAiActionToFullNote,

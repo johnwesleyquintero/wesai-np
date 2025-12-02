@@ -1,11 +1,10 @@
 
 import { useState, useCallback } from 'react';
 import { useStoreContext } from '../context/AppContext';
-import { useToast } from '../context/ToastContext';
+import { toast, TOAST_MESSAGES } from '../lib/toast';
 
 export const useDataManagement = () => {
     const { notes, collections, smartCollections, templates, importData } = useStoreContext();
-    const { showToast } = useToast();
     const [dataToImport, setDataToImport] = useState<any | null>(null);
     const [isImportConfirmOpen, setIsImportConfirmOpen] = useState(false);
 
@@ -28,12 +27,12 @@ export const useDataManagement = () => {
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
-            showToast({ message: 'Data exported successfully!', type: 'success' });
+            toast.success(TOAST_MESSAGES.EXPORT_SUCCESS);
         } catch (error) {
             console.error("Export failed:", error);
-            showToast({ message: 'Failed to export data.', type: 'error' });
+            toast.error("Failed to export data.");
         }
-    }, [notes, collections, smartCollections, templates, showToast]);
+    }, [notes, collections, smartCollections, templates]);
 
     const handleImportClick = useCallback(() => {
         const input = document.createElement('input');
@@ -50,10 +49,10 @@ export const useDataManagement = () => {
                             setDataToImport(data);
                             setIsImportConfirmOpen(true);
                         } else {
-                            showToast({ message: 'Invalid backup file format.', type: 'error' });
+                            toast.error("Invalid backup file format.");
                         }
                     } catch (err) {
-                        showToast({ message: 'Error reading backup file.', type: 'error' });
+                        toast.error("Error reading backup file.");
                         console.error(err);
                     }
                 };
@@ -61,7 +60,7 @@ export const useDataManagement = () => {
             }
         };
         input.click();
-    }, [showToast]);
+    }, []);
 
     const confirmImport = useCallback(async () => {
         if (dataToImport) {
@@ -69,15 +68,15 @@ export const useDataManagement = () => {
                 await importData(dataToImport);
                 setIsImportConfirmOpen(false);
                 setDataToImport(null);
-                showToast({ message: 'Data imported! App will now reload.', type: 'success' });
+                toast.success(TOAST_MESSAGES.IMPORT_SUCCESS);
                 setTimeout(() => window.location.reload(), 1500);
             } catch (error) {
                 const message = error instanceof Error ? error.message : "An unknown error occurred during import.";
-                showToast({ message: `Import failed: ${message}`, type: 'error' });
+                toast.error(`Import failed: ${message}`);
                 setIsImportConfirmOpen(false);
             }
         }
-    }, [dataToImport, importData, showToast]);
+    }, [dataToImport, importData]);
 
     return {
         handleExportAll,

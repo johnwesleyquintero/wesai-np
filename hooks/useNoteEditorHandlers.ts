@@ -2,7 +2,7 @@
 import React, { useCallback, RefObject } from 'react';
 import { Note, Template, NoteVersion } from '../types';
 import { useStoreContext, useUIContext } from '../context/AppContext';
-import { useToast } from '../context/ToastContext';
+import { toast, TOAST_MESSAGES } from '../lib/toast';
 import { NoteEditorAction } from './useNoteEditorReducer';
 
 type NoteState = { title: string; content: string; tags: string[] };
@@ -36,7 +36,6 @@ export const useNoteEditorHandlers = ({
 }: UseNoteEditorHandlersProps) => {
     const { updateNote, restoreNoteVersion, addTemplate } = useStoreContext();
     const { showConfirmation, hideConfirmation } = useUIContext();
-    const { showToast } = useToast();
 
     const handleSave = useCallback(async () => {
         if (saveStatus === 'saving' || saveStatus === 'saved') return;
@@ -45,20 +44,20 @@ export const useNoteEditorHandlers = ({
         try {
             await updateNote(note.id, editorState);
             dispatch({ type: 'SET_SAVE_STATUS', payload: 'saved' });
-            showToast({ message: 'Note saved!', type: 'success' });
+            toast.success(TOAST_MESSAGES.SAVE_SUCCESS);
         } catch (error) {
             console.error("Manual save failed:", error);
-            showToast({ message: `Save failed. Your changes are safe here.`, type: 'error' });
+            toast.error(TOAST_MESSAGES.SAVE_ERROR);
             dispatch({ type: 'SET_SAVE_STATUS', payload: 'error' });
         }
-    }, [saveStatus, dispatch, stateWhenLastSavedRef, editorState, updateNote, note.id, showToast]);
+    }, [saveStatus, dispatch, stateWhenLastSavedRef, editorState, updateNote, note.id]);
 
     const handleRestore = useCallback((version: NoteVersion) => {
         restoreNoteVersion(note.id, version);
         dispatch({ type: 'SET_PREVIEW_VERSION', payload: null });
         dispatch({ type: 'SET_HISTORY_OPEN', payload: false });
-        showToast({ message: 'Version restored.', type: 'success' });
-    }, [restoreNoteVersion, note.id, dispatch, showToast]);
+        toast.success(TOAST_MESSAGES.RESTORE_SUCCESS);
+    }, [restoreNoteVersion, note.id, dispatch]);
 
     const handleCloseHistory = useCallback(() => {
         dispatch({ type: 'SET_PREVIEW_VERSION', payload: null });
@@ -69,7 +68,7 @@ export const useNoteEditorHandlers = ({
         const apply = () => {
             setEditorState({ title: template.title, content: template.content, tags: [] });
             dispatch({ type: 'SET_VIEW_MODE', payload: 'edit' });
-            showToast({ message: 'Template applied.', type: 'success' });
+            toast.success(TOAST_MESSAGES.TEMPLATE_APPLIED);
         };
 
         if (editorState.content.trim() !== '') {
@@ -82,17 +81,17 @@ export const useNoteEditorHandlers = ({
         } else {
             apply();
         }
-    }, [editorState.content, setEditorState, dispatch, showConfirmation, showToast]);
+    }, [editorState.content, setEditorState, dispatch, showConfirmation]);
 
     const handleSaveAsTemplate = useCallback((title: string) => {
         addTemplate(title, editorState.content)
             .then(() => {
-                showToast({ message: `Template "${title}" saved!`, type: 'success' });
+                toast.success(`Template "${title}" saved!`);
             })
             .catch((err) => {
-                showToast({ message: `Failed to save template: ${err.message}`, type: 'error' });
+                toast.error(`Failed to save template: ${err.message}`);
             });
-    }, [addTemplate, editorState.content, showToast]);
+    }, [addTemplate, editorState.content]);
 
     const handleToggleTask = useCallback((lineNumber: number) => {
         setEditorState(prev => {

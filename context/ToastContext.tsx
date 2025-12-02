@@ -1,6 +1,8 @@
-import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+
+import React, { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react';
 import { ToastMessage } from '../types';
 import Toast from '../components/Toast';
+import { TOAST_EVENT_NAME, ToastEventDetail } from '../lib/toast';
 
 type ToastContextType = {
     showToast: (options: Omit<ToastMessage, 'id'>) => void;
@@ -30,6 +32,21 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({ children }) =
             return updated.slice(0, 3); // Limit to 3 toasts to avoid clutter
         });
     }, []);
+
+    // Listen for global toast events dispatched by lib/toast.ts
+    useEffect(() => {
+        const handleGlobalToast = (event: Event) => {
+            const customEvent = event as CustomEvent<ToastEventDetail>;
+            if (customEvent.detail) {
+                showToast(customEvent.detail);
+            }
+        };
+
+        window.addEventListener(TOAST_EVENT_NAME, handleGlobalToast);
+        return () => {
+            window.removeEventListener(TOAST_EVENT_NAME, handleGlobalToast);
+        };
+    }, [showToast]);
 
     const removeToast = (id: number) => {
         setToasts(prevToasts => prevToasts.filter(toast => toast.id !== id));

@@ -1,12 +1,10 @@
-
-import React, { useEffect, useRef, useMemo, useCallback, useState, useLayoutEffect } from 'react';
+import React, { useEffect, useRef, useMemo, useCallback, useState, useLayoutEffect, Suspense } from 'react';
 import { Note, NoteVersion, Template, InlineAction } from '../types';
 import EditorHeader from './editor/EditorHeader';
 import EditorTitle from './editor/EditorTitle';
 import EditorContent from './editor/EditorContent';
 import EditorMeta from './editor/EditorMeta';
 import EditorStatusBar from './editor/EditorStatusBar';
-import VersionHistorySidebar from './VersionHistorySidebar';
 import { useUndoableState } from '../hooks/useUndoableState';
 import { useEditorContext, useStoreContext, useUIContext, useAuthContext } from '../context/AppContext';
 import { useBacklinks } from '../hooks/useBacklinks';
@@ -25,6 +23,10 @@ import EditorPopups from './editor/EditorPopups';
 import { getCursorPositionRect, getLineInfoForPosition } from '../lib/editorDOMUtils';
 import { useToast } from '../context/ToastContext';
 import { SparklesIcon } from './Icons';
+import { useEditorPopupState } from '../hooks/useEditorPopupState';
+
+// Lazy load sidebar
+const VersionHistorySidebar = React.lazy(() => import('./VersionHistorySidebar'));
 
 interface NoteEditorProps {
     note: Note;
@@ -155,8 +157,6 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
 
     const { 
         handleDrop, 
-        handleDragOver,
-        handleDragLeave,
         handlePaste 
     } = useNoteInputHandlers({
         editorState,
@@ -438,8 +438,33 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
         performParagraphAiAction(action, selection, editorState.content);
     }, [performParagraphAiAction, editorState.content]);
 
+    // Use logic hook to consolidate popup props
+    const editorPopupsProps = useEditorPopupState({
+        uiState,
+        dispatch,
+        editorPaneRef,
+        textareaRef,
+        desiredCursorPosRef,
+        activeSpellingError,
+        setActiveSpellingError,
+        spellingSuggestions,
+        isLoadingSuggestions,
+        suggestionError,
+        isApiKeyMissing,
+        isAiEnabled,
+        handlers: {
+            handleInsertLink,
+            handleInsertSyncedBlock,
+            handleSelectCommand,
+            handleInlineAiAction: (action, selection) => handleInlineAiAction(action, selection),
+            handleFormatSelection,
+            handleApplySuggestion,
+            handleParagraphAiAction
+        }
+    });
+
     return (
-        <div className="flex-1 flex flex-col h-full relative bg-light-background dark:bg-dark-background" onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop} onPaste={handlePaste}>
+        <div className="flex-1 flex flex-col h-full relative bg-light-background dark:bg-dark-background" onDragOver={(e) => { e.preventDefault(); if (!isEffectivelyReadOnly) dispatch({ type: 'SET_DRAG_OVER', payload: true }); }} onDragLeave={() => dispatch({ type: 'SET_DRAG_OVER', payload: false })} onDrop={handleDrop} onPaste={handlePaste}>
             <pre ref={cursorMeasureRef} style={{ position: 'absolute', visibility: 'hidden', top: -9999, left: -9999, pointerEvents: 'none' }} />
             <EditorHeader note={note} onToggleFavorite={() => toggleFavorite(note.id)} saveStatus={saveStatus} handleSave={handleSave} editorTitle={editorState.title} onEnhance={(tone) => handleEnhanceNote(tone, editorState.content)} onSummarize={() => summarizeAndFindActionForFullNote(editorState.content)} onToggleHistory={() => dispatch({type: 'SET_HISTORY_OPEN', payload: !isHistoryOpen})} isHistoryOpen={isHistoryOpen} onApplyTemplate={handleApplyTemplate} onSaveAsTemplate={() => handleSaveAsTemplate(editorState.title)} isMobileView={isMobileView} onToggleSidebar={onToggleSidebar} onUndo={undo} onRedo={redo} canUndo={canUndo} canRedo={canRedo} viewMode={viewMode} onToggleViewMode={() => dispatch({type: 'SET_VIEW_MODE', payload: viewMode === 'edit' ? 'preview' : 'edit'})} wordCount={wordCount} charCount={charCount} isFullAiActionLoading={isFullAiActionLoading} isApiKeyMissing={isApiKeyMissing} isAiEnabled={isAiEnabled} />
             {isAiRateLimited && <div className="bg-yellow-100 dark:bg-yellow-900/30 border-b border-yellow-300 dark:border-yellow-700/50 py-2 px-4 text-center text-sm text-yellow-800 dark:text-yellow-200 flex-shrink-0">AI features are temporarily paused due to high usage. They will be available again shortly.</div>}
@@ -506,38 +531,13 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
             
             <EditorStatusBar wordCount={wordCount} charCount={charCount} readingTime={readingTime} isCheckingSpelling={isCheckingSpelling} />
 
-            <EditorPopups
-                noteLinker={noteLinker}
-                templateLinker={templateLinker}
-                slashCommand={slashCommand}
-                selection={selection}
-                noteLinkerForSelection={noteLinkerForSelection}
-                gutterMenu={gutterMenu}
-                activeSpellingError={activeSpellingError}
-                spellingSuggestions={spellingSuggestions}
-                isLoadingSuggestions={isLoadingSuggestions}
-                suggestionError={suggestionError}
-                isAiActionLoading={isAiActionLoading}
-                isApiKeyMissing={isApiKeyMissing}
-                isAiEnabled={isAiEnabled}
-                onInsertLink={handleInsertLink}
-                onInsertSyncedBlock={handleInsertSyncedBlock}
-                onSelectCommand={handleSelectCommand}
-                onInlineAiAction={(action) => handleInlineAiAction(action, selection!)}
-                onFormatSelection={handleFormatSelection}
-                onApplySpellingSuggestion={handleApplySuggestion}
-                onParagraphAiAction={handleParagraphAiAction}
-                closeNoteLinker={() => dispatch({ type: 'SET_NOTE_LINKER', payload: null })}
-                closeTemplateLinker={() => dispatch({ type: 'SET_TEMPLATE_LINKER', payload: null })}
-                closeSlashCommand={() => dispatch({ type: 'SET_SLASH_COMMAND', payload: null })}
-                closeSelection={() => dispatch({ type: 'SET_SELECTION', payload: null })}
-                closeSpelling={() => setActiveSpellingError(null)}
-                closeGutterMenu={() => dispatch({ type: 'SET_GUTTER_MENU', payload: null })}
-                editorPaneRef={editorPaneRef}
-                textareaRef={textareaRef}
-                desiredCursorPosRef={desiredCursorPosRef}
-            />
-            {isHistoryOpen && <VersionHistorySidebar history={note.history || []} onClose={handleCloseHistory} onPreview={(version) => dispatch({ type: 'SET_PREVIEW_VERSION', payload: version })} onRestore={handleRestore} activeVersionTimestamp={previewVersion?.savedAt} />}
+            <EditorPopups {...editorPopupsProps} />
+            
+            {isHistoryOpen && (
+                <Suspense fallback={null}>
+                    <VersionHistorySidebar history={note.history || []} onClose={handleCloseHistory} onPreview={(version) => dispatch({ type: 'SET_PREVIEW_VERSION', payload: version })} onRestore={handleRestore} activeVersionTimestamp={previewVersion?.savedAt} />
+                </Suspense>
+            )}
             {isDragOver && <div className="absolute inset-0 bg-light-primary/10 dark:bg-dark-primary/10 border-4 border-dashed border-light-primary dark:border-dark-primary rounded-2xl m-4 pointer-events-none flex items-center justify-center"><p className="text-light-primary dark:text-dark-primary font-bold text-2xl">Drop file to import</p></div>}
         </div>
     );

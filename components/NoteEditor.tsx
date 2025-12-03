@@ -1,5 +1,6 @@
-import React, { useEffect, useRef, useMemo, useLayoutEffect, Suspense, useCallback } from 'react';
-import { Note, InlineAction } from '../types';
+
+import React, { useEffect, useRef, useMemo, useCallback, useState, useLayoutEffect, Suspense } from 'react';
+import { Note, NoteVersion, Template, InlineAction } from '../types';
 import EditorHeader from './editor/EditorHeader';
 import EditorTitle from './editor/EditorTitle';
 import EditorContent from './editor/EditorContent';
@@ -174,12 +175,9 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note }) => {
     useNoteEditorLifecycle({
         note,
         editorState,
-        latestEditorStateRef,
         dispatch,
         saveStatus,
         previewVersion,
-        updateNote,
-        showToast,
         resetAiSuggestions,
         setActiveSpellingError,
         setParagraphGutterTarget,

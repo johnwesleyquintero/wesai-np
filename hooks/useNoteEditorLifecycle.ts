@@ -1,5 +1,5 @@
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect } from 'react';
 import { Note, NoteVersion, NoteState } from '../types';
 import { NoteEditorAction } from './useNoteEditorReducer';
 import { ActiveSpellingError } from './useSpellcheck';
@@ -8,12 +8,9 @@ import { areNoteStatesEqual } from '../lib/dataUtils';
 interface UseNoteEditorLifecycleProps {
     note: Note;
     editorState: NoteState;
-    latestEditorStateRef: React.MutableRefObject<NoteState>;
     dispatch: React.Dispatch<NoteEditorAction>;
     saveStatus: 'saved' | 'saving' | 'unsaved' | 'error';
     previewVersion: NoteVersion | null;
-    updateNote: (id: string, updates: any) => Promise<void>;
-    showToast: (options: { message: string; type: 'success' | 'error' | 'info' }) => void;
     // Callbacks for initialization
     resetAiSuggestions: () => void;
     setActiveSpellingError: (error: ActiveSpellingError | null) => void;
@@ -26,17 +23,16 @@ interface UseNoteEditorLifecycleProps {
  * Encapsulates the lifecycle events of the NoteEditor:
  * 1. Initialization when a new note is selected.
  * 2. Dirty state checking (unsaved changes).
- * 3. Saving changes on component unmount or note switch.
+ * 
+ * NOTE: Auto-save on unmount has been disabled to allow manual control.
+ * Drafts persist in sessionStorage via useUndoableState.
  */
 export const useNoteEditorLifecycle = ({
     note,
     editorState,
-    latestEditorStateRef,
     dispatch,
     saveStatus,
     previewVersion,
-    updateNote,
-    showToast,
     resetAiSuggestions,
     setActiveSpellingError,
     setParagraphGutterTarget,
@@ -80,33 +76,4 @@ export const useNoteEditorLifecycle = ({
             }
         }
     }, [editorState, note.title, note.content, note.tags, previewVersion, saveStatus, dispatch]);
-
-    // --- 3. Save on Unmount/Change ---
-    useEffect(() => {
-        const noteAtMount = note;
-        const sessionKeyAtMount = `wescore-editor-session-${noteAtMount.id}`;
-
-        return () => {
-            const latestStateForNote = latestEditorStateRef.current;
-            const isDirty = !areNoteStatesEqual(latestStateForNote, {
-                title: noteAtMount.title,
-                content: noteAtMount.content,
-                tags: noteAtMount.tags,
-            });
-    
-            if (isDirty) {
-                updateNote(noteAtMount.id, latestStateForNote).catch(error => {
-                     console.error("Failed to save note on unmount/change:", error);
-                     showToast({ message: `Failed to save "${noteAtMount.title}".`, type: 'error' });
-                });
-            }
-
-            try {
-                sessionStorage.removeItem(sessionKeyAtMount);
-            } catch (e) {
-                console.warn(`Could not remove session storage for key ${sessionKeyAtMount}:`, e);
-            }
-        };
-    }, [note.id, updateNote, showToast, latestEditorStateRef]); 
-    // Dependency on note.id ensures this runs when switching notes (unmount old, mount new)
 };

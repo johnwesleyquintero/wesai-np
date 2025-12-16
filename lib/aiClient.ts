@@ -1,8 +1,7 @@
+
 import { GoogleGenAI, HarmCategory, HarmBlockThreshold, GenerateContentResponse, GenerationConfig, Part } from "@google/genai";
-import { API_KEY_STORAGE_KEY, MODEL_NAMES } from './config';
-import { sha256, getLocalCache, setLocalCache } from './cache';
-import { supabase } from './supabaseClient';
-import { normalizeContents, sortObjectKeys } from './dataUtils';
+import { API_KEY_STORAGE_KEY } from './config';
+import { normalizeContents } from './dataUtils';
 
 // Cache for the GenAI instance to avoid re-creating it on every call.
 let genAI: GoogleGenAI | null = null;
@@ -49,7 +48,8 @@ export const fireRateLimitEvent = (error: any) => {
 };
 
 /**
- * A centralized wrapper for making Gemini API calls with a two-tiered caching system.
+ * A centralized wrapper for making Gemini API calls.
+ * Caching has been disabled to prevent database usage.
  */
 export async function callGemini<T>(
     payload: {
@@ -61,44 +61,14 @@ export async function callGemini<T>(
         errorMessage: string;
         processResponse: (response: GenerateContentResponse) => T;
         onError: () => T | never;
-        bypassCache?: boolean;
+        bypassCache?: boolean; // Deprecated, kept for interface compatibility
     }
 ): Promise<T> {
     const { model, contents, config } = payload;
-    const { bypassCache = false } = processingOptions;
 
     const normalizedContents = normalizeContents(contents);
 
-    // 1. Create a stable hash for the request
-    const requestPayload = { model, contents: normalizedContents, config };
-    const sortedPayload = sortObjectKeys(requestPayload);
-    const promptString = JSON.stringify(sortedPayload);
-    const hash = await sha256(promptString);
-
-    // 2. Check Level 1: Local Cache (fastest)
-    if (!bypassCache) {
-        const localData = getLocalCache(hash);
-        if (localData !== null) {
-            return localData as T;
-        }
-    }
-
-    // 3. Check Level 2: Supabase Persistent Cache
-    if (!bypassCache) {
-        const { data: dbCache, error: dbError } = await supabase
-            .from('ai_cache')
-            .select('response')
-            .eq('prompt_hash', hash)
-            .single();
-        
-        if (dbCache && !dbError) {
-            const dbData = dbCache.response as T;
-            setLocalCache(hash, dbData); // Populate L1 cache
-            return dbData;
-        }
-    }
-
-    // 4. Cache Miss: Call the Gemini API
+    // Call the Gemini API
     let response: GenerateContentResponse;
     try {
         const ai = getGenAI();
@@ -109,25 +79,9 @@ export async function callGemini<T>(
         return processingOptions.onError();
     }
 
-    // 5. Process the response. If this fails, we DO NOT cache the result.
+    // Process the response
     try {
-        const processedData = processingOptions.processResponse(response);
-
-        // 6. Save to both caches
-        setLocalCache(hash, processedData);
-        // Fire-and-forget insertion to Supabase.
-        supabase.from('ai_cache').insert({
-            prompt_hash: hash,
-            prompt: promptString,
-            response: processedData as any,
-            model,
-        }).then(({ error }) => {
-            if (error && error.code !== '23505') { 
-                console.warn("Supabase cache insertion failed:", error);
-            }
-        });
-
-        return processedData;
+        return processingOptions.processResponse(response);
     } catch (e) {
         console.error(`Processing error: ${processingOptions.errorMessage}`, e);
         return processingOptions.onError();
